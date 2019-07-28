@@ -25,7 +25,7 @@ type FutureRestAPI interface {
 	 * @param size 获取深度档数
 	 * @return
 	 */
-	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*Depth, error)
+	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, error)
 
 	/**
 	 * 期货指数
