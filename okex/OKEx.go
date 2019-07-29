@@ -100,7 +100,7 @@ func (ok *OKEx) GetExchangeName() string {
 	return OKEX
 }
 
-func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{}) error {
+func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte,error) {
 	url := ok.config.Endpoint + uri
 	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
 	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
@@ -112,9 +112,9 @@ func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{})
 		OK_ACCESS_SIGN:       sign,
 		OK_ACCESS_TIMESTAMP:  fmt.Sprint(timestamp)})
 	if err != nil {
-		return err
+		return nil, err
 	} else {
-		return json.Unmarshal(resp, &response)
+		return resp, json.Unmarshal(resp, &response)
 	}
 }
 
