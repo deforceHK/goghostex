@@ -100,7 +100,7 @@ func (ok *OKEx) GetExchangeName() string {
 	return OKEX
 }
 
-func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte,error) {
+func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	url := ok.config.Endpoint + uri
 	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
 	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
@@ -177,31 +177,31 @@ func (ok *OKEx) IsoTime() string {
 	return iso
 }
 
-func (ok *OKEx) LimitBuy(amount, price string, currency CurrencyPair) (*Order, error) {
+func (ok *OKEx) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.OKExSpot.LimitBuy(amount, price, currency)
 }
 
-func (ok *OKEx) LimitSell(amount, price string, currency CurrencyPair) (*Order, error) {
+func (ok *OKEx) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.OKExSpot.LimitSell(amount, price, currency)
 }
 
-func (ok *OKEx) MarketBuy(amount, price string, currency CurrencyPair) (*Order, error) {
+func (ok *OKEx) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.OKExSpot.MarketBuy(amount, price, currency)
 }
 
-func (ok *OKEx) MarketSell(amount, price string, currency CurrencyPair) (*Order, error) {
+func (ok *OKEx) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.OKExSpot.MarketSell(amount, price, currency)
 }
 
-func (ok *OKEx) CancelOrder(orderId string, currency CurrencyPair) (bool, error) {
+func (ok *OKEx) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
 	return ok.OKExSpot.OKExSpot.CancelOrder(orderId, currency)
 }
 
-func (ok *OKEx) GetOneOrder(orderId string, currency CurrencyPair) (*Order, error) {
+func (ok *OKEx) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.OKExSpot.GetOneOrder(orderId, currency)
 }
 
-func (ok *OKEx) GetUnfinishOrders(currency CurrencyPair) ([]Order, error) {
+func (ok *OKEx) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
 	return ok.OKExSpot.GetUnfinishOrders(currency)
 }
 
@@ -209,19 +209,19 @@ func (ok *OKEx) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize in
 	return ok.OKExSpot.GetOrderHistorys(currency, currentPage, pageSize)
 }
 
-func (ok *OKEx) GetAccount() (*Account, error) {
+func (ok *OKEx) GetAccount() (*Account, []byte, error) {
 	return ok.OKExSpot.GetAccount()
 }
 
-func (ok *OKEx) GetTicker(currency CurrencyPair) (*Ticker, error) {
+func (ok *OKEx) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	return ok.OKExSpot.GetTicker(currency)
 }
 
-func (ok *OKEx) GetDepth(size int, currency CurrencyPair) (*Depth, error) {
+func (ok *OKEx) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
 	return ok.OKExSpot.GetDepth(size, currency)
 }
 
-func (ok *OKEx) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, error) {
+func (ok *OKEx) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
 	return ok.OKExSpot.GetKlineRecords(currency, period, size, since)
 }
 

@@ -179,7 +179,7 @@ func (ok *OKExSpot) LimitSell(amount, price string, currency CurrencyPair) (*Ord
 	})
 }
 
-func (ok *OKExSpot) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte,error) {
+func (ok *OKExSpot) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.PlaceOrder("market", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
@@ -188,7 +188,7 @@ func (ok *OKExSpot) MarketBuy(amount, price string, currency CurrencyPair) (*Ord
 	})
 }
 
-func (ok *OKExSpot) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte,error) {
+func (ok *OKExSpot) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
 	return ok.PlaceOrder("market", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
@@ -330,7 +330,7 @@ func (ok *OKExSpot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 		BaseVolume24h float64 `json:"base_volume_24_h,string"`
 		Timestamp     string  `json:"timestamp"`
 	}
-	resp ,err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
