@@ -2,13 +2,14 @@ package goghostex
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type WsConfig struct {
