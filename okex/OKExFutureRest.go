@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
-
 	. "github.com/strengthening/goghostex"
 )
 
@@ -120,7 +118,7 @@ func (ok *OKExFuture) getFutureContractId(pair CurrencyPair, contractAlias strin
 	return contractId
 }
 
-func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType string) (*Ticker, []byte, error) {
+func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error) {
 	var urlPath = fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/ticker",
 		ok.getFutureContractId(currencyPair, contractType),
@@ -143,7 +141,7 @@ func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType st
 
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
 
-	return &Ticker{
+	ticker := Ticker{
 		Pair:      currencyPair,
 		Sell:      response.BestAsk,
 		Buy:       response.BestBid,
@@ -151,7 +149,10 @@ func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType st
 		High:      response.High24h,
 		Last:      response.Last,
 		Vol:       response.Volume24h,
-		Timestamp: uint64(date.UnixNano() / int64(time.Millisecond))}, resp, nil
+		Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
+	}
+
+	return &FutureTicker{Ticker: ticker}, resp, nil
 }
 
 func (ok *OKExFuture) GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error) {
@@ -282,7 +283,7 @@ func (ok *OKExFuture) PlaceFutureOrder2(matchPrice int, ord *FutureOrder) (*Futu
 		return nil, nil, errors.New("ord param is nil")
 	}
 	param.InstrumentId = ok.getFutureContractId(ord.Currency, ord.ContractName)
-	param.ClientOid = strings.Replace(uuid.New().String(), "-", "", 32)
+	param.ClientOid = strings.Replace(UUID(), "-", "", 32)
 	param.Type = ord.OType
 	param.OrderType = ord.OrderType
 	param.Price = ok.normalizePrice(ord.Price, ord.Currency)
@@ -341,7 +342,7 @@ func (ok *OKExFuture) PlaceFutureOrder(
 	}
 
 	param.InstrumentId = ok.getFutureContractId(currencyPair, contractType)
-	param.ClientOid = strings.Replace(uuid.New().String(), "-", "", 32)
+	param.ClientOid = strings.Replace(UUID(), "-", "", 32)
 	param.Type = fmt.Sprint(openType)
 	param.OrderType = "0"
 	param.Price = price

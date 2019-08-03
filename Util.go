@@ -120,7 +120,10 @@ func GzipUnCompress(data []byte) ([]byte, error) {
 }
 
 func FlateUnCompress(data []byte) ([]byte, error) {
-	return ioutil.ReadAll(flate.NewReader(bytes.NewReader(data)))
+	reader := flate.NewReader(bytes.NewReader(data))
+	defer func() { _ = reader.Close() }()
+
+	return ioutil.ReadAll(reader)
 }
 
 func UUID() string {
