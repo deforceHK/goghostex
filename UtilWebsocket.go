@@ -13,17 +13,19 @@ import (
 )
 
 type WsConfig struct {
-	WsUrl                 string
-	ProxyUrl              string
-	ReqHeaders            map[string][]string          //连接的时候加入的头部信息
-	HeartbeatIntervalTime time.Duration                //
-	HeartbeatData         []byte                       //心跳数据
-	HeartbeatFunc         func() interface{}           //心跳数据2
-	ReconnectIntervalTime time.Duration                //定时重连时间间隔
-	ProtoHandleFunc       func([]byte) error           //协议处理函数
-	UnCompressFunc        func([]byte) ([]byte, error) //解压函数
-	ErrorHandleFunc       func(err error)
-	IsDump                bool
+	WsUrl                 string              // websocket server url, necessary
+	ProxyUrl              string              // proxy url, not necessary
+	ReqHeaders            map[string][]string // set the head info ,when connecting, not necessary
+	HeartbeatIntervalTime time.Duration       // the heartbeat interval, necessary
+	HeartbeatData         []byte              // the raw text of heartbeat data for example: ping, necessary if heartbeatfunc is nil
+	HeartbeatDataType     int
+
+	//HeartbeatFunc         func() interface{}           // the json text of heartbeat data , necessary if heartbeatdata is nil
+	ReconnectIntervalTime time.Duration                // force reconnect on XXX time duration, not necessary
+	ProtoHandleFunc       func([]byte) error           // the message handle func, necessary
+	UnCompressFunc        func([]byte) ([]byte, error) // the uncompress func, not necessary
+	ErrorHandleFunc       func(err error)              // the error handle func, not necessary
+	IsDump                bool                         // is print the connect info, not necessary
 }
 
 type WsConn struct {
@@ -42,6 +44,7 @@ type WsConn struct {
 	subs           []interface{}
 }
 
+// websocket build config
 type WsBuilder struct {
 	wsConfig *WsConfig
 }
@@ -70,16 +73,18 @@ func (b *WsBuilder) Dump() *WsBuilder {
 	return b
 }
 
-func (b *WsBuilder) Heartbeat(data []byte, t time.Duration) *WsBuilder {
+func (b *WsBuilder) Heartbeat(data []byte, dataType int, t time.Duration) *WsBuilder {
 	b.wsConfig.HeartbeatIntervalTime = t
 	b.wsConfig.HeartbeatData = data
+	b.wsConfig.HeartbeatDataType = dataType
 	return b
 }
-func (b *WsBuilder) Heartbeat2(heartbeat func() interface{}, t time.Duration) *WsBuilder {
-	b.wsConfig.HeartbeatIntervalTime = t
-	b.wsConfig.HeartbeatFunc = heartbeat
-	return b
-}
+
+//func (b *WsBuilder) Heartbeat2(heartbeat func() interface{}, t time.Duration) *WsBuilder {
+//	b.wsConfig.HeartbeatIntervalTime = t
+//	b.wsConfig.HeartbeatFunc = heartbeat
+//	return b
+//}
 
 func (b *WsBuilder) ReconnectIntervalTime(t time.Duration) *WsBuilder {
 	b.wsConfig.ReconnectIntervalTime = t
@@ -186,7 +191,7 @@ func (ws *WsConn) ReConnect() {
 	//re subscribe
 	for _, sub := range ws.subs {
 		log.Println("subscribe:", sub)
-		ws.SendJsonMessage(sub)
+		_ = ws.SendJsonMessage(sub)
 	}
 }
 
@@ -194,7 +199,6 @@ func (ws *WsConn) ReConnectTimer() {
 	if ws.ReconnectIntervalTime == 0 {
 		return
 	}
-
 	timer := time.NewTimer(ws.ReconnectIntervalTime)
 
 	go func() {
@@ -244,7 +248,7 @@ func (ws *WsConn) checkStatusTimer() {
 
 func (ws *WsConn) HeartbeatTimer() {
 	log.Println("heartbeat interval time = ", ws.HeartbeatIntervalTime)
-	if ws.HeartbeatIntervalTime == 0 || (ws.HeartbeatFunc == nil && ws.HeartbeatData == nil) {
+	if ws.HeartbeatIntervalTime == 0 || (ws.HeartbeatDataType == 0 && ws.HeartbeatData == nil) {
 		return
 	}
 
@@ -255,12 +259,7 @@ func (ws *WsConn) HeartbeatTimer() {
 		for {
 			select {
 			case <-timer.C:
-				var err error
-				if ws.HeartbeatFunc != nil {
-					err = ws.SendJsonMessage(ws.HeartbeatFunc())
-				} else {
-					err = ws.SendTextMessage(ws.HeartbeatData)
-				}
+				err := ws.WriteMessage(ws.HeartbeatDataType, ws.HeartbeatData)
 				if err != nil {
 					log.Println("heartbeat error , ", err)
 					time.Sleep(time.Second)

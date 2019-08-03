@@ -9,14 +9,14 @@ type FutureRestAPI interface {
 	/**
 	 *获取交割预估价
 	 */
-	GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, error)
+	GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, []byte, error)
 
 	/**
 	 * 期货行情
 	 * @param currency_pair   btc_usd:比特币    ltc_usd :莱特币
 	 * @param contractType  合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 */
-	GetFutureTicker(currencyPair CurrencyPair, contractType string) (*Ticker, error)
+	GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error)
 
 	/**
 	 * 期货深度
@@ -25,18 +25,18 @@ type FutureRestAPI interface {
 	 * @param size 获取深度档数
 	 * @return
 	 */
-	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, error)
+	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error)
 
 	/**
 	 * 期货指数
 	 * @param currencyPair   btc_usd:比特币    ltc_usd :莱特币
 	 */
-	GetFutureIndex(currencyPair CurrencyPair) (float64, error)
+	GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error)
 
 	/**
 	 *全仓账户
 	 */
-	GetFutureUserinfo() (*FutureAccount, error)
+	GetFutureUserinfo() (*FutureAccount, []byte, error)
 
 	/**
 	 * @deprecated
@@ -48,7 +48,15 @@ type FutureRestAPI interface {
 	 * @param openType   1:开多   2:开空   3:平多   4:平空
 	 * @param matchPrice  是否为对手价 0:不是    1:是   ,当取值为1时,price无效
 	 */
-	PlaceFutureOrder(currencyPair CurrencyPair, contractType, price, amount string, openType, matchPrice, leverRate int) (string, error)
+	PlaceFutureOrder(
+		currencyPair CurrencyPair,
+		contractType,
+		price,
+		amount string,
+		openType,
+		matchPrice,
+		leverRate int,
+	) (string, []byte, error)
 
 	/**
 	 * 取消订单
@@ -56,7 +64,7 @@ type FutureRestAPI interface {
 	 * @param contractType    合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 * @param orderId   订单ID
 	 */
-	FutureCancelOrder(currencyPair CurrencyPair, contractType, orderId string) (bool, error)
+	FutureCancelOrder(currencyPair CurrencyPair, contractType, orderId string) (bool, []byte, error)
 
 	/**
 	 * 用户持仓查询
@@ -64,22 +72,22 @@ type FutureRestAPI interface {
 	 * @param contractType   合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 * @return
 	 */
-	GetFuturePosition(currencyPair CurrencyPair, contractType string) ([]FuturePosition, error)
+	GetFuturePosition(currencyPair CurrencyPair, contractType string) ([]FuturePosition, []byte, error)
 
 	/**
 	 *获取订单信息
 	 */
-	GetFutureOrders(orderIds []string, currencyPair CurrencyPair, contractType string) ([]FutureOrder, error)
+	GetFutureOrders(orderIds []string, currencyPair CurrencyPair, contractType string) ([]FutureOrder, []byte, error)
 
 	/**
 	 *获取单个订单信息
 	 */
-	GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, error)
+	GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error)
 
 	/**
 	 *获取未完成订单信息
 	 */
-	GetUnfinishFutureOrders(currencyPair CurrencyPair, contractType string) ([]FutureOrder, error)
+	GetUnfinishFutureOrders(currencyPair CurrencyPair, contractType string) ([]FutureOrder, []byte, error)
 
 	/**
 	 *获取交易费
@@ -104,7 +112,7 @@ type FutureRestAPI interface {
 	/**
 	 * 获取K线数据
 	 */
-	GetKlineRecords(contract_type string, currency CurrencyPair, period, size, since int) ([]FutureKline, error)
+	GetKlineRecords(contract_type string, currency CurrencyPair, period, size, since int) ([]FutureKline, []byte, error)
 
 	/**
 	 * 获取Trade数据
