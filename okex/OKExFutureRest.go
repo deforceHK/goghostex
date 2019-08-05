@@ -39,7 +39,7 @@ func (ok *OKExFuture) GetExchangeName() string {
 	return OKEX_FUTURE
 }
 
-//获取法币汇率
+// cny -> usd rate
 func (ok *OKExFuture) GetRate() (float64, []byte, error) {
 	var response struct {
 		Rate         float64   `json:"rate,string"`

@@ -1,23 +1,26 @@
 package binance
 
 import (
-	"github.com/gorilla/websocket"
+	"fmt"
 	"log"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	. "github.com/strengthening/goghostex"
 )
 
-type BinanceFutureWebsocket struct {
+type BinanceWebsocket struct {
 	ws       *WsConn
+	wsBuild  *WsBuilder
+	wsUrl    string
 	proxyUrl string
 
 	msg     chan []byte
 	receive func([]byte) error
 }
 
-func (this *BinanceFutureWebsocket) Init() {
-
+func (this *BinanceWebsocket) Init() {
 	// the default buffer channel
 	if this.msg == nil {
 		this.msg = make(chan []byte, 10)
@@ -30,8 +33,12 @@ func (this *BinanceFutureWebsocket) Init() {
 		}
 	}
 
-	this.ws = NewWsBuilder().Dump().WsUrl(
-		"wss://stream.binance.com:9443/ws/bnbbtc@depth",
+	if this.wsUrl == "" {
+		this.wsUrl = "wss://stream.binance.com:9443/stream?streams="
+	}
+
+	this.wsBuild = NewWsBuilder().Dump().WsUrl(
+		this.wsUrl,
 	).ProxyUrl(
 		this.proxyUrl,
 	).Heartbeat(
@@ -44,12 +51,18 @@ func (this *BinanceFutureWebsocket) Init() {
 		this.ws.UpdateActiveTime()
 		this.msg <- data
 		return nil
-	}).Build()
+	})
 
 }
 
-func (this *BinanceFutureWebsocket) Start() {
+func (this *BinanceWebsocket) Subscribe(channel string) error {
+	this.wsUrl += fmt.Sprintf("%s/", channel)
+	this.wsBuild.WsUrl(this.wsUrl[:(len(this.wsUrl) - 1)])
+	return nil
+}
 
+func (this *BinanceWebsocket) Start() {
+	this.ws = this.wsBuild.Build()
 	this.ws.ReceiveMessage()
 	for {
 		data := <-this.msg
@@ -61,6 +74,6 @@ func (this *BinanceFutureWebsocket) Start() {
 	}
 }
 
-func (this *BinanceFutureWebsocket) Close() {
+func (this *BinanceWebsocket) Close() {
 	this.ws.CloseWs()
 }

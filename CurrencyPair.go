@@ -15,7 +15,7 @@ func (c Currency) Eq(c2 Currency) bool {
 	return c.Symbol == c2.Symbol
 }
 
-// A->B(A兑换为B)
+// A->B(A exchange to B)
 type CurrencyPair struct {
 	CurrencyA Currency
 	CurrencyB Currency
