@@ -106,3 +106,12 @@ type FuturePosition struct {
 	ContractId     int64
 	ForceLiquPrice float64 //预估爆仓价
 }
+
+
+/*
+	models about API config
+*/
+type FutureAPIConfig struct {
+	APIConfig
+	Lever int //杠杆倍数 , for future
+}

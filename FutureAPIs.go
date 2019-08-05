@@ -119,3 +119,18 @@ type FutureRestAPI interface {
 	 */
 	GetTrades(contract_type string, currencyPair CurrencyPair, since int64) ([]Trade, error)
 }
+
+
+type FutureWebsocketAPI interface {
+	Init()
+
+	//Login(config *APIConfig) error
+
+	Subscribe(channel string) error
+
+	//Unsubscribe(channel string) error
+
+	Start()
+
+	Close()
+}

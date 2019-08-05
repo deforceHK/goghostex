@@ -75,12 +75,12 @@ func (this *OKexFutureWebsocket) Login(config *APIConfig) error {
 	return this.ws.WriteMessage(websocket.TextMessage, req)
 }
 
-func (this *OKexFutureWebsocket) Subscribe(topic []byte) error {
-	return this.ws.WriteMessage(websocket.TextMessage, topic)
+func (this *OKexFutureWebsocket) Subscribe(channel string) error {
+	return this.ws.WriteMessage(websocket.TextMessage, []byte(channel))
 }
 
-func (this *OKexFutureWebsocket) Unsubscribe(topic []byte) error {
-	return this.ws.WriteMessage(websocket.TextMessage, topic)
+func (this *OKexFutureWebsocket) Unsubscribe(channel string) error {
+	return this.ws.WriteMessage(websocket.TextMessage, []byte(channel))
 }
 
 func (this *OKexFutureWebsocket) Start() {
