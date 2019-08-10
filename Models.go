@@ -45,6 +45,7 @@ type MarginSubAccount struct {
 type Kline struct {
 	Pair      CurrencyPair
 	Timestamp int64
+	Date      string
 	Open      float64
 	Close     float64
 	High      float64
@@ -61,6 +62,7 @@ type Ticker struct {
 	Low       float64      `json:"low,string"`
 	Vol       float64      `json:"vol,string"`
 	Timestamp uint64       `json:"timestamp"` // unit:ms
+	Date      string       `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
 // record
@@ -130,6 +132,5 @@ type APIConfig struct {
 	ApiSecretKey  string
 	ApiPassphrase string //for okex.com v3 api
 	ClientId      string //for bitstamp.net , huobi.pro
-
-	Lever int //杠杆倍数 , for future
+	Location      *time.Location
 }

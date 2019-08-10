@@ -4,24 +4,23 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	. "github.com/strengthening/goghostex"
 )
 
-//合约信息
+//future contract info
 type FutureContractInfo struct {
-	InstrumentID    string  `json:"instrument_id"` //合约ID:如BTC-USD-180213
+	InstrumentID    string  `json:"instrument_id"` //instrument_id for example: BTC-USD-180213
 	UnderlyingIndex string  `json:"underlying_index"`
 	QuoteCurrency   string  `json:"quote_currency"`
 	TickSize        float64 `json:"tick_size,string"` //下单价格精度
 	TradeIncrement  string  `json:"trade_increment"`  //数量精度
-	ContractVal     string  `json:"contract_val"`     //合约面值(美元)
+	ContractVal     string  `json:"contract_val"`     //the contract vol in usd
 	Listing         string  `json:"listing"`
-	Delivery        string  `json:"delivery"` //交割日期
-	Alias           string  `json:"alias"`    //	本周 this_week 次周 next_week 季度 quarter
+	Delivery        string  `json:"delivery"` // delivery date
+	Alias           string  `json:"alias"`    // this_week next_week quarter
 }
 
 type AllFutureContractInfo struct {
@@ -140,6 +139,9 @@ func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType st
 	}
 
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
+	if ok.config.Location != nil {
+		date = date.In(ok.config.Location)
+	}
 
 	ticker := Ticker{
 		Pair:      currencyPair,
@@ -150,6 +152,7 @@ func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType st
 		Last:      response.Last,
 		Vol:       response.Volume24h,
 		Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
+		Date:      date.Format(GO_BIRTHDAY),
 	}
 
 	return &FutureTicker{Ticker: ticker}, resp, nil
@@ -170,11 +173,16 @@ func (ok *OKExFuture) GetFutureDepth(currencyPair CurrencyPair, contractType str
 	if err != nil {
 		return nil, nil, err
 	}
+	date, _ := time.Parse(time.RFC3339, response.Timestamp)
+	if ok.config.Location != nil {
+		date = date.In(ok.config.Location)
+	}
 
 	var dep FutureDepth
 	dep.Pair = currencyPair
 	dep.ContractType = contractType
-	dep.UTime, _ = time.Parse(time.RFC3339, response.Timestamp)
+	dep.Timestamp = uint64(date.UnixNano() / int64(time.Millisecond))
+	dep.Date = date.Format(GO_BIRTHDAY)
 	for _, itm := range response.Asks {
 		dep.AskList = append(dep.AskList, FutureDepthRecord{
 			Price:  ToFloat64(itm[0]),
@@ -259,7 +267,7 @@ func (ok *OKExFuture) normalizePrice(price float64, pair CurrencyPair) string {
 }
 
 //matchPrice:是否以对手价下单(0:不是 1:是)，默认为0;当取值为1时,price字段无效，当以对手价下单，order_type只能选择0:普通委托
-func (ok *OKExFuture) PlaceFutureOrder2(matchPrice int, ord *FutureOrder) (*FutureOrder, []byte, error) {
+func (ok *OKExFuture) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []byte, error) {
 	urlPath := "/api/futures/v3/order"
 	var param struct {
 		ClientOid    string `json:"client_oid"`
@@ -280,10 +288,10 @@ func (ok *OKExFuture) PlaceFutureOrder2(matchPrice int, ord *FutureOrder) (*Futu
 		OrderId      string `json:"order_id"`
 	}
 	if ord == nil {
-		return nil, nil, errors.New("ord param is nil")
+		return false, nil, errors.New("ord param is nil")
 	}
 	param.InstrumentId = ok.getFutureContractId(ord.Currency, ord.ContractName)
-	param.ClientOid = strings.Replace(UUID(), "-", "", 32)
+	param.ClientOid = ord.ClientOid
 	param.Type = ord.OType
 	param.OrderType = ord.OrderType
 	param.Price = ok.normalizePrice(ord.Price, ord.Currency)
@@ -301,73 +309,54 @@ func (ok *OKExFuture) PlaceFutureOrder2(matchPrice int, ord *FutureOrder) (*Futu
 	resp, err := ok.DoRequest("POST", urlPath, reqBody, &response)
 
 	if err != nil {
-		return ord, nil, err
+		return false, nil, err
 	}
 
+	now := time.Now()
 	ord.ClientOid = response.ClientOid
 	ord.OrderId = response.OrderId
-	ord.OrderTime = time.Now().UnixNano() / int64(time.Millisecond)
+	ord.OrderTime = now.UnixNano() / int64(time.Millisecond)
+	ord.OrderTimestamp = uint64(ord.OrderTime)
+	ord.OrderDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
 
-	return ord, resp, nil
+	return response.Result, resp, nil
 }
 
-//deprecated
-func (ok *OKExFuture) PlaceFutureOrder(
-	currencyPair CurrencyPair,
-	contractType,
-	price,
-	amount string,
-	openType,
-	matchPrice,
-	leverRate int,
-) (string, []byte, error) {
-	urlPath := "/api/futures/v3/order"
-	var param struct {
-		ClientOid    string `json:"client_oid"`
-		InstrumentId string `json:"instrument_id"`
-		Type         string `json:"type"`
-		OrderType    string `json:"order_type"`
-		Price        string `json:"price"`
-		Size         string `json:"size"`
-		MatchPrice   string `json:"match_price"`
-		Leverage     string `json:"leverage"`
-	}
+func (ok *OKExFuture) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
+	ord.ContractName = response.InstrumentId
+	ord.OrderId = response.OrderId
+	ord.ClientOid = response.ClientOid
+	ord.DealAmount = response.FilledQty
+	ord.AvgPrice = response.PriceAvg
+	ord.Status = ok.adaptOrderState(response.State)
+	ord.Fee = response.Fee
+	ord.OrderTime = response.Timestamp.UnixNano() / int64(time.Millisecond)
+	ord.OrderTimestamp = uint64(ord.OrderTime)
+	ord.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
+	return
+}
 
-	var response struct {
-		Result       bool   `json:"result"`
-		ErrorMessage string `json:"error_message"`
-		ErrorCode    string `json:"error_code"`
-		ClientOid    string `json:"client_oid"`
-		OrderId      string `json:"order_id"`
-	}
-
-	param.InstrumentId = ok.getFutureContractId(currencyPair, contractType)
-	param.ClientOid = strings.Replace(UUID(), "-", "", 32)
-	param.Type = fmt.Sprint(openType)
-	param.OrderType = "0"
-	param.Price = price
-	param.Size = amount
-	param.MatchPrice = fmt.Sprint(matchPrice)
-	param.Leverage = fmt.Sprint(leverRate)
-
-	reqBody, _, _ := ok.BuildRequestBody(param)
-	resp, err := ok.DoRequest("POST", urlPath, reqBody, &response)
+func (ok *OKExFuture) GetFutureOrder(ord *FutureOrder) ([]byte, error) {
+	urlPath := fmt.Sprintf(
+		"/api/futures/v3/orders/%s/%s",
+		ok.getFutureContractId(ord.Currency, ord.ContractName),
+		ord.OrderId,
+	)
+	var response futureOrderResponse
+	resp, err := ok.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return response.OrderId, resp, nil
+	ok.adaptOrder(response, ord)
+	return resp, nil
 }
 
-func (ok *OKExFuture) FutureCancelOrder(
-	currencyPair CurrencyPair,
-	contractType,
-	orderId string,
-) (bool, []byte, error) {
+func (ok *OKExFuture) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
-		ok.getFutureContractId(currencyPair, contractType),
-		orderId,
+		ok.getFutureContractId(ord.Currency, ord.ContractName),
+		ord.OrderId,
 	)
 	var response struct {
 		Result       bool   `json:"result"`
@@ -483,45 +472,6 @@ type futureOrderResponse struct {
 	Timestamp    time.Time `json:"timestamp,string"`
 }
 
-func (ok *OKExFuture) adaptOrder(response futureOrderResponse) FutureOrder {
-	return FutureOrder{
-		ContractName: response.InstrumentId,
-		OrderId:      response.OrderId,
-		ClientOid:    response.ClientOid,
-		Amount:       response.Size,
-		Price:        response.Price,
-		DealAmount:   response.FilledQty,
-		AvgPrice:     response.PriceAvg,
-		OType:        response.Type,
-		OrderType:    response.OrderType,
-		Status:       ok.adaptOrderState(response.State),
-		Fee:          response.Fee,
-		OrderTime:    response.Timestamp.UnixNano() / int64(time.Millisecond),
-	}
-}
-
-func (ok *OKExFuture) GetFutureOrder(
-	orderId string,
-	currencyPair CurrencyPair,
-	contractType string,
-) (*FutureOrder, []byte, error) {
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/orders/%s/%s",
-		ok.getFutureContractId(currencyPair, contractType),
-		orderId,
-	)
-	var response futureOrderResponse
-	resp, err := ok.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ord := ok.adaptOrder(response)
-	ord.Currency = currencyPair
-
-	return &ord, resp, nil
-}
-
 func (ok *OKExFuture) GetUnfinishFutureOrders(
 	currencyPair CurrencyPair,
 	contractType string,
@@ -544,8 +494,8 @@ func (ok *OKExFuture) GetUnfinishFutureOrders(
 
 	var ords []FutureOrder
 	for _, itm := range response.OrderInfo {
-		ord := ok.adaptOrder(itm)
-		ord.Currency = currencyPair
+		ord := FutureOrder{}
+		ok.adaptOrder(itm, &ord)
 		ords = append(ords, ord)
 	}
 
@@ -633,6 +583,7 @@ func (ok *OKExFuture) GetKlineRecords(
 		klines = append(klines, FutureKline{
 			Kline: Kline{
 				Timestamp: t.Unix(),
+				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
 				Pair:      currency,
 				Open:      ToFloat64(itm[1]),
 				High:      ToFloat64(itm[2]),

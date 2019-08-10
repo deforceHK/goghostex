@@ -1,9 +1,5 @@
 package goghostex
 
-import (
-	"time"
-)
-
 /*
 	models about account
 */
@@ -56,7 +52,8 @@ func (dr FutureDepthRecords) Less(i, j int) bool {
 type FutureDepth struct {
 	ContractType string //for future
 	Pair         CurrencyPair
-	UTime        time.Time
+	Timestamp    uint64
+	Date         string
 	AskList      FutureDepthRecords // Descending order
 	BidList      FutureDepthRecords // Descending order
 }
@@ -72,20 +69,22 @@ type FutureKline struct {
 
 type FutureOrder struct {
 	ClientOid  string //自定义ID，GoEx内部自动生成
-	OrderId    string //请尽量用这个字段替代OrderID字段
+	OrderId    string
 	Price      float64
 	Amount     float64
 	AvgPrice   float64
 	DealAmount float64
 
-	OrderTime    int64
-	Status       TradeStatus
-	Currency     CurrencyPair
-	OrderType    int     //ORDINARY=0 POST_ONLY=1 FOK= 2 IOC= 3
-	OType        int     //1：开多 2：开空 3：平多 4： 平空
-	LeverRate    int     //倍数
-	Fee          float64 //手续费
-	ContractName string
+	OrderTime      int64
+	OrderTimestamp uint64
+	OrderDate      string
+	Status         TradeStatus
+	Currency       CurrencyPair
+	OrderType      int     //ORDINARY=0 POST_ONLY=1 FOK= 2 IOC= 3
+	OType          int     //1：开多 2：开空 3：平多 4： 平空
+	LeverRate      int     //倍数
+	Fee            float64 //手续费
+	ContractName   string
 }
 
 type FuturePosition struct {
@@ -107,11 +106,10 @@ type FuturePosition struct {
 	ForceLiquPrice float64 //预估爆仓价
 }
 
-
 /*
 	models about API config
 */
 type FutureAPIConfig struct {
 	APIConfig
-	Lever int //杠杆倍数 , for future
+	Lever int // lever number , for future
 }

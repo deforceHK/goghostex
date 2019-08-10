@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+const (
+	GO_BIRTHDAY = "2006-01-02 15:04:05"
+)
+
 type TradeSide int
 
 const (
