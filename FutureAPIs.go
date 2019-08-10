@@ -48,15 +48,7 @@ type FutureRestAPI interface {
 	 * @param openType   1:开多   2:开空   3:平多   4:平空
 	 * @param matchPrice  是否为对手价 0:不是    1:是   ,当取值为1时,price无效
 	 */
-	PlaceFutureOrder(
-		currencyPair CurrencyPair,
-		contractType,
-		price,
-		amount string,
-		openType,
-		matchPrice,
-		leverRate int,
-	) (string, []byte, error)
+	PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []byte, error)
 
 	/**
 	 * 取消订单
@@ -64,7 +56,7 @@ type FutureRestAPI interface {
 	 * @param contractType    合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 * @param orderId   订单ID
 	 */
-	FutureCancelOrder(currencyPair CurrencyPair, contractType, orderId string) (bool, []byte, error)
+	CancelFutureOrder(ord *FutureOrder) (bool, []byte, error)
 
 	/**
 	 * 用户持仓查询
@@ -119,7 +111,6 @@ type FutureRestAPI interface {
 	 */
 	GetTrades(contract_type string, currencyPair CurrencyPair, since int64) ([]Trade, error)
 }
-
 
 type FutureWebsocketAPI interface {
 	Init()
