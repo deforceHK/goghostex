@@ -12,6 +12,7 @@ jobs:
 
     steps:
       - checkout
-
+      - echo $ORG_NAME
+      - echo $REPO_NAME
       - run: go get -v -t -d ./...
       - run: go test -v ./...
