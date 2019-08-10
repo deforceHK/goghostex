@@ -1,4 +1,4 @@
-package goghostex
+package main
 
 import "fmt"
 
