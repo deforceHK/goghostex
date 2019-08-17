@@ -38,7 +38,7 @@ type MarginSubAccount struct {
 	LendingFee  float64
 }
 
- /**
+/**
  * models about market
  **/
 
