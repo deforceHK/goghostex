@@ -1,5 +1,7 @@
 # goghostex
 
+[![CircleCI](https://circleci.com/gh/strengthening/goghostex.svg?style=svg)](https://circleci.com/gh/strengthening/goghostex)
+[![CircleCI](https://img.shields.io/badge/license-BSD-blue)](https://img.shields.io/badge/license-BSD-blue)
 
 Goghostex is a open source API of TOP crypto currency exchanges. You can use it directly for your data collector or trading program.
 
