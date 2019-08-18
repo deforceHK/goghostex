@@ -1,10 +1,50 @@
 # goghostex
 
 
-### order_type
+Goghostex is a open source API of TOP crypto currency exchanges. You can use it directly for your data collector or trading program.
 
-FOK(Fill Or Kill):全部成交否则取消，限价单或市价单皆可使用，但原则上多数为市价单采用。假设使用FOK交易，一笔订单下10手，但市场仅提供了3手，因无法成交10手，故并不会下单立即取消。
+## Feature
 
-IOC(Immediate Or Cancel):立即成交否则取消，限价单或者市价单皆可使用，但原则上多数为市价单采用。假设使用IOC交易，一笔订单下10手，但市场仅提供了3手，则成交3手后立即取消。
+The list of goghost supported API.As below:
 
-ROD(Rest Of Day):当日有效单，限价单才能使用。
+
+| |SPON|MARGIN|FUTURE|SWAP|
+|:---|:---|:---|:---|:---
+|OKEX|YES|NO|YES|NO|
+|BINANCE|YES|NO|NO|NO
+
+
+## Clone
+
+```
+git clone https://github.com/strengthening/goghostex.git
+```
+
+## Install 
+
+```
+go install
+```
+
+
+## TODO
+
+- Support bitmex exchange.
+- Support bitstamp exchange.
+- Add `cli` features.
+- Update the order feature
+    - FOK(Fill Or Kill)
+    - IOC(Immediate Or Cancel)
+    - ROD(Rest Of Day)
+
+
+## LICENSE
+
+The project use the [New BSD License](./LICENSE)
+
+## Credits
+
+- [gorilla/websocket](https://github.com/gorilla/websocket)
+    - A WebSocket implementation for Go.
+- [nntaoli-project/GoEx](https://github.com/nntaoli-project/GoEx.git)
+    - A Exchange REST and WebSocket API for Golang.
