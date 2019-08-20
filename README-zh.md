@@ -1,6 +1,6 @@
 # goghostex
 
-[![CircleCI](https://img.shields.io/badge/license-BSD-blue)](https://img.shields.io/badge/license-BSD-blue)
+[![img.shields.io](https://img.shields.io/badge/license-BSD-blue)](https://img.shields.io/badge/license-BSD-blue)
 [![CircleCI](https://circleci.com/gh/strengthening/goghostex/tree/master.svg?style=svg&circle-token=3e0fb98af6c242519e447954d79a2188ef1bafa6)](https://circleci.com/gh/strengthening/goghostex/tree/master)
 
 README: [English](https://github.com/strengthening/goghostex/blob/master/README.md) | [中文](https://github.com/strengthening/goghostex/blob/master/README-zh.md)
@@ -15,9 +15,6 @@ goghostex支持的交易所API。如下：
 |:---|:---|:---|:---|:---
 |OKEX|YES|NO|YES|NO|
 |BINANCE|YES|NO|NO|NO
-
-
-
 
 ## Clone
 

@@ -67,7 +67,7 @@ const (
 	XRP_USD_SWAP = "XRP-USD-SWAP"
 
 	/*Rest Endpoint*/
-	Endpoint              = "https://www.okex.com"
+	ENDPOINT              = "https://www.okex.com"
 	GET_ACCOUNTS          = "/api/swap/v3/accounts"
 	PLACE_ORDER           = "/api/swap/v3/order"
 	CANCEL_ORDER          = "/api/swap/v3/cancel_order/%s/%s"
@@ -177,54 +177,54 @@ func (ok *OKEx) IsoTime() string {
 	return iso
 }
 
-func (ok *OKEx) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.OKExSpot.LimitBuy(amount, price, currency)
-}
-
-func (ok *OKEx) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.OKExSpot.LimitSell(amount, price, currency)
-}
-
-func (ok *OKEx) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.OKExSpot.MarketBuy(amount, price, currency)
-}
-
-func (ok *OKEx) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.OKExSpot.MarketSell(amount, price, currency)
-}
-
-func (ok *OKEx) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
-	return ok.OKExSpot.OKExSpot.CancelOrder(orderId, currency)
-}
-
-func (ok *OKEx) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.OKExSpot.GetOneOrder(orderId, currency)
-}
-
-func (ok *OKEx) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
-	return ok.OKExSpot.GetUnfinishOrders(currency)
-}
-
-func (ok *OKEx) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
-	return ok.OKExSpot.GetOrderHistorys(currency, currentPage, pageSize)
-}
-
-func (ok *OKEx) GetAccount() (*Account, []byte, error) {
-	return ok.OKExSpot.GetAccount()
-}
-
-func (ok *OKEx) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
-	return ok.OKExSpot.GetTicker(currency)
-}
-
-func (ok *OKEx) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
-	return ok.OKExSpot.GetDepth(size, currency)
-}
-
-func (ok *OKEx) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
-	return ok.OKExSpot.GetKlineRecords(currency, period, size, since)
-}
-
-func (ok *OKEx) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
-	return ok.OKExSpot.GetTrades(currencyPair, since)
-}
+//func (ok *OKEx) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+//	return ok.OKExSpot.LimitBuy(amount, price, currency)
+//}
+//
+//func (ok *OKEx) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+//	return ok.OKExSpot.LimitSell(amount, price, currency)
+//}
+//
+//func (ok *OKEx) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+//	return ok.OKExSpot.MarketBuy(amount, price, currency)
+//}
+//
+//func (ok *OKEx) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+//	return ok.OKExSpot.MarketSell(amount, price, currency)
+//}
+//
+//func (ok *OKEx) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
+//	return ok.OKExSpot.OKExSpot.CancelOrder(orderId, currency)
+//}
+//
+//func (ok *OKEx) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
+//	return ok.OKExSpot.GetOneOrder(orderId, currency)
+//}
+//
+//func (ok *OKEx) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+//	return ok.OKExSpot.GetUnfinishOrders(currency)
+//}
+//
+//func (ok *OKEx) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
+//	return ok.OKExSpot.GetOrderHistorys(currency, currentPage, pageSize)
+//}
+//
+//func (ok *OKEx) GetAccount() (*Account, []byte, error) {
+//	return ok.OKExSpot.GetAccount()
+//}
+//
+//func (ok *OKEx) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
+//	return ok.OKExSpot.GetTicker(currency)
+//}
+//
+//func (ok *OKEx) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+//	return ok.OKExSpot.GetDepth(size, currency)
+//}
+//
+//func (ok *OKEx) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+//	return ok.OKExSpot.GetKlineRecords(currency, period, size, since)
+//}
+//
+//func (ok *OKEx) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
+//	return ok.OKExSpot.GetTrades(currencyPair, since)
+//}
