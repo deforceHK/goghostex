@@ -107,8 +107,8 @@ func (ok *OKExFuture) getFutureContractId(pair CurrencyPair, contractAlias strin
 	contractId := ""
 	for _, itm := range ok.allContractInfo.contractInfos {
 		if itm.Alias == contractAlias &&
-			itm.UnderlyingIndex == pair.CurrencyA.Symbol &&
-			itm.QuoteCurrency == pair.CurrencyB.Symbol {
+			itm.UnderlyingIndex == pair.CurrencyTarget.Symbol &&
+			itm.QuoteCurrency == pair.CurrencyBasis.Symbol {
 			contractId = itm.InstrumentID
 			break
 		}
@@ -254,7 +254,7 @@ func (ok *OKExFuture) GetFutureUserinfo() (*FutureAccount, []byte, error) {
 
 func (ok *OKExFuture) normalizePrice(price float64, pair CurrencyPair) string {
 	for _, info := range ok.allContractInfo.contractInfos {
-		if info.UnderlyingIndex == pair.CurrencyA.Symbol && info.QuoteCurrency == pair.CurrencyB.Symbol {
+		if info.UnderlyingIndex == pair.CurrencyTarget.Symbol && info.QuoteCurrency == pair.CurrencyBasis.Symbol {
 			var bit = 0
 			for info.TickSize < 1 {
 				bit++
@@ -506,7 +506,7 @@ func (ok *OKExFuture) GetFee() (float64, error) { panic("") }
 
 func (ok *OKExFuture) GetContractValue(currencyPair CurrencyPair) (float64, error) {
 	for _, info := range ok.allContractInfo.contractInfos {
-		if info.UnderlyingIndex == currencyPair.CurrencyA.Symbol && info.QuoteCurrency == currencyPair.CurrencyB.Symbol {
+		if info.UnderlyingIndex == currencyPair.CurrencyTarget.Symbol && info.QuoteCurrency == currencyPair.CurrencyBasis.Symbol {
 			return ToFloat64(info.ContractVal), nil
 		}
 	}

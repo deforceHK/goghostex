@@ -54,13 +54,13 @@ type Kline struct {
 }
 
 type Ticker struct {
-	Pair      CurrencyPair `json:"omitempty"`
-	Last      float64      `json:"last,string"`
-	Buy       float64      `json:"buy,string"`
-	Sell      float64      `json:"sell,string"`
-	High      float64      `json:"high,string"`
-	Low       float64      `json:"low,string"`
-	Vol       float64      `json:"vol,string"`
+	Pair      CurrencyPair `json:"-"`
+	Last      float64      `json:"last"`
+	Buy       float64      `json:"buy"`
+	Sell      float64      `json:"sell"`
+	High      float64      `json:"high"`
+	Low       float64      `json:"low"`
+	Vol       float64      `json:"vol"`
 	Timestamp uint64       `json:"timestamp"` // unit:ms
 	Date      string       `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
@@ -122,9 +122,11 @@ type Order struct {
 	OrderType  int    //0:taker,1:maker,2:fok,3:ioc,4:rod
 }
 
-/*
-	models about API config
-*/
+/**
+ *
+ * models about API config
+ *
+ **/
 type APIConfig struct {
 	HttpClient    *http.Client
 	Endpoint      string

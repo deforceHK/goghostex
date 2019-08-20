@@ -344,7 +344,9 @@ func (ok *OKExSpot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 		Sell:      response.BestAsk,
 		Buy:       response.BestBid,
 		Vol:       response.BaseVolume24h,
-		Timestamp: uint64(time.Duration(date.UnixNano() / int64(time.Millisecond)))}, resp, nil
+		Timestamp: uint64(time.Duration(date.UnixNano() / int64(time.Millisecond))),
+		Date:      date.In(ok.config.Location).Format(GO_BIRTHDAY),
+	}, resp, nil
 }
 
 func (ok *OKExSpot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
