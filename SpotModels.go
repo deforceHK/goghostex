@@ -95,11 +95,12 @@ func (dr DepthRecords) Less(i, j int) bool {
 }
 
 type Depth struct {
-	ContractType string //for future
-	Pair         CurrencyPair
-	UTime        time.Time
-	AskList      DepthRecords // Descending order
-	BidList      DepthRecords // Descending order
+	//ContractType string //for future
+	Pair      CurrencyPair
+	Timestamp uint64
+	Date      string
+	AskList   DepthRecords // Descending order
+	BidList   DepthRecords // Descending order
 }
 
 /*
