@@ -2,9 +2,12 @@ package binance
 
 import (
 	"fmt"
-	. "github.com/strengthening/goghostex"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
+
+	. "github.com/strengthening/goghostex"
 )
 
 type Spot struct {
@@ -129,8 +132,52 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 	return depth, resp, err
 }
 
-func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
-	panic("implement me")
+func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+
+	currency := this.adaptCurrencyPair(pair)
+	params := url.Values{}
+	params.Set("symbol", strings.ToUpper(currency.ToSymbol("")))
+	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
+	params.Set("startTime", strconv.Itoa(since/1000000))
+	params.Set("endTime", strconv.Itoa(int(time.Now().UnixNano()/1000000)))
+	params.Set("limit", fmt.Sprintf("%d", size))
+
+	uri := API_V1 + KLINE_URI + "?" + params.Encode()
+	klines := make([][]interface{}, 0)
+
+	resp, err := this.DoRequest("GET", uri, "", &klines)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var klineRecords []Kline
+
+	for _, record := range klines {
+		r := Kline{Pair: currency}
+		for i, e := range record {
+			switch i {
+			case 0:
+				r.Timestamp = int64(e.(float64))
+				r.Date = time.Unix(
+					r.Timestamp/1000,
+					0,
+				).In(this.config.Location).Format(GO_BIRTHDAY)
+			case 1:
+				r.Open = ToFloat64(e)
+			case 2:
+				r.High = ToFloat64(e)
+			case 3:
+				r.Low = ToFloat64(e)
+			case 4:
+				r.Close = ToFloat64(e)
+			case 5:
+				r.Vol = ToFloat64(e)
+			}
+		}
+		klineRecords = append(klineRecords, r)
+	}
+
+	return klineRecords, resp, nil
 }
 
 func (this *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
