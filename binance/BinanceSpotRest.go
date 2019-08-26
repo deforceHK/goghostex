@@ -145,7 +145,7 @@ func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
 		order.Status = ORDER_FINISH
 	} else {
 		now := time.Now()
-		order.OrderTimestamp = uint64(now.UnixNano())
+		order.OrderTimestamp = uint64(now.UnixNano() / 1000000)
 		order.OrderDate = now.Format(GO_BIRTHDAY)
 		order.Status = ORDER_UNFINISH
 	}
@@ -406,7 +406,7 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 		order.Status = ORDER_FINISH
 	} else {
 		now := time.Now()
-		order.OrderTimestamp = uint64(now.UnixNano() / 1000)
+		order.OrderTimestamp = uint64(now.UnixNano() / 1000000)
 		order.OrderDate = now.Format(GO_BIRTHDAY)
 		order.Status = ORDER_UNFINISH
 	}
