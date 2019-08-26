@@ -11,10 +11,8 @@ import (
 
 const (
 	ENDPOINT = "https://api.binance.com"
-
-	API_BASE_URL = "https://api.binance.com/"
-	API_V1       = "/api/v1/"
-	API_V3       = "/api/v3/"
+	API_V1   = "/api/v1/"
+	API_V3   = "/api/v3/"
 
 	TICKER_URI             = "ticker/24hr?symbol=%s"
 	TICKERS_URI            = "ticker/allBookTickers"

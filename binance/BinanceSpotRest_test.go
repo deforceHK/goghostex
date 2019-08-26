@@ -11,6 +11,11 @@ import (
 	. "github.com/strengthening/goghostex"
 )
 
+const (
+	API_KEY       = ""
+	API_SECRETKEY = ""
+)
+
 func TestSpot_GetTicker(t *testing.T) {
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
@@ -23,8 +28,8 @@ func TestSpot_GetTicker(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
@@ -56,8 +61,8 @@ func TestSpot_GetDepth(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
@@ -87,8 +92,8 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
@@ -125,8 +130,8 @@ func TestSpot_GetAccount(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
@@ -152,8 +157,8 @@ func TestSpot_LimitSell(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
