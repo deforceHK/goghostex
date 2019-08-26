@@ -111,3 +111,79 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 		fmt.Println(string(resp))
 	}
 }
+
+func TestSpot_GetAccount(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return &url.URL{
+						Scheme: "socks5",
+						Host:   "127.0.0.1:1090"}, nil
+				},
+			},
+		},
+		ApiKey:        "",
+		ApiSecretKey:  "",
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	b := New(config)
+	if account, _, err := b.Spot.GetAccount(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		fmt.Println(*account)
+	}
+}
+
+func TestSpot_LimitSell(t *testing.T) {
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return &url.URL{
+						Scheme: "socks5",
+						Host:   "127.0.0.1:1090"}, nil
+				},
+			},
+		},
+		ApiKey:        "",
+		ApiSecretKey:  "",
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	b := New(config)
+	order := &Order{
+		Currency: CurrencyPair{BNB, BTC},
+		Price:    0.0030061,
+		Amount:   1,
+		Side:     SELL,
+	}
+
+	if _, err := b.Spot.LimitSell(order); err != nil {
+		t.Error(err)
+		return
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, err := b.Spot.GetOneOrder(order); err != nil {
+			t.Error(err)
+			return
+		}
+
+		body, _ := json.Marshal(*order)
+		fmt.Println(string(body))
+	}
+
+	if _, err := b.Spot.CancelOrder(order); err != nil {
+		t.Error(err)
+		return
+	}
+
+}

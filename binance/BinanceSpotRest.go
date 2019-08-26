@@ -1,6 +1,7 @@
 package binance
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -14,28 +15,142 @@ type Spot struct {
 	*Binance
 }
 
-func (this *Spot) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
+func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
+	if order.Side != BUY {
+		return nil, errors.New("the order side is not BUY")
+	}
+	return this.placeOrder(order)
 }
 
-func (this *Spot) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
+func (this *Spot) LimitSell(order *Order) ([]byte, error) {
+	if order.Side != SELL {
+		return nil, errors.New("the order side is not SELL")
+	}
+
+	return this.placeOrder(order)
+}
+func (this *Spot) MarketBuy(order *Order) ([]byte, error) {
+	if order.Side != BUY_MARKET {
+		return nil, errors.New("the order side is not BUY_MARKET")
+	}
+	return this.placeOrder(order)
 }
 
-func (this *Spot) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
+func (this *Spot) MarketSell(order *Order) ([]byte, error) {
+	if order.Side != SELL_MARKET {
+		return nil, errors.New("the order side is not SELL_MARKET")
+	}
+	return this.placeOrder(order)
 }
 
-func (this *Spot) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
+func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
+	pair := this.adaptCurrencyPair(order.Currency)
+	uri := API_V3 + ORDER_URI
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol(""))
+	params.Set("orderId", order.OrderId)
+
+	if err := this.buildParamsSigned(&params); err != nil {
+		return nil, err
+	}
+
+	response := struct {
+		Symbol              string  `json:"symbol"`
+		OrderId             int64   `json:"orderId,sting"`
+		ClientOrderId       string  `json:"clientOrderId,sting"`
+		TransactTime        uint64  `json:"transactTime,sting"`
+		Price               float64 `json:"price,string"`
+		OrigQty             float64 `json:"origQty,string"`
+		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
+		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
+		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
+	}{}
+
+	resp, err := this.DoRequest(
+		"DELETE",
+		uri,
+		params.Encode(),
+		&response,
+	)
+
+	if response.Status == "CANCELED" {
+		order.Status = ORDER_CANCEL
+		order.OrderId = fmt.Sprintf("%d", response.OrderId)
+		order.Cid = response.ClientOrderId
+		order.AvgPrice = response.CummulativeQuoteQty
+		order.DealAmount = response.ExecutedQty
+		transactTime := time.Unix(
+			int64(response.TransactTime)/1000,
+			int64(response.TransactTime)%1000,
+		)
+		order.OrderTimestamp = response.TransactTime
+		order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
-func (this *Spot) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
-	panic("implement me")
-}
+func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
+	pair := this.adaptCurrencyPair(order.Currency)
 
-func (this *Spot) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol(""))
+	if order.OrderId == "" {
+		return nil, errors.New("You must get the order_id. ")
+	}
+	params.Set("orderId", order.OrderId)
+
+	if err := this.buildParamsSigned(&params); err != nil {
+		return nil, err
+	}
+
+	uri := API_V3 + ORDER_URI + params.Encode()
+	response := struct {
+		Symbol              string  `json:"symbol"`
+		OrderId             int64   `json:"orderId,sting"`
+		ClientOrderId       string  `json:"clientOrderId,sting"`
+		TransactTime        uint64  `json:"transactTime,sting"`
+		Price               float64 `json:"price,string"`
+		OrigQty             float64 `json:"origQty,string"`
+		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
+		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
+		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
+	}{}
+
+	resp, err := this.DoRequest("GET", uri, "", &response)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.OrderId <= 0 {
+		return nil, errors.New(string(resp))
+	}
+
+	order.Cid = response.ClientOrderId
+	order.AvgPrice = response.CummulativeQuoteQty
+	order.DealAmount = response.ExecutedQty
+	transactTime := time.Unix(
+		int64(response.TransactTime)/1000,
+		int64(response.TransactTime)%1000,
+	)
+	fmt.Println(response.TransactTime)
+	order.OrderTimestamp = response.TransactTime
+	order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
+
+	if response.Status == "FILLED" {
+		order.Status = ORDER_FINISH
+	} else {
+		now := time.Now()
+		order.OrderTimestamp = uint64(now.UnixNano())
+		order.OrderDate = now.Format(GO_BIRTHDAY)
+		order.Status = ORDER_UNFINISH
+	}
+
+	return resp, nil
 }
 
 func (this *Spot) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
@@ -47,7 +162,43 @@ func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize 
 }
 
 func (this *Spot) GetAccount() (*Account, []byte, error) {
-	panic("implement me")
+
+	params := url.Values{}
+	if err := this.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	uri := API_V3 + ACCOUNT_URI + params.Encode()
+	response := struct {
+		Balances []*struct {
+			Asset  string  `json:"asset"`
+			Free   float64 `json:"free,string"`
+			Locked float64 `json:"locked,string"`
+		}
+	}{}
+
+	if resp, err := this.DoRequest("GET", uri, "", &response); err != nil {
+		return nil, nil, err
+	} else {
+		fmt.Println(string(resp))
+		fmt.Println(response)
+
+		account := &Account{
+			Exchange:    BINANCE,
+			SubAccounts: make(map[Currency]SubAccount, 0),
+		}
+
+		for _, itm := range response.Balances {
+			currency := NewCurrency(itm.Asset, "")
+			account.SubAccounts[currency] = SubAccount{
+				Currency:     currency,
+				ForzenAmount: itm.Locked,
+				Amount:       itm.Free,
+			}
+		}
+
+		return account, resp, nil
+	}
 }
 
 func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
@@ -144,14 +295,12 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 
 	uri := API_V1 + KLINE_URI + "?" + params.Encode()
 	klines := make([][]interface{}, 0)
-
 	resp, err := this.DoRequest("GET", uri, "", &klines)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var klineRecords []Kline
-
 	for _, record := range klines {
 		r := Kline{Pair: currency}
 		for i, e := range record {
@@ -184,6 +333,82 @@ func (this *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, er
 	panic("implement me")
 }
 
-//func (this *Spot) GetExchangeName() string {
-//	return BINANCE
-//}
+func (this *Spot) placeOrder(order *Order) ([]byte, error) {
+	pair := this.adaptCurrencyPair(order.Currency)
+	uri := API_V3 + ORDER_URI
+	orderSide := ""
+	orderType := ""
+	switch order.Side {
+	case BUY:
+		orderSide = "BUY"
+		orderType = "LIMIT"
+	case SELL:
+		orderSide = "SELL"
+		orderType = "LIMIT"
+	case BUY_MARKET:
+		orderSide = "BUY"
+		orderType = "MARKET"
+	case SELL_MARKET:
+		orderSide = "SELL"
+		orderType = "MARKET"
+	default:
+		return nil, errors.New("Can not deal the order side. ")
+	}
+
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol(""))
+	params.Set("side", orderSide)
+	params.Set("type", orderType)
+	params.Set("quantity", fmt.Sprintf("%f", order.Amount))
+	params.Set("timeInForce", "GTC")
+
+	switch orderType {
+	case "LIMIT":
+		params.Set("price", fmt.Sprintf("%f", order.Price))
+	}
+
+	if err := this.buildParamsSigned(&params); err != nil {
+		return nil, err
+	}
+
+	response := struct {
+		Symbol              string  `json:"symbol"`
+		OrderId             int64   `json:"orderId,sting"`
+		ClientOrderId       string  `json:"clientOrderId,sting"`
+		TransactTime        uint64  `json:"transactTime,sting"`
+		Price               float64 `json:"price,string"`
+		OrigQty             float64 `json:"origQty,string"`
+		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
+		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
+		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
+	}{}
+	resp, err := this.DoRequest("POST", uri, params.Encode(), &response)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(string(resp))
+	if response.OrderId <= 0 {
+		return nil, errors.New(string(resp))
+	}
+
+	order.OrderId = fmt.Sprintf("%d", response.OrderId)
+	order.Cid = response.ClientOrderId
+	order.AvgPrice = response.CummulativeQuoteQty
+	order.DealAmount = response.ExecutedQty
+
+	if response.Status == "FILLED" {
+		transactTime := time.Unix(
+			int64(response.TransactTime)/1000,
+			int64(response.TransactTime)%1000,
+		)
+		order.OrderTimestamp = response.TransactTime
+		order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
+		order.Status = ORDER_FINISH
+	} else {
+		now := time.Now()
+		order.OrderTimestamp = uint64(now.UnixNano() / 1000)
+		order.OrderDate = now.Format(GO_BIRTHDAY)
+		order.Status = ORDER_UNFINISH
+	}
+	return resp, nil
+}

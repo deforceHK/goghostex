@@ -28,18 +28,18 @@ type AllFutureContractInfo struct {
 	uTime         time.Time
 }
 
-type OKExFuture struct {
+type Future struct {
 	*OKEx
 	sync.Locker
 	allContractInfo AllFutureContractInfo
 }
 
-func (ok *OKExFuture) GetExchangeName() string {
+func (ok *Future) GetExchangeName() string {
 	return OKEX_FUTURE
 }
 
 // cny -> usd rate
-func (ok *OKExFuture) GetRate() (float64, []byte, error) {
+func (ok *Future) GetRate() (float64, []byte, error) {
 	var response struct {
 		Rate         float64   `json:"rate,string"`
 		InstrumentId string    `json:"instrument_id"` //USD_CNY
@@ -53,7 +53,7 @@ func (ok *OKExFuture) GetRate() (float64, []byte, error) {
 	return response.Rate, resp, nil
 }
 
-func (ok *OKExFuture) GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, []byte, error) {
+func (ok *Future) GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/estimated_price",
 		ok.getFutureContractId(currencyPair, QUARTER_CONTRACT),
@@ -70,7 +70,7 @@ func (ok *OKExFuture) GetFutureEstimatedPrice(currencyPair CurrencyPair) (float6
 	return response.SettlementPrice, resp, nil
 }
 
-func (ok *OKExFuture) GetFutureContractInfo() ([]FutureContractInfo, []byte, error) {
+func (ok *Future) GetFutureContractInfo() ([]FutureContractInfo, []byte, error) {
 	urlPath := "/api/futures/v3/instruments"
 	var response []FutureContractInfo
 	resp, err := ok.DoRequest("GET", urlPath, "", &response)
@@ -80,7 +80,7 @@ func (ok *OKExFuture) GetFutureContractInfo() ([]FutureContractInfo, []byte, err
 	return response, resp, nil
 }
 
-func (ok *OKExFuture) getFutureContractId(pair CurrencyPair, contractAlias string) string {
+func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) string {
 	if contractAlias != QUARTER_CONTRACT &&
 		contractAlias != NEXT_WEEK_CONTRACT &&
 		contractAlias != THIS_WEEK_CONTRACT { //传Alias，需要转为具体ContractId
@@ -117,7 +117,7 @@ func (ok *OKExFuture) getFutureContractId(pair CurrencyPair, contractAlias strin
 	return contractId
 }
 
-func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error) {
+func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error) {
 	var urlPath = fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/ticker",
 		ok.getFutureContractId(currencyPair, contractType),
@@ -158,7 +158,7 @@ func (ok *OKExFuture) GetFutureTicker(currencyPair CurrencyPair, contractType st
 	return &FutureTicker{Ticker: ticker}, resp, nil
 }
 
-func (ok *OKExFuture) GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error) {
+func (ok *Future) GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/book?size=%d",
 		ok.getFutureContractId(currencyPair, contractType),
@@ -198,7 +198,7 @@ func (ok *OKExFuture) GetFutureDepth(currencyPair CurrencyPair, contractType str
 	return &dep, resp, nil
 }
 
-func (ok *OKExFuture) GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error) {
+func (ok *Future) GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error) {
 	//统一交易对，当周，次周，季度指数一样的
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/index",
@@ -221,7 +221,7 @@ type CrossedAccountInfo struct {
 	Equity     float64 `json:"equity,string"`
 }
 
-func (ok *OKExFuture) GetFutureUserinfo() (*FutureAccount, []byte, error) {
+func (ok *Future) GetFutureUserinfo() (*FutureAccount, []byte, error) {
 	urlPath := "/api/futures/v3/accounts"
 	var response struct {
 		Info map[string]map[string]interface{}
@@ -252,7 +252,7 @@ func (ok *OKExFuture) GetFutureUserinfo() (*FutureAccount, []byte, error) {
 	return acc, resp, nil
 }
 
-func (ok *OKExFuture) normalizePrice(price float64, pair CurrencyPair) string {
+func (ok *Future) normalizePrice(price float64, pair CurrencyPair) string {
 	for _, info := range ok.allContractInfo.contractInfos {
 		if info.UnderlyingIndex == pair.CurrencyTarget.Symbol && info.QuoteCurrency == pair.CurrencyBasis.Symbol {
 			var bit = 0
@@ -267,7 +267,7 @@ func (ok *OKExFuture) normalizePrice(price float64, pair CurrencyPair) string {
 }
 
 //matchPrice:是否以对手价下单(0:不是 1:是)，默认为0;当取值为1时,price字段无效，当以对手价下单，order_type只能选择0:普通委托
-func (ok *OKExFuture) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []byte, error) {
+func (ok *Future) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []byte, error) {
 	urlPath := "/api/futures/v3/order"
 	var param struct {
 		ClientOid    string `json:"client_oid"`
@@ -322,7 +322,7 @@ func (ok *OKExFuture) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, 
 	return response.Result, resp, nil
 }
 
-func (ok *OKExFuture) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
+func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
 	ord.ContractName = response.InstrumentId
 	ord.OrderId = response.OrderId
 	ord.ClientOid = response.ClientOid
@@ -336,7 +336,7 @@ func (ok *OKExFuture) adaptOrder(response futureOrderResponse, ord *FutureOrder)
 	return
 }
 
-func (ok *OKExFuture) GetFutureOrder(ord *FutureOrder) ([]byte, error) {
+func (ok *Future) GetFutureOrder(ord *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
 		ok.getFutureContractId(ord.Currency, ord.ContractName),
@@ -352,7 +352,7 @@ func (ok *OKExFuture) GetFutureOrder(ord *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *OKExFuture) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
+func (ok *Future) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
 		ok.getFutureContractId(ord.Currency, ord.ContractName),
@@ -371,7 +371,7 @@ func (ok *OKExFuture) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) 
 	return response.Result, resp, nil
 }
 
-func (ok *OKExFuture) GetFuturePosition(
+func (ok *Future) GetFuturePosition(
 	currencyPair CurrencyPair,
 	contractType string,
 ) ([]FuturePosition, []byte, error) {
@@ -446,7 +446,7 @@ func (ok *OKExFuture) GetFuturePosition(
 	return postions, resp, nil
 }
 
-func (ok *OKExFuture) GetFutureOrders(
+func (ok *Future) GetFutureOrders(
 	orderIds []string,
 	currencyPair CurrencyPair,
 	contractType string,
@@ -472,7 +472,7 @@ type futureOrderResponse struct {
 	Timestamp    time.Time `json:"timestamp,string"`
 }
 
-func (ok *OKExFuture) GetUnfinishFutureOrders(
+func (ok *Future) GetUnfinishFutureOrders(
 	currencyPair CurrencyPair,
 	contractType string,
 ) ([]FutureOrder, []byte, error) {
@@ -502,9 +502,9 @@ func (ok *OKExFuture) GetUnfinishFutureOrders(
 	return ords, resp, nil
 }
 
-func (ok *OKExFuture) GetFee() (float64, error) { panic("") }
+func (ok *Future) GetFee() (float64, error) { panic("") }
 
-func (ok *OKExFuture) GetContractValue(currencyPair CurrencyPair) (float64, error) {
+func (ok *Future) GetContractValue(currencyPair CurrencyPair) (float64, error) {
 	for _, info := range ok.allContractInfo.contractInfos {
 		if info.UnderlyingIndex == currencyPair.CurrencyTarget.Symbol && info.QuoteCurrency == currencyPair.CurrencyBasis.Symbol {
 			return ToFloat64(info.ContractVal), nil
@@ -513,14 +513,14 @@ func (ok *OKExFuture) GetContractValue(currencyPair CurrencyPair) (float64, erro
 	return 0, nil
 }
 
-func (ok *OKExFuture) GetDeliveryTime() (int, int, int, int) {
+func (ok *Future) GetDeliveryTime() (int, int, int, int) {
 	return 4, 16, 0, 0 //星期五，下午4点交割
 }
 
 /**
   since : 单位秒,开始时间
 */
-func (ok *OKExFuture) GetKlineRecords(
+func (ok *Future) GetKlineRecords(
 	contractType string,
 	currency CurrencyPair,
 	period,
@@ -596,7 +596,7 @@ func (ok *OKExFuture) GetKlineRecords(
 	return klines, resp, nil
 }
 
-func (ok *OKExFuture) GetTrades(contract_type string, currencyPair CurrencyPair, since int64) ([]Trade, error) {
+func (ok *Future) GetTrades(contract_type string, currencyPair CurrencyPair, since int64) ([]Trade, error) {
 	panic("")
 }
 
@@ -606,7 +606,7 @@ func (ok *OKExFuture) GetTrades(contract_type string, currencyPair CurrencyPair,
  contract:合约ID
  oType：平仓方向：CLOSE_SELL平空，CLOSE_BUY平多
 */
-func (ok *OKExFuture) MarketCloseAllPosition(currency CurrencyPair, contract string, oType int) (bool, []byte, error) {
+func (ok *Future) MarketCloseAllPosition(currency CurrencyPair, contract string, oType int) (bool, []byte, error) {
 	urlPath := "/api/futures/v3/close_position"
 	var response struct {
 		InstrumentId string `json:"instrument_id"`
