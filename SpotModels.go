@@ -108,19 +108,20 @@ type Depth struct {
 */
 
 type Order struct {
-	Price      float64
-	Amount     float64
-	AvgPrice   float64
-	DealAmount float64
-	Fee        float64
-	Cid        string //define by yourself
-	OrderId    string
-	OrderTime  int
-	Status     TradeStatus
-	Currency   CurrencyPair
-	Side       TradeSide
-	Type       string // taker maker
-	OrderType  int    //0:taker,1:maker,2:fok,3:ioc,4:rod
+	Price          float64
+	Amount         float64
+	AvgPrice       float64
+	DealAmount     float64
+	Fee            float64
+	Cid            string //define by yourself
+	OrderId        string
+	OrderTimestamp uint64
+	OrderDate      string
+	Status         TradeStatus
+	Currency       CurrencyPair
+	Side           TradeSide
+	Type           string // taker maker
+	OrderType      int    //0:taker,1:maker,2:fok,3:ioc,4:rod
 }
 
 /**

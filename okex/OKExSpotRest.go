@@ -9,7 +9,7 @@ import (
 	. "github.com/strengthening/goghostex"
 )
 
-type OKExSpot struct {
+type Spot struct {
 	*OKEx
 }
 
@@ -24,7 +24,7 @@ type OKExSpot struct {
 //    },
 //    ...]
 
-func (ok *OKExSpot) GetAccount() (*Account, []byte, error) {
+func (this *Spot) GetAccount() (*Account, []byte, error) {
 	urlPath := "/api/spot/v3/accounts"
 	var response []struct {
 		Frozen    float64 `json:"frozen,string"`
@@ -35,7 +35,7 @@ func (ok *OKExSpot) GetAccount() (*Account, []byte, error) {
 		Holds     float64 `json:"holds,string"`
 	}
 
-	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,7 +78,7 @@ type PlaceOrderResponse struct {
 /**
 Must Set Client Oid
 */
-func (ok *OKExSpot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []byte, error) {
+func (this *Spot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []byte, error) {
 	var param []PlaceOrderParam
 	var response map[string][]PlaceOrderResponse
 
@@ -92,8 +92,8 @@ func (ok *OKExSpot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []by
 			Type:         "limit",
 			OrderType:    ord.OrderType})
 	}
-	reqBody, _, _ := ok.BuildRequestBody(param)
-	resp, err := ok.DoRequest("POST", "/api/spot/v3/batch_orders", reqBody, &response)
+	reqBody, _, _ := this.BuildRequestBody(param)
+	resp, err := this.DoRequest("POST", "/api/spot/v3/batch_orders", reqBody, &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -107,7 +107,7 @@ func (ok *OKExSpot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []by
 	return ret, resp, nil
 }
 
-func (ok *OKExSpot) PlaceOrder(ty string, ord *Order) (*Order, []byte, error) {
+func (ok *Spot) PlaceOrder(ty string, ord *Order) (*Order, []byte, error) {
 	urlPath := "/api/spot/v3/orders"
 	param := PlaceOrderParam{
 		ClientOid:    UUID(),
@@ -161,8 +161,8 @@ func (ok *OKExSpot) PlaceOrder(ty string, ord *Order) (*Order, []byte, error) {
 	return ord, resp, nil
 }
 
-func (ok *OKExSpot) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.PlaceOrder("limit", &Order{
+func (this *Spot) LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+	return this.PlaceOrder("limit", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
 		Currency: currency,
@@ -170,8 +170,8 @@ func (ok *OKExSpot) LimitBuy(amount, price string, currency CurrencyPair) (*Orde
 	})
 }
 
-func (ok *OKExSpot) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.PlaceOrder("limit", &Order{
+func (this *Spot) LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+	return this.PlaceOrder("limit", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
 		Currency: currency,
@@ -179,8 +179,8 @@ func (ok *OKExSpot) LimitSell(amount, price string, currency CurrencyPair) (*Ord
 	})
 }
 
-func (ok *OKExSpot) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.PlaceOrder("market", &Order{
+func (this *Spot) MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+	return this.PlaceOrder("market", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
 		Currency: currency,
@@ -188,8 +188,8 @@ func (ok *OKExSpot) MarketBuy(amount, price string, currency CurrencyPair) (*Ord
 	})
 }
 
-func (ok *OKExSpot) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
-	return ok.PlaceOrder("market", &Order{
+func (this *Spot) MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error) {
+	return this.PlaceOrder("market", &Order{
 		Price:    ToFloat64(price),
 		Amount:   ToFloat64(amount),
 		Currency: currency,
@@ -198,19 +198,19 @@ func (ok *OKExSpot) MarketSell(amount, price string, currency CurrencyPair) (*Or
 }
 
 //orderId can set client oid or orderId
-func (ok *OKExSpot) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
+func (this *Spot) CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error) {
 	urlPath := "/api/spot/v3/cancel_orders/" + orderId
 	param := struct {
 		InstrumentId string `json:"instrument_id"`
 	}{currency.AdaptUsdToUsdt().ToLower().ToSymbol("-")}
-	reqBody, _, _ := ok.BuildRequestBody(param)
+	reqBody, _, _ := this.BuildRequestBody(param)
 	var response struct {
 		ClientOid string `json:"client_oid"`
 		OrderId   string `json:"order_id"`
 		Result    bool   `json:"result"`
 	}
 
-	resp, err := ok.OKEx.DoRequest("POST", urlPath, reqBody, &response)
+	resp, err := this.OKEx.DoRequest("POST", urlPath, reqBody, &response)
 	if err != nil {
 		return false, nil, err
 	}
@@ -237,7 +237,7 @@ type OrderResponse struct {
 	Timestamp      string  `json:"timestamp"`
 }
 
-func (ok *OKExSpot) adaptOrder(response OrderResponse) *Order {
+func (this *Spot) adaptOrder(response OrderResponse) *Order {
 	ordInfo := &Order{
 		Cid:        response.ClientOid,
 		OrderId:    response.OrderId,
@@ -245,7 +245,7 @@ func (ok *OKExSpot) adaptOrder(response OrderResponse) *Order {
 		Amount:     response.Size,
 		AvgPrice:   ToFloat64(response.PriceAvg),
 		DealAmount: ToFloat64(response.FilledSize),
-		Status:     ok.adaptOrderState(response.State)}
+		Status:     this.adaptOrderState(response.State)}
 
 	switch response.Side {
 	case "buy":
@@ -275,35 +275,35 @@ func (ok *OKExSpot) adaptOrder(response OrderResponse) *Order {
 }
 
 //orderId can set client oid or orderId
-func (ok *OKExSpot) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
+func (this *Spot) GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error) {
 	urlPath := "/api/spot/v3/orders/" + orderId + "?instrument_id=" + currency.AdaptUsdToUsdt().ToSymbol("-")
 	//param := struct {
 	//	InstrumentId string `json:"instrument_id"`
 	//}{currency.AdaptUsdToUsdt().ToLower().ToSymbol("-")}
 	//reqBody, _, _ := ok.BuildRequestBody(param)
 	var response OrderResponse
-	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	ordInfo := ok.adaptOrder(response)
+	ordInfo := this.adaptOrder(response)
 	ordInfo.Currency = currency
 
 	return ordInfo, resp, nil
 }
 
-func (ok *OKExSpot) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+func (this *Spot) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
 	urlPath := fmt.Sprintf("/api/spot/v3/orders_pending?instrument_id=%s", currency.AdaptUsdToUsdt().ToSymbol("-"))
 	var response []OrderResponse
-	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var ords []Order
 	for _, itm := range response {
-		ord := ok.adaptOrder(itm)
+		ord := this.adaptOrder(itm)
 		ord.Currency = currency
 		ords = append(ords, *ord)
 	}
@@ -311,15 +311,11 @@ func (ok *OKExSpot) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, e
 	return ords, resp, nil
 }
 
-func (ok *OKExSpot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
 	panic("unsupported")
 }
 
-func (ok *OKExSpot) GetExchangeName() string {
-	return OKEX
-}
-
-func (ok *OKExSpot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
+func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	urlPath := fmt.Sprintf("/api/spot/v3/instruments/%s/ticker", currency.AdaptUsdToUsdt().ToSymbol("-"))
 	var response struct {
 		Last          float64 `json:"last,string"`
@@ -330,7 +326,7 @@ func (ok *OKExSpot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 		BaseVolume24h float64 `json:"base_volume_24_h,string"`
 		Timestamp     string  `json:"timestamp"`
 	}
-	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -345,11 +341,11 @@ func (ok *OKExSpot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 		Buy:       response.BestBid,
 		Vol:       response.BaseVolume24h,
 		Timestamp: uint64(time.Duration(date.UnixNano() / int64(time.Millisecond))),
-		Date:      date.In(ok.config.Location).Format(GO_BIRTHDAY),
+		Date:      date.In(this.config.Location).Format(GO_BIRTHDAY),
 	}, resp, nil
 }
 
-func (ok *OKExSpot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
 	urlPath := fmt.Sprintf("/api/spot/v3/instruments/%s/book?size=%d", currency.AdaptUsdToUsdt().ToSymbol("-"), size)
 
 	var response struct {
@@ -358,14 +354,16 @@ func (ok *OKExSpot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, e
 		Timestamp string          `json:"timestamp"`
 	}
 
-	resp, err := ok.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	dep := new(Depth)
 	dep.Pair = currency
-	dep.UTime, _ = time.Parse(time.RFC3339, response.Timestamp)
+	uTime, _ := time.Parse(time.RFC3339, response.Timestamp)
+	dep.Timestamp = uint64(uTime.UnixNano())
+	dep.Date = uTime.In(this.config.Location).Format(GO_BIRTHDAY)
 
 	for _, itm := range response.Asks {
 		dep.AskList = append(dep.AskList, DepthRecord{
@@ -386,7 +384,7 @@ func (ok *OKExSpot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, e
 	return dep, resp, nil
 }
 
-func (ok *OKExSpot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
 	urlPath := "/api/spot/v3/instruments/%s/candles?granularity=%d"
 
 	if since > 0 {
@@ -426,7 +424,7 @@ func (ok *OKExSpot) GetKlineRecords(currency CurrencyPair, period, size, since i
 	}
 
 	var response [][]interface{}
-	resp, err := ok.DoRequest("GET", fmt.Sprintf(urlPath, currency.AdaptUsdToUsdt().ToSymbol("-"), granularity), "", &response)
+	resp, err := this.DoRequest("GET", fmt.Sprintf(urlPath, currency.AdaptUsdToUsdt().ToSymbol("-"), granularity), "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -448,6 +446,6 @@ func (ok *OKExSpot) GetKlineRecords(currency CurrencyPair, period, size, since i
 }
 
 //非个人，整个交易所的交易记录
-func (ok *OKExSpot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
+func (ok *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
 	panic("unsupported")
 }

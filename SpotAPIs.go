@@ -2,12 +2,14 @@ package goghostex
 
 // api interface
 type API interface {
-	LimitBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error)
-	LimitSell(amount, price string, currency CurrencyPair) (*Order, []byte, error)
-	MarketBuy(amount, price string, currency CurrencyPair) (*Order, []byte, error)
-	MarketSell(amount, price string, currency CurrencyPair) (*Order, []byte, error)
-	CancelOrder(orderId string, currency CurrencyPair) (bool, []byte, error)
-	GetOneOrder(orderId string, currency CurrencyPair) (*Order, []byte, error)
+	//just the orderid, get order info by func GetOneOrder
+
+	LimitBuy(*Order) ([]byte, error)
+	LimitSell(*Order) ([]byte, error)
+	MarketBuy(*Order) ([]byte, error)
+	MarketSell(*Order) ([]byte, error)
+	CancelOrder(*Order) ([]byte, error)
+	GetOneOrder(*Order) ([]byte, error)
 	GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error)
 	GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error)
 	GetAccount() (*Account, []byte, error)
