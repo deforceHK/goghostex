@@ -171,24 +171,43 @@ func TestSpot_LimitSell(t *testing.T) {
 		Side:     SELL,
 	}
 
-	if _, err := b.Spot.LimitSell(order); err != nil {
+	if resp, err := b.Spot.LimitSell(order); err != nil {
 		t.Error(err)
 		return
+	} else {
+		fmt.Println("LIMIT SELL ~~~~~~~~~~~~~~~~~~~~~~")
+		fmt.Println(string(resp))
 	}
 
 	for i := 0; i < 3; i++ {
-		if _, err := b.Spot.GetOneOrder(order); err != nil {
+		if resp, err := b.Spot.GetOneOrder(order); err != nil {
 			t.Error(err)
 			return
+		} else {
+			fmt.Println("GET ORDER ~~~~~~~~~~~~~~~~~~~~~~")
+			fmt.Println(string(resp))
 		}
 
 		body, _ := json.Marshal(*order)
 		fmt.Println(string(body))
 	}
 
-	if _, err := b.Spot.CancelOrder(order); err != nil {
+	if _, resp, err := b.Spot.GetUnFinishOrders(
+		CurrencyPair{BNB, BTC},
+	); err != nil {
 		t.Error(err)
 		return
+	} else {
+		fmt.Println("GET UNFINISHED ORDER ~~~~~~~~~~~~~~~~~~~~~~")
+		fmt.Println(string(resp))
+	}
+
+	if resp, err := b.Spot.CancelOrder(order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		fmt.Println("CANCEL ORDER ~~~~~~~~~~~~~~~~~~~~~~")
+		fmt.Println(string(resp))
 	}
 
 }

@@ -10,7 +10,7 @@ type API interface {
 	MarketSell(*Order) ([]byte, error)
 	CancelOrder(*Order) ([]byte, error)
 	GetOneOrder(*Order) ([]byte, error)
-	GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error)
+	GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error)
 	GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error)
 	GetAccount() (*Account, []byte, error)
 

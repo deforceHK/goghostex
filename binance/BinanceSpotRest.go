@@ -15,6 +15,59 @@ type Spot struct {
 	*Binance
 }
 
+// the common resp struct of order/info/cancel
+type remoteOrder struct {
+	Symbol              string  `json:"symbol"`
+	OrderId             int64   `json:"orderId"`
+	ClientOrderId       string  `json:"clientOrderId"`
+	TransactTime        uint64  `json:"transactTime"` // exist when order
+	Time                uint64  `json:"time"`         // exist when get order info
+	Price               float64 `json:"price,string"`
+	OrigQty             float64 `json:"origQty,string"`
+	ExecutedQty         float64 `json:"executedQty,string"`         // order deal amount
+	CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` // order avg price
+
+	// OrderStatus: NEW PARTIALLY_FILLED FILLED CANCELED REJECTED EXPIRED
+	Status string `json:"status"`
+	// OrderType: LIMIT MARKET STOP_LOSS STOP_LOSS_LIMIT TAKE_PROFIT TAKE_PROFIT_LIMIT LIMIT_MAKER
+	Type   string `json:"type"`
+	// OrderSide: BUY SELL
+	Side   string `json:"side"`
+}
+
+func (this *remoteOrder) Merge(order *Order, location *time.Location) {
+	if this.TransactTime != 0 || this.Time != 0 {
+		ts := this.Time
+		if this.TransactTime > this.Time {
+			ts = this.TransactTime
+		}
+		transactTime := time.Unix(int64(ts)/1000, int64(ts)%1000)
+		order.OrderDate = transactTime.In(location).Format(GO_BIRTHDAY)
+		order.OrderTimestamp = this.TransactTime
+	}
+
+	status, exist := _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[this.Status]
+	if !exist {
+		status = ORDER_FAIL
+	}
+
+	if this.Type == "LIMIT" && this.Side == "SELL" {
+		order.Side = BUY
+	} else if this.Type == "LIMIT" && this.Side == "BUY" {
+		order.Side = SELL
+	} else if this.Type == "MARKET" && this.Side == "SELL" {
+		order.Side = SELL_MARKET
+	} else {
+		order.Side = BUY_MARKET
+	}
+
+	order.Status = status
+	order.OrderId = fmt.Sprintf("%d", this.OrderId)
+	order.Cid = this.ClientOrderId
+	order.AvgPrice = this.CummulativeQuoteQty
+	order.DealAmount = this.ExecutedQty
+}
+
 func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
 		return nil, errors.New("the order side is not BUY")
@@ -45,27 +98,19 @@ func (this *Spot) MarketSell(order *Order) ([]byte, error) {
 
 func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 	pair := this.adaptCurrencyPair(order.Currency)
+	if order.OrderId == "" {
+		return nil, errors.New("You must get the order_id. ")
+	}
+
 	uri := API_V3 + ORDER_URI
 	params := url.Values{}
 	params.Set("symbol", pair.ToSymbol(""))
 	params.Set("orderId", order.OrderId)
-
 	if err := this.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
-	response := struct {
-		Symbol              string  `json:"symbol"`
-		OrderId             int64   `json:"orderId,sting"`
-		ClientOrderId       string  `json:"clientOrderId,sting"`
-		TransactTime        uint64  `json:"transactTime,sting"`
-		Price               float64 `json:"price,string"`
-		OrigQty             float64 `json:"origQty,string"`
-		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
-		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
-		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
-	}{}
-
+	response := remoteOrder{}
 	resp, err := this.DoRequest(
 		"DELETE",
 		uri,
@@ -73,88 +118,68 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 		&response,
 	)
 
-	if response.Status == "CANCELED" {
-		order.Status = ORDER_CANCEL
-		order.OrderId = fmt.Sprintf("%d", response.OrderId)
-		order.Cid = response.ClientOrderId
-		order.AvgPrice = response.CummulativeQuoteQty
-		order.DealAmount = response.ExecutedQty
-		transactTime := time.Unix(
-			int64(response.TransactTime)/1000,
-			int64(response.TransactTime)%1000,
-		)
-		order.OrderTimestamp = response.TransactTime
-		order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
-	}
-
 	if err != nil {
 		return nil, err
 	}
-
+	response.Merge(order, this.config.Location)
 	return resp, nil
 }
 
 func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	pair := this.adaptCurrencyPair(order.Currency)
-
-	params := url.Values{}
-	params.Set("symbol", pair.ToSymbol(""))
 	if order.OrderId == "" {
 		return nil, errors.New("You must get the order_id. ")
 	}
-	params.Set("orderId", order.OrderId)
 
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol(""))
+	params.Set("orderId", order.OrderId)
 	if err := this.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
 	uri := API_V3 + ORDER_URI + params.Encode()
-	response := struct {
-		Symbol              string  `json:"symbol"`
-		OrderId             int64   `json:"orderId,sting"`
-		ClientOrderId       string  `json:"clientOrderId,sting"`
-		TransactTime        uint64  `json:"transactTime,sting"`
-		Price               float64 `json:"price,string"`
-		OrigQty             float64 `json:"origQty,string"`
-		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
-		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
-		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
-	}{}
-
-	resp, err := this.DoRequest("GET", uri, "", &response)
+	response := remoteOrder{}
+	resp, err := this.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, err
 	}
-
 	if response.OrderId <= 0 {
 		return nil, errors.New(string(resp))
 	}
-
-	order.Cid = response.ClientOrderId
-	order.AvgPrice = response.CummulativeQuoteQty
-	order.DealAmount = response.ExecutedQty
-	transactTime := time.Unix(
-		int64(response.TransactTime)/1000,
-		int64(response.TransactTime)%1000,
-	)
-	fmt.Println(response.TransactTime)
-	order.OrderTimestamp = response.TransactTime
-	order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
-
-	if response.Status == "FILLED" {
-		order.Status = ORDER_FINISH
-	} else {
-		now := time.Now()
-		order.OrderTimestamp = uint64(now.UnixNano() / 1000000)
-		order.OrderDate = now.Format(GO_BIRTHDAY)
-		order.Status = ORDER_UNFINISH
-	}
-
+	response.Merge(order, this.config.Location)
 	return resp, nil
 }
 
-func (this *Spot) GetUnfinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
-	panic("implement me")
+func (this *Spot) GetUnFinishOrders(pair CurrencyPair) ([]Order, []byte, error) {
+
+	pair = this.adaptCurrencyPair(pair)
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol(""))
+	if err := this.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	uri := API_V3 + UNFINISHED_ORDERS_INFO + params.Encode()
+	remoteOrders := make([]*remoteOrder, 0)
+	resp, err := this.DoRequest("GET", uri, "", &remoteOrders)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	orders := make([]Order, 0)
+	for _, remoteOrder := range remoteOrders {
+		order := Order{}
+		remoteOrder.Merge(&order, this.config.Location)
+		orders = append(orders, order)
+	}
+
+	return orders, resp, nil
 }
 
 func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
@@ -180,9 +205,6 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 	if resp, err := this.DoRequest("GET", uri, "", &response); err != nil {
 		return nil, nil, err
 	} else {
-		fmt.Println(string(resp))
-		fmt.Println(response)
-
 		account := &Account{
 			Exchange:    BINANCE,
 			SubAccounts: make(map[Currency]SubAccount, 0),
@@ -196,7 +218,6 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 				Amount:       itm.Free,
 			}
 		}
-
 		return account, resp, nil
 	}
 }
@@ -371,44 +392,20 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 		return nil, err
 	}
 
-	response := struct {
-		Symbol              string  `json:"symbol"`
-		OrderId             int64   `json:"orderId,sting"`
-		ClientOrderId       string  `json:"clientOrderId,sting"`
-		TransactTime        uint64  `json:"transactTime,sting"`
-		Price               float64 `json:"price,string"`
-		OrigQty             float64 `json:"origQty,string"`
-		Status              string  `json:"status"`                     // NEW/FILLED/CANCELED
-		ExecutedQty         float64 `json:"executedQty,string"`         // deal amount
-		CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"` //deal avg price
-	}{}
-	resp, err := this.DoRequest("POST", uri, params.Encode(), &response)
+	response := remoteOrder{}
+	resp, err := this.DoRequest(
+		"POST",
+		uri,
+		params.Encode(),
+		&response,
+	)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(resp))
+
 	if response.OrderId <= 0 {
 		return nil, errors.New(string(resp))
 	}
-
-	order.OrderId = fmt.Sprintf("%d", response.OrderId)
-	order.Cid = response.ClientOrderId
-	order.AvgPrice = response.CummulativeQuoteQty
-	order.DealAmount = response.ExecutedQty
-
-	if response.Status == "FILLED" {
-		transactTime := time.Unix(
-			int64(response.TransactTime)/1000,
-			int64(response.TransactTime)%1000,
-		)
-		order.OrderTimestamp = response.TransactTime
-		order.OrderDate = transactTime.In(this.config.Location).Format(GO_BIRTHDAY)
-		order.Status = ORDER_FINISH
-	} else {
-		now := time.Now()
-		order.OrderTimestamp = uint64(now.UnixNano() / 1000000)
-		order.OrderDate = now.Format(GO_BIRTHDAY)
-		order.Status = ORDER_UNFINISH
-	}
+	response.Merge(order, this.config.Location)
 	return resp, nil
 }
