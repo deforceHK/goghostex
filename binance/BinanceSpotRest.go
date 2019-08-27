@@ -30,9 +30,9 @@ type remoteOrder struct {
 	// OrderStatus: NEW PARTIALLY_FILLED FILLED CANCELED REJECTED EXPIRED
 	Status string `json:"status"`
 	// OrderType: LIMIT MARKET STOP_LOSS STOP_LOSS_LIMIT TAKE_PROFIT TAKE_PROFIT_LIMIT LIMIT_MAKER
-	Type   string `json:"type"`
+	Type string `json:"type"`
 	// OrderSide: BUY SELL
-	Side   string `json:"side"`
+	Side string `json:"side"`
 }
 
 func (this *remoteOrder) Merge(order *Order, location *time.Location) {
@@ -70,18 +70,18 @@ func (this *remoteOrder) Merge(order *Order, location *time.Location) {
 
 func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
-		return nil, errors.New("the order side is not BUY")
+		return nil, errors.New("The order side is not BUY or order type is not LIMIT. ")
 	}
 	return this.placeOrder(order)
 }
 
 func (this *Spot) LimitSell(order *Order) ([]byte, error) {
 	if order.Side != SELL {
-		return nil, errors.New("the order side is not SELL")
+		return nil, errors.New("The order side is not SELL or order type is not LIMIT. ")
 	}
-
 	return this.placeOrder(order)
 }
+
 func (this *Spot) MarketBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY_MARKET {
 		return nil, errors.New("the order side is not BUY_MARKET")
@@ -381,7 +381,17 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 	params.Set("side", orderSide)
 	params.Set("type", orderType)
 	params.Set("quantity", fmt.Sprintf("%f", order.Amount))
-	params.Set("timeInForce", "GTC")
+
+	switch order.OrderType {
+	case NORMAL, ONLY_MAKER:
+		params.Set("timeInForce", "GTC")
+	case FOK:
+		params.Set("timeInForce", "FOK")
+	case IOC:
+		params.Set("timeInForce", "IOC")
+	default:
+		params.Set("timeInForce", "GTC")
+	}
 
 	switch orderType {
 	case "LIMIT":

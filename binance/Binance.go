@@ -33,13 +33,6 @@ var _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER = map[string]TradeStatus{
 	"EXPIRED":          ORDER_FAIL,
 }
 
-//var _INTERNAL_ORDER_SIDE_REVERSE_CONVERTER = map[string]TradeSide{
-//	"BUY": BUY,
-//	"SELL": SELL,
-//	"BUY_MARKET": BUY_MARKET,
-//	"SELL_MARKET": SELL_MARKET,
-//}
-
 var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1MIN:   "1m",
 	KLINE_PERIOD_3MIN:   "3m",
@@ -68,8 +61,7 @@ func New(config *APIConfig) *Binance {
 
 type Binance struct {
 	config *APIConfig
-
-	Spot *Spot
+	Spot   *Spot
 }
 
 func (this *Binance) GetExchangeName() string {
@@ -77,7 +69,7 @@ func (this *Binance) GetExchangeName() string {
 }
 
 func (this *Binance) buildParamsSigned(postForm *url.Values) error {
-	tonce := strconv.FormatInt(time.Now().UnixNano(), 10)[0:13]
+	tonce := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 	postForm.Set("recvWindow", "60000")
 	postForm.Set("timestamp", tonce)
 	payload := postForm.Encode()

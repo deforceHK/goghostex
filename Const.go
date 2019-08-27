@@ -1,9 +1,5 @@
 package goghostex
 
-import (
-	"fmt"
-)
-
 const (
 	GO_BIRTHDAY = "2006-01-02 15:04:05"
 )
@@ -78,27 +74,7 @@ const (
 	KLINE_PERIOD_1YEAR
 )
 
-type OrderType int
-
-func (ot OrderType) String() string {
-	if ot > 0 && int(ot) <= len(orderTypeSymbol) {
-		return orderTypeSymbol[ot-1]
-	}
-	return fmt.Sprintf("UNKNOWN_ORDER_TYPE(%d)", ot)
-}
-
-var orderTypeSymbol = [...]string{"LIMIT", "MARKET", "FAK", "IOC", "POST_ONLY"}
-
 const (
-	ORDER_TYPE_LIMIT = 1 + iota
-	ORDER_TYPE_MARKET
-	ORDER_TYPE_FOK
-	ORDER_TYPE_FAK
-	ORDER_TYPE_POST_ONLY
-	ORDER_TYPE_IOC = ORDER_TYPE_FAK
-)
-
-var (
 	THIS_WEEK_CONTRACT = "this_week" //周合约
 	NEXT_WEEK_CONTRACT = "next_week" //次周合约
 	QUARTER_CONTRACT   = "quarter"   //季度合约
@@ -120,26 +96,17 @@ const (
 	HBDM        = "hbdm.com"
 )
 
-type OderType int
+var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}
+
+type OrderType int
 
 const (
-	ORDINARY  = 0 // normal order
-	POST_ONLY = 1 // only maker
-	FOK       = 2 // fill or kill
-	IOC       = 3 // Immediate or Cancel
+	NORMAL     OrderType = iota // normal order, need to cancel (GTC)
+	ONLY_MAKER                  // only maker
+	FOK                         // fill or kill
+	IOC                         // Immediate or Cancel
 )
 
-func (ot OderType) String() string {
-	switch ot {
-	case ORDINARY:
-		return "ORDINARY"
-	case POST_ONLY:
-		return "POST_ONLY"
-	case FOK:
-		return "FOK"
-	case IOC:
-		return "IOC"
-	default:
-		return "UNKNOWN"
-	}
+func (ot OrderType) String() string {
+	return orderTypeSymbol[ot]
 }
