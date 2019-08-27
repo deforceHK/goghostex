@@ -39,7 +39,7 @@ go install
 - Update the order feature
     - FOK(Fill Or Kill)
     - IOC(Immediate Or Cancel)
-    - GTC(good til cancelled)
+    - GTC(Good Til Cancelled)
 
 
 ## LICENSE
