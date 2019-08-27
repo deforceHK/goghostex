@@ -39,7 +39,7 @@ go install
 - Update the order feature
     - FOK(Fill Or Kill)
     - IOC(Immediate Or Cancel)
-    - ROD(Rest Of Day)
+    - GTC(good til cancelled)
 
 
 ## LICENSE
