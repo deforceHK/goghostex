@@ -43,7 +43,7 @@ func init() {
 }
 
 func TestOKExFuture_GetRate(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 
 	if result, _, err := ok.Future.GetRate(); err != nil {
 		t.Error(err)
@@ -54,7 +54,7 @@ func TestOKExFuture_GetRate(t *testing.T) {
 }
 
 func TestOKExFuture_GetFutureEstimatedPrice(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	p := CurrencyPair{BTC, USD}
 	if result, resp, err := ok.Future.GetFutureEstimatedPrice(p); err != nil {
 		t.Error(err)
@@ -66,7 +66,7 @@ func TestOKExFuture_GetFutureEstimatedPrice(t *testing.T) {
 }
 
 func TestOKExFuture_GetFutureContractInfo(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	if result, resp, err := ok.Future.GetFutureContractInfo(); err != nil {
 		t.Error(err)
 		return
@@ -77,7 +77,7 @@ func TestOKExFuture_GetFutureContractInfo(t *testing.T) {
 }
 
 func TestOKExFuture_GetFutureTicker(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 
 	p := CurrencyPair{BTC, USD}
 	if result, resp, err := ok.Future.GetFutureTicker(p, "quarter"); err != nil {
@@ -91,7 +91,7 @@ func TestOKExFuture_GetFutureTicker(t *testing.T) {
 
 func TestOKExFuture_GetFutureDepth(t *testing.T) {
 
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	if result, resp, err := ok.Future.GetFutureDepth(
 		BTC_USD,
 		"next_week",
@@ -108,7 +108,7 @@ func TestOKExFuture_GetFutureDepth(t *testing.T) {
 
 func TestOKExFuture_GetFutureIndex(t *testing.T) {
 
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	if result, resp, err := ok.Future.GetFutureIndex(
 		BTC_USD,
 	); err != nil {
@@ -121,7 +121,7 @@ func TestOKExFuture_GetFutureIndex(t *testing.T) {
 }
 
 func TestOKexFuture_GetFutureUserinfo(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	if result, resp, err := ok.Future.GetFutureUserinfo(); err != nil {
 		t.Error(err)
 		return
@@ -133,7 +133,7 @@ func TestOKexFuture_GetFutureUserinfo(t *testing.T) {
 
 func TestOKexFuture_GetUnfinishFutureOrders(t *testing.T) {
 
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	p := CurrencyPair{BTC, USD}
 	if result, resp, err := ok.Future.GetUnfinishFutureOrders(
 		p,
@@ -148,7 +148,7 @@ func TestOKexFuture_GetUnfinishFutureOrders(t *testing.T) {
 }
 
 func TestOKExFuture_PlaceFutureOrder(t *testing.T) {
-	ok := NewOKEx(&api)
+	ok := New(&api)
 
 	p := CurrencyPair{ETC, USD}
 	ticker, _, err := ok.Future.GetFutureTicker(p, "quarter")
@@ -189,7 +189,7 @@ func TestOKExFuture_PlaceFutureOrder(t *testing.T) {
 // test the maker only order
 func TestOKExFuture_PlaceFutureOrder_MakerOnly(t *testing.T) {
 
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	ticker, _, err := ok.Future.GetFutureTicker(CurrencyPair{ETC, USD}, "quarter")
 	if err != nil {
 		t.Error(err)
@@ -243,7 +243,7 @@ func TestOKExFuture_PlaceFutureOrder_MakerOnly(t *testing.T) {
 // test the fok order
 func TestOKExFuture_PlaceFutureOrder_FOK(t *testing.T) {
 
-	ok := NewOKEx(&api)
+	ok := New(&api)
 	ticker, _, err := ok.Future.GetFutureTicker(
 		CurrencyPair{ETC, USD},
 		"quarter",

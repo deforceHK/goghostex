@@ -150,7 +150,7 @@ func (this *Command) getSponAPI() (API, error) {
 	config := this.getNonAuthConfig()
 	switch this.exchange {
 	case "okex":
-		return okex.NewOKEx(config).OKExSpot, nil
+		return okex.New(config).Spot, nil
 	case "binance":
 		return binance.New(config).Spot, nil
 	}
