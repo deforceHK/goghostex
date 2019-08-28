@@ -1,6 +1,7 @@
 package goghostex
 
 import (
+	"errors"
 	"net/http"
 	"time"
 )
@@ -98,9 +99,37 @@ type Depth struct {
 	//ContractType string //for future
 	Pair      CurrencyPair
 	Timestamp uint64
+	Sequence  uint64 // The increasing sequence, cause the http return sequence is not sure.
 	Date      string
-	AskList   DepthRecords // Descending order
+	AskList   DepthRecords // Ascending order
 	BidList   DepthRecords // Descending order
+}
+// check the depth data is right
+func (depth *Depth) Check() error {
+	AskCount := len(depth.AskList)
+	BidCount := len(depth.BidList)
+
+	if BidCount < 10 || AskCount < 10 {
+		return errors.New("The ask_list or bid_list not enough! ")
+	}
+
+	for i := 1; i < AskCount; i++ {
+		pre := depth.AskList[i-1]
+		last := depth.AskList[i]
+		if pre.Price >= last.Price {
+			return errors.New("The ask_list is not ascending ordered! ")
+		}
+	}
+
+	for i := 1; i < BidCount; i++ {
+		pre := depth.BidList[i-1]
+		last := depth.BidList[i]
+		if pre.Price <= last.Price {
+			return errors.New("The bid_list is not descending ordered! ")
+		}
+	}
+
+	return nil
 }
 
 /*

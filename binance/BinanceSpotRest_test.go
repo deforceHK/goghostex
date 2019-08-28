@@ -2,7 +2,6 @@ package binance
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -14,6 +13,7 @@ import (
 const (
 	API_KEY       = ""
 	API_SECRETKEY = ""
+	PROXY_URL     = "socks5://127.0.0.1:1090"
 )
 
 /**
@@ -25,15 +25,14 @@ const (
  *
  **/
 
-func TestSpot_GetTicker(t *testing.T) {
+func TestSpot_MarketAPI(t *testing.T) {
+
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
 			Transport: &http.Transport{
 				Proxy: func(req *http.Request) (*url.URL, error) {
-					return &url.URL{
-						Scheme: "socks5",
-						Host:   "127.0.0.1:1090"}, nil
+					return url.Parse(PROXY_URL)
 				},
 			},
 		},
@@ -42,87 +41,107 @@ func TestSpot_GetTicker(t *testing.T) {
 		ApiPassphrase: "",
 		Location:      time.Now().Location(),
 	}
+	bn := New(config)
 
-	b := New(config)
-	if ticker, resp, err := b.Spot.GetTicker(CurrencyPair{
-		CurrencyTarget: Currency{"btc", ""},
-		CurrencyBasis:  Currency{"usdt", ""},
-	}); err != nil {
+	// ticker unit test
+	if ticker, resp, err := bn.Spot.GetTicker(
+		CurrencyPair{BTC, USDT},
+	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		body, _ := json.Marshal(*ticker)
-		fmt.Println(string(body))
-		fmt.Println(string(resp))
-	}
-}
+		standard, err := json.Marshal(ticker)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
-func TestSpot_GetDepth(t *testing.T) {
-
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return &url.URL{
-						Scheme: "socks5",
-						Host:   "127.0.0.1:1090"}, nil
-				},
-			},
-		},
-		ApiKey:        API_KEY,
-		ApiSecretKey:  API_SECRETKEY,
-		ApiPassphrase: "",
-		Location:      time.Now().Location(),
+		t.Log("Ticker standard struct: ")
+		t.Log(string(standard))
+		t.Log("Ticker remote api response: ")
+		t.Log(string(resp))
 	}
 
-	b := New(config)
-	if depth, _, err := b.Spot.GetDepth(
-		50,
-		CurrencyPair{BTC, USDT}); err != nil {
+	// depth unit test
+	if depth, resp, err := bn.Spot.GetDepth(
+		20,
+		CurrencyPair{BTC, USDT},
+	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		body, _ := json.Marshal(*depth)
-		fmt.Println(string(body))
-		//fmt.Println(string(resp))
-	}
-}
+		standard, err := json.Marshal(depth)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
-func TestSpot_GetKlineRecords(t *testing.T) {
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return &url.URL{
-						Scheme: "socks5",
-						Host:   "127.0.0.1:1090"}, nil
-				},
-			},
-		},
-		ApiKey:        API_KEY,
-		ApiSecretKey:  API_SECRETKEY,
-		ApiPassphrase: "",
-		Location:      time.Now().Location(),
+		t.Log("Depth standard struct:")
+		t.Log(string(standard))
+		t.Log("Depth remote api response: ")
+		t.Log(string(resp))
+
+		// make sure the later request get bigger sequence
+		depth1, _, _ := bn.Spot.GetDepth(
+			20,
+			CurrencyPair{BTC, USDT},
+		)
+
+		if depth1.Sequence < depth.Sequence {
+			t.Error("later request get smaller sequence!!")
+			return
+		}
+
+		if err := depth.Check(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if err := depth1.Check(); err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
-	b := New(config)
-	if klines, resp, err := b.Spot.GetKlineRecords(
-		CurrencyPair{
-			CurrencyTarget: Currency{"btc", ""},
-			CurrencyBasis:  Currency{"usdt", ""},
-		},
+	// klines unit test
+	if minKlines, resp, err := bn.Spot.GetKlineRecords(
+		CurrencyPair{BTC, USDT},
 		KLINE_PERIOD_1MIN,
-		50,
+		10,
 		int(time.Now().Add(-2*24*time.Hour).UnixNano()),
 	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		body, _ := json.Marshal(klines)
-		fmt.Println(string(body))
-		fmt.Println(string(resp))
+		standard, err := json.Marshal(minKlines)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("min kline standard struct:")
+		t.Log(string(standard))
+		t.Log("min kline remote api response: ")
+		t.Log(string(resp))
+	}
+
+	if dayKlines, resp, err := bn.Spot.GetKlineRecords(
+		CurrencyPair{BTC, USDT},
+		KLINE_PERIOD_1DAY,
+		10,
+		int(time.Now().Add(-11*24*time.Hour).UnixNano()),
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(dayKlines)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("day kline standard struct:")
+		t.Log(string(standard))
+		t.Log("day kline remote api response: ")
+		t.Log(string(resp))
 	}
 }
 
@@ -138,16 +157,13 @@ func TestSpot_GetKlineRecords(t *testing.T) {
  *
  */
 
-func TestSpot_GetAccount(t *testing.T) {
-
+func TestSpot_TradeAPI(t *testing.T) {
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
 			Transport: &http.Transport{
 				Proxy: func(req *http.Request) (*url.URL, error) {
-					return &url.URL{
-						Scheme: "socks5",
-						Host:   "127.0.0.1:1090"}, nil
+					return url.Parse(PROXY_URL)
 				},
 			},
 		},
@@ -157,78 +173,146 @@ func TestSpot_GetAccount(t *testing.T) {
 		Location:      time.Now().Location(),
 	}
 
-	b := New(config)
-	if account, _, err := b.Spot.GetAccount(); err != nil {
+	bn := New(config)
+	if account, _, err := bn.Spot.GetAccount(); err != nil {
 		t.Error(err)
 		return
 	} else {
-		fmt.Println(*account)
-	}
-}
-
-func TestSpot_LimitSell(t *testing.T) {
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return &url.URL{
-						Scheme: "socks5",
-						Host:   "127.0.0.1:1090"}, nil
-				},
-			},
-		},
-		ApiKey:        API_KEY,
-		ApiSecretKey:  API_SECRETKEY,
-		ApiPassphrase: "",
-		Location:      time.Now().Location(),
-	}
-
-	b := New(config)
-	order := &Order{
-		Currency: CurrencyPair{BNB, BTC},
-		Price:    0.0030061,
-		Amount:   1,
-		Side:     SELL,
-	}
-
-	if resp, err := b.Spot.LimitSell(order); err != nil {
-		t.Error(err)
-		return
-	} else {
-		fmt.Println("LIMIT SELL ~~~~~~~~~~~~~~~~~~~~~~")
-		fmt.Println(string(resp))
-	}
-
-	for i := 0; i < 3; i++ {
-		if resp, err := b.Spot.GetOneOrder(order); err != nil {
-			t.Error(err)
-			return
-		} else {
-			fmt.Println("GET ORDER ~~~~~~~~~~~~~~~~~~~~~~")
-			fmt.Println(string(resp))
+		for currency, subAccount := range account.SubAccounts {
+			if currency == BNB && subAccount.Amount < 1 {
+				t.Error("You don not has 1 BNB to order. ")
+				return
+			}
 		}
-
-		body, _ := json.Marshal(*order)
-		fmt.Println(string(body))
 	}
 
-	if _, resp, err := b.Spot.GetUnFinishOrders(
+	testPrice := 0.0
+	// ticker unit test
+	if ticker, _, err := bn.Spot.GetTicker(
 		CurrencyPair{BNB, BTC},
 	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		fmt.Println("GET UNFINISHED ORDER ~~~~~~~~~~~~~~~~~~~~~~")
-		fmt.Println(string(resp))
+		testPrice = ticker.Sell * 1.1
 	}
 
-	if resp, err := b.Spot.CancelOrder(order); err != nil {
+	normalOrder := Order{
+		Currency:  CurrencyPair{BNB, BTC},
+		Price:     testPrice,
+		Amount:    1,
+		Side:      SELL,
+		OrderType: NORMAL,
+	}
+
+	if resp, err := bn.Spot.LimitSell(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
-		fmt.Println("CANCEL ORDER ~~~~~~~~~~~~~~~~~~~~~~")
-		fmt.Println(string(resp))
+		standard, err := json.Marshal(normalOrder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("Order standard struct:")
+		t.Log(string(standard))
+		t.Log("Order remote api response: ")
+		t.Log(string(resp))
+	}
+
+	for i := 0; i < 3; i++ {
+		if resp, err := bn.Spot.GetOneOrder(&normalOrder); err != nil {
+			t.Error(err)
+			return
+		} else if i == 0 {
+			standard, err := json.Marshal(normalOrder)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			t.Log("Order standard struct:")
+			t.Log(string(standard))
+			t.Log("Order remote api response: ")
+			t.Log(string(resp))
+		}
+	}
+
+	if orders, resp, err := bn.Spot.GetUnFinishOrders(
+		CurrencyPair{BNB, BTC},
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(orders)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("UnFinished Order standard struct:")
+		t.Log(string(standard))
+		t.Log("UnFinished Order remote api response: ")
+		t.Log(string(resp))
+	}
+
+	if resp, err := bn.Spot.CancelOrder(&normalOrder); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(normalOrder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("Cancel Order standard struct:")
+		t.Log(string(standard))
+		t.Log("Cancel Order remote api response: ")
+		t.Log(string(resp))
+	}
+
+	fokOrder := Order{
+		Currency:  CurrencyPair{BNB, BTC},
+		Price:     testPrice,
+		Amount:    1,
+		Side:      SELL,
+		OrderType: FOK,
+	}
+
+	if resp, err := bn.Spot.LimitSell(&fokOrder); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(fokOrder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("FOK Order standard struct:")
+		t.Log(string(standard))
+		t.Log("FOK Order remote api response: ")
+		t.Log(string(resp))
+	}
+
+	iocOrder := Order{
+		Currency:  CurrencyPair{BNB, BTC},
+		Price:     testPrice,
+		Amount:    1,
+		Side:      SELL,
+		OrderType: IOC,
+	}
+
+	if resp, err := bn.Spot.LimitSell(&iocOrder); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(iocOrder)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Log("IOC Order standard struct:")
+		t.Log(string(standard))
+		t.Log("IOC Order remote api response: ")
+		t.Log(string(resp))
 	}
 
 }
