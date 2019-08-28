@@ -16,6 +16,15 @@ const (
 	API_SECRETKEY = ""
 )
 
+/**
+ *
+ * The func of market unit test step is:
+ * 1. Get the BNBBTC ticker
+ * 2. Get the BNBBTC depth
+ * 3. Get the BNBBTC 1d 1m kline
+ *
+ **/
+
 func TestSpot_GetTicker(t *testing.T) {
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
@@ -116,6 +125,18 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 		fmt.Println(string(resp))
 	}
 }
+
+/*
+ *
+ * The func of order unit test step is:
+ * 1. Get BNBBTC ticker.
+ * 2. Get the account, and find have the enough crypto.
+ * 2. Order the Limit Sell/Buy without deal.
+ * 3. Get the unfinished orders info, and find the order in step 1.
+ * 4. Get the order info.
+ * 5. Cancel the Limit Order
+ *
+ */
 
 func TestSpot_GetAccount(t *testing.T) {
 
