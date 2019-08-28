@@ -104,6 +104,7 @@ type Depth struct {
 	AskList   DepthRecords // Ascending order
 	BidList   DepthRecords // Descending order
 }
+
 // check the depth data is right
 func (depth *Depth) Check() error {
 	AskCount := len(depth.AskList)
