@@ -89,7 +89,7 @@ type OKEx struct {
 	//OKExMargin *OKExMargin
 }
 
-func NewOKEx(config *APIConfig) *OKEx {
+func New(config *APIConfig) *OKEx {
 	okex := &OKEx{config: config}
 	okex.Spot = &Spot{okex}
 	okex.Future = &Future{OKEx: okex, Locker: new(sync.Mutex)}

@@ -302,7 +302,7 @@ func (ok *Future) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []by
 	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
 	if param.MatchPrice == 1 {
 		println("注意:当matchPrice=1以对手价下单时，order_type只能选择0:普通委托")
-		param.OrderType = ORDINARY
+		param.OrderType = 0
 	}
 
 	reqBody, _, _ := ok.BuildRequestBody(param)

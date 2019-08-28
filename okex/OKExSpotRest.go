@@ -3,7 +3,8 @@ package okex
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,7 +132,7 @@ func (this *Spot) MarketBuy(order *Order) ([]byte, error) {
 
 func (this *Spot) MarketSell(order *Order) ([]byte, error) {
 	if order.Side != SELL_MARKET {
-		return nil, errors.New("The order side is not buy market. ")
+		return nil, errors.New("The order side is not sell market. ")
 	}
 	return this.placeOrder(order)
 }
@@ -255,25 +256,29 @@ func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize 
 	panic("unsupported")
 }
 
-func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
-	urlPath := fmt.Sprintf("/api/spot/v3/instruments/%s/ticker", currency.AdaptUsdToUsdt().ToSymbol("-"))
+func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
+	uri := fmt.Sprintf(
+		"/api/spot/v3/instruments/%s/ticker",
+		pair.AdaptUsdToUsdt().ToSymbol("-"),
+	)
+
 	var response struct {
 		Last          float64 `json:"last,string"`
 		High24h       float64 `json:"high_24h,string"`
 		Low24h        float64 `json:"low_24h,string"`
 		BestBid       float64 `json:"best_bid,string"`
 		BestAsk       float64 `json:"best_ask,string"`
-		BaseVolume24h float64 `json:"base_volume_24_h,string"`
+		BaseVolume24h float64 `json:"base_volume_24h,string"`
 		Timestamp     string  `json:"timestamp"`
 	}
-	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
 
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
 	return &Ticker{
-		Pair:      currency,
+		Pair:      pair,
 		Last:      response.Last,
 		High:      response.High24h,
 		Low:       response.Low24h,
@@ -286,7 +291,11 @@ func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 }
 
 func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
-	urlPath := fmt.Sprintf("/api/spot/v3/instruments/%s/book?size=%d", currency.AdaptUsdToUsdt().ToSymbol("-"), size)
+	uri := fmt.Sprintf(
+		"/api/spot/v3/instruments/%s/book?size=%d",
+		currency.AdaptUsdToUsdt().ToSymbol("-"),
+		size,
+	)
 
 	var response struct {
 		Asks      [][]interface{} `json:"asks"`
@@ -294,16 +303,17 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 		Timestamp string          `json:"timestamp"`
 	}
 
-	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.OKEx.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	dep := new(Depth)
 	dep.Pair = currency
-	uTime, _ := time.Parse(time.RFC3339, response.Timestamp)
-	dep.Timestamp = uint64(uTime.UnixNano())
-	dep.Date = uTime.In(this.config.Location).Format(GO_BIRTHDAY)
+	date, _ := time.Parse(time.RFC3339, response.Timestamp)
+	dep.Timestamp = uint64(date.UnixNano() / 1000000)
+	dep.Date = date.In(this.config.Location).Format(GO_BIRTHDAY)
+	dep.Sequence = dep.Timestamp
 
 	for _, itm := range response.Asks {
 		dep.AskList = append(dep.AskList, DepthRecord{
@@ -319,19 +329,20 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 		})
 	}
 
-	sort.Sort(sort.Reverse(dep.AskList))
 	return dep, resp, nil
 }
 
 func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
-	urlPath := "/api/spot/v3/instruments/%s/candles?granularity=%d"
+	uri := fmt.Sprintf("/api/spot/v3/instruments/%s/candles?", currency.AdaptUsdToUsdt().ToSymbol("-"))
 
+	params := url.Values{}
 	if since > 0 {
-		sinceTime := time.Unix(int64(since), 0).UTC()
-		if since/int(time.Second) != 1 { //如果不为秒，转为秒
-			sinceTime = time.Unix(int64(since)/int64(time.Second), 0).UTC()
+		ts, err := strconv.ParseInt(strconv.Itoa(since)[0:10], 10, 64)
+		if err != nil {
+			return nil, nil, err
 		}
-		urlPath += "&start=" + sinceTime.Format(time.RFC3339)
+		sinceTime := time.Unix(ts, 0).UTC()
+		params.Add("start", sinceTime.Format(time.RFC3339))
 	}
 
 	granularity := 60
@@ -361,11 +372,13 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 	default:
 		granularity = 1800
 	}
+	params.Add("granularity", fmt.Sprintf("%d", granularity))
 
+	fmt.Println(uri+params.Encode())
 	var response [][]interface{}
 	resp, err := this.DoRequest(
 		"GET",
-		fmt.Sprintf(urlPath, currency.AdaptUsdToUsdt().ToSymbol("-"), granularity),
+		uri+params.Encode(),
 		"",
 		&response,
 	)
@@ -378,12 +391,14 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
 		klines = append(klines, Kline{
 			Timestamp: t.Unix(),
+			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Pair:      currency,
 			Open:      ToFloat64(itm[1]),
 			High:      ToFloat64(itm[2]),
 			Low:       ToFloat64(itm[3]),
 			Close:     ToFloat64(itm[4]),
-			Vol:       ToFloat64(itm[5])})
+			Vol:       ToFloat64(itm[5])},
+		)
 	}
 
 	return klines, resp, nil
