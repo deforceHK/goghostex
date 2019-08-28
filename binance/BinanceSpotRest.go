@@ -64,6 +64,8 @@ func (this *remoteOrder) Merge(order *Order, location *time.Location) {
 	order.Status = status
 	order.OrderId = fmt.Sprintf("%d", this.OrderId)
 	order.Cid = this.ClientOrderId
+	order.Price = this.Price
+	order.Amount = this.OrigQty
 	order.AvgPrice = this.CummulativeQuoteQty
 	order.DealAmount = this.ExecutedQty
 }
@@ -224,7 +226,7 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 
 func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	currency2 := this.adaptCurrencyPair(currency)
-	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, strings.ToUpper(currency2.ToSymbol("")))
+	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, currency2.ToSymbol(""))
 	response := struct {
 		Last   string `json:"lastPrice"`
 		Buy    string `json:"bidPrice"`
@@ -248,7 +250,7 @@ func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	} else {
 		var ticker Ticker
 		ticker.Pair = currency
-		ticker.Timestamp = uint64(response.Timestamp / 1000)
+		ticker.Timestamp = uint64(response.Timestamp)
 		ticker.Date = time.Unix(
 			response.Timestamp/1000,
 			0,
@@ -271,10 +273,11 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 	}
 	currencyPair2 := this.adaptCurrencyPair(pair)
 	response := struct {
-		Code    int64           `json:"code,-"`
-		Message string          `json:"message,-"`
-		Asks    [][]interface{} `json:"asks"`
-		Bids    [][]interface{} `json:"bids"`
+		Code         int64           `json:"code,-"`
+		Message      string          `json:"message,-"`
+		Asks         [][]interface{} `json:"asks"` // The binance return asks Ascending ordered
+		Bids         [][]interface{} `json:"bids"` // The binance return bids Descending ordered
+		LastUpdateId uint64          `json:"lastUpdateId"`
 	}{}
 
 	apiUri := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair2.ToSymbol(""), size)
@@ -287,6 +290,11 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 
 	depth := new(Depth)
 	depth.Pair = pair
+	now := time.Now()
+	depth.Timestamp = uint64(now.UnixNano() / 1000000)
+	depth.Date = now.In(this.config.Location).Format(GO_BIRTHDAY)
+	depth.Sequence = response.LastUpdateId
+
 	for _, bid := range response.Bids {
 		price := ToFloat64(bid[0])
 		amount := ToFloat64(bid[1])
@@ -310,7 +318,7 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 	params := url.Values{}
 	params.Set("symbol", strings.ToUpper(currency.ToSymbol("")))
 	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", strconv.Itoa(since/1000000))
+	params.Set("startTime", strconv.Itoa(since)[0:10])
 	params.Set("endTime", strconv.Itoa(int(time.Now().UnixNano()/1000000)))
 	params.Set("limit", fmt.Sprintf("%d", size))
 
