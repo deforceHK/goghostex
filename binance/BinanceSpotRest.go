@@ -365,6 +365,10 @@ func (this *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, er
 func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 	pair := this.adaptCurrencyPair(order.Currency)
 	uri := API_V3 + ORDER_URI
+	if order.Cid == "" {
+		order.Cid = UUID()
+	}
+
 	orderSide := ""
 	orderType := ""
 	switch order.Side {
@@ -389,6 +393,7 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 	params.Set("side", orderSide)
 	params.Set("type", orderType)
 	params.Set("quantity", fmt.Sprintf("%f", order.Amount))
+	params.Set("newClientOrderId", order.Cid)
 
 	switch order.OrderType {
 	case NORMAL, ONLY_MAKER:

@@ -15,48 +15,6 @@ type Spot struct {
 	*OKEx
 }
 
-// [{
-//        "frozen":"0",
-//        "hold":"0",
-//        "id":"9150707",
-//        "currency":"BTC",
-//        "balance":"0.0049925",
-//        "available":"0.0049925",
-//        "holds":"0"
-//    },
-//    ...]
-
-func (this *Spot) GetAccount() (*Account, []byte, error) {
-	urlPath := "/api/spot/v3/accounts"
-	var response []struct {
-		Frozen    float64 `json:"frozen,string"`
-		Hold      float64 `json:"hold,string"`
-		Currency  string
-		Balance   float64 `json:"balance,string"`
-		Available float64 `json:"available,string"`
-		Holds     float64 `json:"holds,string"`
-	}
-
-	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	account := &Account{
-		SubAccounts: make(map[Currency]SubAccount, 2)}
-
-	for _, itm := range response {
-		currency := NewCurrency(itm.Currency, "")
-		account.SubAccounts[currency] = SubAccount{
-			Currency:     currency,
-			ForzenAmount: itm.Hold,
-			Amount:       itm.Available,
-		}
-	}
-
-	return account, resp, nil
-}
-
 type PlaceOrderParam struct {
 	ClientOid     string  `json:"client_oid"`
 	Type          string  `json:"type"`
@@ -69,45 +27,109 @@ type PlaceOrderParam struct {
 	MarginTrading string  `json:"margin_trading,omitempty"`
 }
 
-type PlaceOrderResponse struct {
+type remoteOrder struct {
+	Result       bool   `json:"result"`
 	OrderId      string `json:"order_id"`
 	ClientOid    string `json:"client_oid"`
-	Result       bool   `json:"result"`
 	ErrorCode    string `json:"error_code"`
 	ErrorMessage string `json:"error_message"`
 }
 
-/**
-Must Set Client Oid
-*/
-func (this *Spot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []byte, error) {
-	var param []PlaceOrderParam
-	var response map[string][]PlaceOrderResponse
-
-	for _, ord := range orders {
-		param = append(param, PlaceOrderParam{
-			InstrumentId: ord.Currency.AdaptUsdToUsdt().ToSymbol("-"),
-			ClientOid:    ord.Cid,
-			Side:         strings.ToLower(ord.Side.String()),
-			Size:         ord.Amount,
-			Price:        ord.Price,
-			Type:         "limit",
-			OrderType:    0})
+func (this *remoteOrder) Merge(order *Order) error {
+	if this.ErrorCode != "" {
+		return errors.New(this.ErrorMessage)
 	}
-	reqBody, _, _ := this.BuildRequestBody(param)
-	resp, err := this.DoRequest("POST", "/api/spot/v3/batch_orders", reqBody, &response)
+
+	order.OrderId = this.OrderId
+	order.Cid = this.ClientOid
+
+	return nil
+}
+
+type OrderResponse struct {
+	ClientOid      string  `json:"client_oid"`
+	OrderId        string  `json:"order_id"`
+	Price          float64 `json:"price,string"`
+	Size           float64 `json:"size,string"`
+	Notional       string  `json:"notional"`
+	Side           string  `json:"side"`
+	Type           string  `json:"type"`
+	FilledSize     string  `json:"filled_size"`
+	FilledNotional string  `json:"filled_notional"`
+	PriceAvg       string  `json:"price_avg"`
+	State          int     `json:"state,string"`
+	OrderType      int     `json:"order_type,string"`
+	Timestamp      string  `json:"timestamp"`
+}
+
+func (this *Spot) GetAccount() (*Account, []byte, error) {
+	uri := "/api/spot/v3/accounts"
+	var response []struct {
+		Currency  string
+		Frozen    float64 `json:"frozen,string"`
+		Hold      float64 `json:"hold,string"`
+		Balance   float64 `json:"balance,string"`
+		Available float64 `json:"available,string"`
+		Holds     float64 `json:"holds,string"`
+	}
+
+	resp, err := this.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var ret []PlaceOrderResponse
-
-	for _, v := range response {
-		ret = append(ret, v...)
+	account := &Account{
+		SubAccounts: make(map[Currency]SubAccount, 0),
 	}
-
-	return ret, resp, nil
+	for _, item := range response {
+		currency := NewCurrency(item.Currency, "")
+		account.SubAccounts[currency] = SubAccount{
+			Currency:     currency,
+			ForzenAmount: item.Hold,
+			Amount:       item.Available,
+		}
+	}
+	return account, resp, nil
 }
+
+/**
+ *
+ * Must Set Client Oid
+ *
+ **/
+//func (this *Spot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []byte, error) {
+//	var param []PlaceOrderParam
+//	var response map[string][]PlaceOrderResponse
+//
+//	for _, ord := range orders {
+//		param = append(param, PlaceOrderParam{
+//			InstrumentId: ord.Currency.AdaptUsdToUsdt().ToSymbol("-"),
+//			ClientOid:    ord.Cid,
+//			Side:         strings.ToLower(ord.Side.String()),
+//			Size:         ord.Amount,
+//			Price:        ord.Price,
+//			Type:         "limit",
+//			OrderType:    0})
+//	}
+//	reqBody, _, _ := this.BuildRequestBody(param)
+//	resp, err := this.DoRequest("POST", "/api/spot/v3/batch_orders", reqBody, &response)
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//
+//	var ret []PlaceOrderResponse
+//
+//	for _, v := range response {
+//		ret = append(ret, v...)
+//	}
+//
+//	return ret, resp, nil
+//}
 
 func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
@@ -142,7 +164,9 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 	urlPath := "/api/spot/v3/cancel_orders/" + order.OrderId
 	param := struct {
 		InstrumentId string `json:"instrument_id"`
-	}{order.Currency.AdaptUsdToUsdt().ToLower().ToSymbol("-")}
+	}{
+		order.Currency.AdaptUsdToUsdt().ToLower().ToSymbol("-"),
+	}
 	reqBody, _, _ := this.BuildRequestBody(param)
 	var response struct {
 		ClientOid string `json:"client_oid"`
@@ -150,7 +174,12 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 		Result    bool   `json:"result"`
 	}
 
-	resp, err := this.OKEx.DoRequest("POST", urlPath, reqBody, &response)
+	resp, err := this.DoRequest(
+		"POST",
+		urlPath,
+		reqBody,
+		&response,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -160,96 +189,102 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 	return resp, NewError(400, "cancel fail, unknown error")
 }
 
-type OrderResponse struct {
-	InstrumentId   string  `json:"instrument_id"`
-	ClientOid      string  `json:"client_oid"`
-	OrderId        string  `json:"order_id"`
-	Price          float64 `json:"price,string"`
-	Size           float64 `json:"size,string"`
-	Notional       string  `json:"notional"`
-	Side           string  `json:"side"`
-	Type           string  `json:"type"`
-	FilledSize     string  `json:"filled_size"`
-	FilledNotional string  `json:"filled_notional"`
-	PriceAvg       string  `json:"price_avg"`
-	State          int     `json:"state,string"`
-	OrderType      int     `json:"order_type,string"`
-	Timestamp      string  `json:"timestamp"`
-}
+func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 
-func (this *Spot) adaptOrder(response OrderResponse) *Order {
-	ordInfo := &Order{
-		Cid:        response.ClientOid,
-		OrderId:    response.OrderId,
-		Price:      response.Price,
-		Amount:     response.Size,
-		AvgPrice:   ToFloat64(response.PriceAvg),
-		DealAmount: ToFloat64(response.FilledSize),
-		Status:     this.adaptOrderState(response.State)}
+	order.Cid = response.ClientOid
+	order.OrderId = response.OrderId
+	order.Price = response.Price
+	order.Amount = response.Size
+	order.AvgPrice = ToFloat64(response.PriceAvg)
+	order.DealAmount = ToFloat64(response.FilledSize)
+	order.Status = this.adaptOrderState(response.State)
 
 	switch response.Side {
 	case "buy":
 		if response.Type == "market" {
-			ordInfo.Side = BUY_MARKET
-			ordInfo.DealAmount = ToFloat64(response.Notional) //成交金额
+			order.Side = BUY_MARKET
+			order.DealAmount = ToFloat64(response.Notional) //成交金额
 		} else {
-			ordInfo.Side = BUY
+			order.Side = BUY
 		}
 	case "sell":
 		if response.Type == "market" {
-			ordInfo.Side = SELL_MARKET
-			ordInfo.DealAmount = ToFloat64(response.Notional) //成交数量
+			order.Side = SELL_MARKET
+			order.DealAmount = ToFloat64(response.Notional) //成交数量
 		} else {
-			ordInfo.Side = SELL
+			order.Side = SELL
 		}
 	}
 
-	date, err := time.Parse(time.RFC3339, response.Timestamp)
-	if err != nil {
-		println(err)
-	} else {
-		ordInfo.OrderTimestamp = uint64(date.UnixNano() / 1000000)
-		ordInfo.OrderDate = date.In(this.config.Location).Format(GO_BIRTHDAY)
+	switch response.OrderType {
+	case 0:
+		order.OrderType = NORMAL
+	case 1:
+		order.OrderType = ONLY_MAKER
+	case 2:
+		order.OrderType = FOK
+	case 3:
+		order.OrderType = IOC
+	default:
+		order.OrderType = NORMAL
 	}
 
-	return ordInfo
+	if date, err := time.Parse(time.RFC3339, response.Timestamp); err != nil {
+		return err
+	} else {
+		order.OrderTimestamp = uint64(date.UnixNano() / 1000000)
+		order.OrderDate = date.In(this.config.Location).Format(GO_BIRTHDAY)
+		return nil
+	}
 }
 
 //orderId can set client oid or orderId
 func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
-	urlPath := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Currency.AdaptUsdToUsdt().ToSymbol("-")
-	//param := struct {
-	//	InstrumentId string `json:"instrument_id"`
-	//}{currency.AdaptUsdToUsdt().ToLower().ToSymbol("-")}
-	//reqBody, _, _ := ok.BuildRequestBody(param)
+	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Currency.AdaptUsdToUsdt().ToSymbol("-")
 	var response OrderResponse
-	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	ordInfo := this.adaptOrder(response)
-	ordInfo.Currency = order.Currency
-
+	if err := this.adaptOrder(order, &response); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
 func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
-	urlPath := fmt.Sprintf("/api/spot/v3/orders_pending?instrument_id=%s", currency.AdaptUsdToUsdt().ToSymbol("-"))
+	uri := fmt.Sprintf(
+		"/api/spot/v3/orders_pending?instrument_id=%s",
+		currency.AdaptUsdToUsdt().ToSymbol("-"),
+	)
 	var response []OrderResponse
-	resp, err := this.OKEx.DoRequest("GET", urlPath, "", &response)
+	resp, err := this.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var ords []Order
+	var orders []Order
 	for _, itm := range response {
-		ord := this.adaptOrder(itm)
-		ord.Currency = currency
-		ords = append(ords, *ord)
+		order := Order{Currency: currency}
+		if err := this.adaptOrder(&order, &itm); err != nil {
+			return nil, nil, err
+		}
+		orders = append(orders, order)
 	}
 
-	return ords, resp, nil
+	return orders, resp, nil
 }
 
 func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
@@ -271,7 +306,7 @@ func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
 		BaseVolume24h float64 `json:"base_volume_24h,string"`
 		Timestamp     string  `json:"timestamp"`
 	}
-	resp, err := this.OKEx.DoRequest("GET", uri, "", &response)
+	resp, err := this.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -303,7 +338,7 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 		Timestamp string          `json:"timestamp"`
 	}
 
-	resp, err := this.OKEx.DoRequest("GET", uri, "", &response)
+	resp, err := this.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -333,7 +368,10 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 }
 
 func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
-	uri := fmt.Sprintf("/api/spot/v3/instruments/%s/candles?", currency.AdaptUsdToUsdt().ToSymbol("-"))
+	uri := fmt.Sprintf(
+		"/api/spot/v3/instruments/%s/candles?",
+		currency.AdaptUsdToUsdt().ToSymbol("-"),
+	)
 
 	params := url.Values{}
 	if since > 0 {
@@ -342,39 +380,17 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 			return nil, nil, err
 		}
 		sinceTime := time.Unix(ts, 0).UTC()
-		params.Add("start", sinceTime.Format(time.RFC3339))
-	}
+		endTime := time.Now().UTC()
 
-	granularity := 60
-	switch period {
-	case KLINE_PERIOD_1MIN:
-		granularity = 60
-	case KLINE_PERIOD_3MIN:
-		granularity = 180
-	case KLINE_PERIOD_5MIN:
-		granularity = 300
-	case KLINE_PERIOD_15MIN:
-		granularity = 900
-	case KLINE_PERIOD_30MIN:
-		granularity = 1800
-	case KLINE_PERIOD_1H, KLINE_PERIOD_60MIN:
-		granularity = 3600
-	case KLINE_PERIOD_2H:
-		granularity = 7200
-	case KLINE_PERIOD_4H:
-		granularity = 14400
-	case KLINE_PERIOD_6H:
-		granularity = 21600
-	case KLINE_PERIOD_1DAY:
-		granularity = 86400
-	case KLINE_PERIOD_1WEEK:
-		granularity = 604800
-	default:
-		granularity = 1800
+		params.Add("start", sinceTime.Format(time.RFC3339))
+		params.Add("end", endTime.Format(time.RFC3339))
+	}
+	granularity, isExist := _INERNAL_KLINE_PERIOD_CONVERTER[period]
+	if !isExist {
+		return nil, nil, errors.New("The period is not supported. ")
 	}
 	params.Add("granularity", fmt.Sprintf("%d", granularity))
 
-	fmt.Println(uri+params.Encode())
 	var response [][]interface{}
 	resp, err := this.DoRequest(
 		"GET",
@@ -387,17 +403,17 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 	}
 
 	var klines []Kline
-	for _, itm := range response {
-		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
+	for _, item := range response {
+		t, _ := time.Parse(time.RFC3339, fmt.Sprint(item[0]))
 		klines = append(klines, Kline{
-			Timestamp: t.Unix(),
+			Timestamp: t.UnixNano() / 1000000,
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Pair:      currency,
-			Open:      ToFloat64(itm[1]),
-			High:      ToFloat64(itm[2]),
-			Low:       ToFloat64(itm[3]),
-			Close:     ToFloat64(itm[4]),
-			Vol:       ToFloat64(itm[5])},
+			Open:      ToFloat64(item[1]),
+			High:      ToFloat64(item[2]),
+			Low:       ToFloat64(item[3]),
+			Close:     ToFloat64(item[4]),
+			Vol:       ToFloat64(item[5])},
 		)
 	}
 
@@ -410,55 +426,49 @@ func (this *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, er
 }
 
 func (this *Spot) placeOrder(order *Order) ([]byte, error) {
-	urlPath := "/api/spot/v3/orders"
+	uri := "/api/spot/v3/orders"
 	param := PlaceOrderParam{
-		ClientOid:    UUID(),
 		InstrumentId: order.Currency.AdaptUsdToUsdt().ToLower().ToSymbol("-"),
 	}
 
-	var response PlaceOrderResponse
+	if order.Cid == "" {
+		order.Cid = UUID()
+	}
+	param.ClientOid = order.Cid
 
+	var response remoteOrder
 	switch order.Side {
 	case BUY, SELL:
 		param.Side = strings.ToLower(order.Side.String())
 		param.Price = order.Price
 		param.Size = order.Amount
+		param.Type = "limit"
+		param.OrderType = _INTERNAL_ORDER_TYPE_CONVERTER[order.OrderType]
 	case SELL_MARKET:
 		param.Side = "sell"
+		param.Type = "market"
 		param.Size = order.Amount
 	case BUY_MARKET:
 		param.Side = "buy"
+		param.Type = "market"
 		param.Notional = order.Price
 	default:
 		param.Size = order.Amount
 		param.Price = order.Price
 	}
 
-	switch order.OrderType {
-	case NORMAL:
-		param.OrderType = 0
-	case ONLY_MAKER:
-		param.OrderType = 1
-	case FOK:
-		param.OrderType = 2
-	case IOC:
-		param.OrderType = 3
-	default:
-		param.OrderType = 0
-	}
-
-	jsonStr, _, _ := this.OKEx.BuildRequestBody(param)
-	resp, err := this.OKEx.DoRequest("POST", urlPath, jsonStr, &response)
+	jsonStr, _, _ := this.BuildRequestBody(param)
+	resp, err := this.DoRequest(
+		"POST",
+		uri,
+		jsonStr,
+		&response,
+	)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-
-	if !response.Result {
-		return nil, NewError(ToInt(response.ErrorCode), response.ErrorMessage)
+	if err := response.Merge(order); err != nil {
+		return resp, err
 	}
-
-	order.Cid = response.ClientOid
-	order.OrderId = response.OrderId
-
 	return resp, nil
 }
