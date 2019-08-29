@@ -45,7 +45,7 @@ type FutureRestAPI interface {
 	/**
 	 *获取单个订单信息
 	 */
-	GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error)
+	GetFutureOrder(order *FutureOrder) ([]byte, error)
 
 	/**
 	 *获取未完成订单信息

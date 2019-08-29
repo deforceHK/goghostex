@@ -34,17 +34,13 @@ type Future struct {
 	allContractInfo AllFutureContractInfo
 }
 
-func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
-	panic("implement me")
-}
+//func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
+//	panic("implement me")
+//}
 
-func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
-	panic("implement me")
-}
-
-func (ok *Future) GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error) {
-	panic("implement me")
-}
+//func (ok *Future) GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error) {
+//	panic("implement me")
+//}
 
 func (ok *Future) GetExchangeName() string {
 	return OKEX_FUTURE
@@ -155,19 +151,23 @@ func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string
 		date = date.In(ok.config.Location)
 	}
 
-	ticker := Ticker{
-		Pair:      currencyPair,
-		Sell:      response.BestAsk,
-		Buy:       response.BestBid,
-		Low:       response.Low24h,
-		High:      response.High24h,
-		Last:      response.Last,
-		Vol:       response.Volume24h,
-		Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
-		Date:      date.Format(GO_BIRTHDAY),
+	ticker := FutureTicker{
+		Ticker: Ticker{
+			Pair:      currencyPair,
+			Sell:      response.BestAsk,
+			Buy:       response.BestBid,
+			Low:       response.Low24h,
+			High:      response.High24h,
+			Last:      response.Last,
+			Vol:       response.Volume24h,
+			Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
+			Date:      date.Format(GO_BIRTHDAY),
+		},
+		ContractType: contractType,
+		ContractName: response.InstrumentId,
 	}
 
-	return &FutureTicker{Ticker: ticker}, resp, nil
+	return &ticker, resp, nil
 }
 
 func (ok *Future) GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error) {
@@ -311,11 +311,10 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 	param.Size = fmt.Sprint(order.Amount)
 	param.Leverage = order.LeverRate
 	param.MatchPrice = order.MatchPrice
-
-	param.OrderType = order.OrderType
+	param.OrderType = int(order.OrderType)
 
 	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
-	if param.MatchPrice == 1 {
+	if param.MatchPrice == 1 && param.OrderType != 0 {
 		println("注意:当matchPrice=1以对手价下单时，order_type只能选择0:普通委托")
 		param.OrderType = 0
 	}
@@ -335,15 +334,14 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 }
 
 func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
-	ord.ContractName = response.InstrumentId
+	ord.ContractType = response.InstrumentId
 	ord.OrderId = response.OrderId
-	ord.ClientOid = response.ClientOid
+	ord.Cid = response.ClientOid
 	ord.DealAmount = response.FilledQty
 	ord.AvgPrice = response.PriceAvg
 	ord.Status = ok.adaptOrderState(response.State)
 	ord.Fee = response.Fee
-	ord.OrderTime = response.Timestamp.UnixNano() / int64(time.Millisecond)
-	ord.OrderTimestamp = uint64(ord.OrderTime)
+	ord.OrderTimestamp = uint64(response.Timestamp.UnixNano() / int64(time.Millisecond))
 	ord.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
 	return
 }
@@ -368,7 +366,7 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 func (ok *Future) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
-		ok.getFutureContractId(ord.Currency, ord.ContractName),
+		ok.getFutureContractId(ord.Currency, ord.ContractType),
 		ord.OrderId,
 	)
 	var response struct {
@@ -634,7 +632,7 @@ func (ok *Future) MarketCloseAllPosition(currency CurrencyPair, contract string,
 	}
 
 	param.InstrumentId = ok.getFutureContractId(currency, contract)
-	if oType == CLOSE_BUY {
+	if oType == int(LIQUIDATE_LONG) { //CLOSE_BUY {
 		param.Direction = "long"
 	} else {
 		param.Direction = "short"
