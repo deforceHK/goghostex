@@ -138,13 +138,13 @@ func (depth *Depth) Check() error {
 */
 
 type Order struct {
+	// cid is important, when the order api return wrong, you can find it in unfinished api
+	Cid            string
 	Price          float64
 	Amount         float64
 	AvgPrice       float64
 	DealAmount     float64
 	Fee            float64
-	// cid is important, when the order api return wrong, you can find it in unfinished api
-	Cid            string
 	OrderId        string
 	OrderTimestamp uint64
 	OrderDate      string

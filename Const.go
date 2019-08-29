@@ -46,13 +46,6 @@ const (
 	ORDER_FAIL
 )
 
-const (
-	OPEN_BUY   = 1 + iota //开多
-	OPEN_SELL             //开空
-	CLOSE_BUY             //平多
-	CLOSE_SELL            //平空
-)
-
 //k线周期
 const (
 	KLINE_PERIOD_1MIN = 1 + iota
@@ -109,4 +102,19 @@ const (
 
 func (ot OrderType) String() string {
 	return orderTypeSymbol[ot]
+}
+
+var futureTypeSymbol = [...]string{"", "OPEN_LONG", "OPEN_SHORT", "LIQUIDATE_LONG", "LIQUIDATE_SHORT"}
+
+type FutureType int
+
+const (
+	OPEN_LONG       FutureType = 1 + iota //开多
+	OPEN_SHORT                            //开空
+	LIQUIDATE_LONG                        //平多
+	LIQUIDATE_SHORT                       //平空
+)
+
+func (ft FutureType) String() string {
+	return futureTypeSymbol[ft]
 }
