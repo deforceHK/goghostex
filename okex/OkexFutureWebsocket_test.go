@@ -14,9 +14,9 @@ func TestStart(t *testing.T) {
 	ws.Init()
 
 	//config := goghostex.APIConfig{
-	//	ApiSecretKey: "B7318B036B1C5C37BEA45DC3B12AD804",
-	//	ApiKey: "a127cc13-2c21-4b19-9a3b-7be62ca8a6f1",
-	//	ApiPassphrase: "strengthening",
+	//	ApiSecretKey: "",
+	//	ApiKey: "",
+	//	ApiPassphrase: "",
 	//}
 
 	//if err := ws.Login(&config);err!=nil{

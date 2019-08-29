@@ -145,7 +145,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	}
 }
 
-/*
+/**
  *
  * The func of order unit test step is:
  * 1. Get BNBBTC ticker.
@@ -155,7 +155,7 @@ func TestSpot_MarketAPI(t *testing.T) {
  * 4. Get the order info.
  * 5. Cancel the Limit Order
  *
- */
+ **/
 
 func TestSpot_TradeAPI(t *testing.T) {
 	config := &APIConfig{

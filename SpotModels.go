@@ -143,15 +143,16 @@ type Order struct {
 	AvgPrice       float64
 	DealAmount     float64
 	Fee            float64
-	Cid            string //define by yourself
+	// cid is important, when the order api return wrong, you can find it in unfinished api
+	Cid            string
 	OrderId        string
 	OrderTimestamp uint64
 	OrderDate      string
 	Status         TradeStatus
 	Currency       CurrencyPair
 	Side           TradeSide
-	//Type           string    // taker maker
-	OrderType OrderType //0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
+	//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
+	OrderType OrderType
 }
 
 /**
