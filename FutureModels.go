@@ -27,12 +27,12 @@ type FutureAccount struct {
 
 type FutureTicker struct {
 	Ticker
-	ContractType string  `json:"omitempty"`
-	ContractId   int     `json:"contract_id"`
-	LimitHigh    float64 `json:"limit_high,string"`
-	LimitLow     float64 `json:"limit_low,string"`
-	HoldAmount   float64 `json:"hold_amount,string"`
-	UnitAmount   float64 `json:"unit_amount,string"`
+	ContractType string `json:"contract_type"`
+	ContractName string `json:"contract_name"`
+	//LimitHigh    float64 `json:"limit_high,string"`
+	//LimitLow     float64 `json:"limit_low,string"`
+	//HoldAmount   float64 `json:"hold_amount,string"`
+	//UnitAmount   float64 `json:"unit_amount,string"`
 }
 
 type FutureDepthRecords []FutureDepthRecord
@@ -56,10 +56,11 @@ func (dr FutureDepthRecords) Less(i, j int) bool {
 
 type FutureDepth struct {
 	ContractType string //for future
+	ContractName string //for future
 	Pair         CurrencyPair
 	Timestamp    uint64
 	Date         string
-	AskList      FutureDepthRecords // Descending order
+	AskList      FutureDepthRecords // Ascending order
 	BidList      FutureDepthRecords // Descending order
 }
 
