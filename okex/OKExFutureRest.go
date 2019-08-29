@@ -34,6 +34,18 @@ type Future struct {
 	allContractInfo AllFutureContractInfo
 }
 
+func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
+	panic("implement me")
+}
+
+func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
+	panic("implement me")
+}
+
+func (ok *Future) GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error) {
+	panic("implement me")
+}
+
 func (ok *Future) GetExchangeName() string {
 	return OKEX_FUTURE
 }
@@ -211,7 +223,7 @@ func (ok *Future) GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, er
 	}
 	resp, err := ok.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, err
 	}
 	return response.Index, resp, nil
 }
@@ -267,7 +279,11 @@ func (ok *Future) normalizePrice(price float64, pair CurrencyPair) string {
 }
 
 //matchPrice:是否以对手价下单(0:不是 1:是)，默认为0;当取值为1时,price字段无效，当以对手价下单，order_type只能选择0:普通委托
-func (ok *Future) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []byte, error) {
+func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
+	if order == nil {
+		return nil, errors.New("ord param is nil")
+	}
+
 	urlPath := "/api/futures/v3/order"
 	var param struct {
 		ClientOid    string `json:"client_oid"`
@@ -287,17 +303,16 @@ func (ok *Future) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []by
 		ClientOid    string `json:"client_oid"`
 		OrderId      string `json:"order_id"`
 	}
-	if ord == nil {
-		return false, nil, errors.New("ord param is nil")
-	}
-	param.InstrumentId = ok.getFutureContractId(ord.Currency, ord.ContractName)
-	param.ClientOid = ord.ClientOid
-	param.Type = ord.OType
-	param.OrderType = ord.OrderType
-	param.Price = ok.normalizePrice(ord.Price, ord.Currency)
-	param.Size = fmt.Sprint(ord.Amount)
-	param.Leverage = ord.LeverRate
-	param.MatchPrice = matchPrice
+
+	param.InstrumentId = ok.getFutureContractId(order.Currency, order.ContractType)
+	param.ClientOid = order.Cid
+	param.Type = int(order.Type)
+	param.Price = ok.normalizePrice(order.Price, order.Currency)
+	param.Size = fmt.Sprint(order.Amount)
+	param.Leverage = order.LeverRate
+	param.MatchPrice = order.MatchPrice
+
+	param.OrderType = order.OrderType
 
 	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
 	if param.MatchPrice == 1 {
@@ -307,19 +322,16 @@ func (ok *Future) PlaceFutureOrder(matchPrice int, ord *FutureOrder) (bool, []by
 
 	reqBody, _, _ := ok.BuildRequestBody(param)
 	resp, err := ok.DoRequest("POST", urlPath, reqBody, &response)
-
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 
 	now := time.Now()
-	ord.ClientOid = response.ClientOid
-	ord.OrderId = response.OrderId
-	ord.OrderTime = now.UnixNano() / int64(time.Millisecond)
-	ord.OrderTimestamp = uint64(ord.OrderTime)
-	ord.OrderDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
-
-	return response.Result, resp, nil
+	order.Cid = response.ClientOid
+	order.OrderId = response.OrderId
+	order.OrderTimestamp = uint64(now.UnixNano() / int64(time.Millisecond))
+	order.OrderDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
+	return resp, nil
 }
 
 func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
@@ -336,19 +348,20 @@ func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
 	return
 }
 
-func (ok *Future) GetFutureOrder(ord *FutureOrder) ([]byte, error) {
+func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
-		ok.getFutureContractId(ord.Currency, ord.ContractName),
-		ord.OrderId,
+		ok.getFutureContractId(order.Currency, order.ContractType),
+		order.OrderId,
 	)
+
 	var response futureOrderResponse
 	resp, err := ok.DoRequest("GET", urlPath, "", &response)
 	if err != nil {
 		return nil, err
 	}
 
-	ok.adaptOrder(response, ord)
+	ok.adaptOrder(response, order)
 	return resp, nil
 }
 
@@ -472,7 +485,7 @@ type futureOrderResponse struct {
 	Timestamp    time.Time `json:"timestamp,string"`
 }
 
-func (ok *Future) GetUnfinishFutureOrders(
+func (ok *Future) GetUnFinishFutureOrders(
 	currencyPair CurrencyPair,
 	contractType string,
 ) ([]FutureOrder, []byte, error) {

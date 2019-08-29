@@ -135,7 +135,7 @@ func TestOKexFuture_GetUnfinishFutureOrders(t *testing.T) {
 
 	ok := New(&api)
 	p := CurrencyPair{BTC, USD}
-	if result, resp, err := ok.Future.GetUnfinishFutureOrders(
+	if result, resp, err := ok.Future.GetUnFinishFutureOrders(
 		p,
 		"quarter",
 	); err != nil {

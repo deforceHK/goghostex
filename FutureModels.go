@@ -1,8 +1,11 @@
 package goghostex
 
-/*
-	models about account
-*/
+/**
+ *
+ * models about account
+ *
+ **/
+
 type FutureSubAccount struct {
 	Currency      Currency
 	AccountRights float64 //账户权益
@@ -16,9 +19,11 @@ type FutureAccount struct {
 	FutureSubAccounts map[Currency]FutureSubAccount
 }
 
-/*
-	models about market
-*/
+/**
+ *
+ * models about market
+ *
+ **/
 
 type FutureTicker struct {
 	Ticker
@@ -63,28 +68,31 @@ type FutureKline struct {
 	Vol2 float64 //个数
 }
 
-/*
-	models about trade
-*/
+/**
+ *
+ * models about trade
+ *
+ **/
 
 type FutureOrder struct {
-	ClientOid  string //自定义ID，GoEx内部自动生成
-	OrderId    string
-	Price      float64
-	Amount     float64
-	AvgPrice   float64
-	DealAmount float64
-
-	OrderTime      int64
-	OrderTimestamp uint64
+	// cid is important, when the order api return wrong, you can find it in unfinished api
+	Cid            string
+	OrderId        string
+	Price          float64
+	Amount         float64
+	AvgPrice       float64
+	DealAmount     float64
+	OrderTimestamp uint64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus
+	OrderType      OrderType  //0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
+	Type           FutureType //1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
+	LeverRate      int
+	Fee            float64
 	Currency       CurrencyPair
-	OrderType      int     //ORDINARY=0 POST_ONLY=1 FOK= 2 IOC= 3
-	OType          int     //1：开多 2：开空 3：平多 4： 平空
-	LeverRate      int     //倍数
-	Fee            float64 //手续费
-	ContractName   string
+	ContractType   string
+	Exchange       string
+	MatchPrice     int // some exchange need
 }
 
 type FuturePosition struct {
@@ -108,7 +116,7 @@ type FuturePosition struct {
 
 /**
  *
- *models about API config
+ * models about API config
  *
  */
 type FutureAPIConfig struct {
