@@ -6,7 +6,12 @@ type FutureRestAPI interface {
 	GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error)
 	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error)
 	GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error)
-	GetFutureUserinfo() (*FutureAccount, []byte, error)
+	GetFutureAccount() (*FutureAccount, []byte, error)
+
+	/**
+	 * 获取K线数据
+	 */
+	GetFutureKlineRecords(contract_type string, currency CurrencyPair, period, size, since int) ([]FutureKline, []byte, error)
 
 	/**
 	 *
@@ -71,11 +76,6 @@ type FutureRestAPI interface {
 	 *获取交割时间 星期(0,1,2,3,4,5,6)，小时，分，秒
 	 */
 	GetDeliveryTime() (int, int, int, int)
-
-	/**
-	 * 获取K线数据
-	 */
-	GetKlineRecords(contract_type string, currency CurrencyPair, period, size, since int) ([]FutureKline, []byte, error)
 
 	/**
 	 * 获取Trade数据

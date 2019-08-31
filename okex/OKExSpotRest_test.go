@@ -94,12 +94,12 @@ func TestSpot_MarketAPI(t *testing.T) {
 			return
 		}
 
-		if err := depth.Check(); err != nil {
+		if err := depth.Verify(); err != nil {
 			t.Error(err)
 			return
 		}
 
-		if err := depth1.Check(); err != nil {
+		if err := depth1.Verify(); err != nil {
 			t.Error(err)
 			return
 		}
@@ -124,6 +124,13 @@ func TestSpot_MarketAPI(t *testing.T) {
 		t.Log(string(standard))
 		t.Log("min kline remote api response: ")
 		t.Log(string(resp))
+
+		for _, kline := range minKlines {
+			if kline.Timestamp < 1000000000000 {
+				t.Error("The timestamp must be 13 number. ")
+				return
+			}
+		}
 	}
 
 	if dayKlines, resp, err := ok.Spot.GetKlineRecords(
@@ -144,6 +151,13 @@ func TestSpot_MarketAPI(t *testing.T) {
 		t.Log(string(standard))
 		t.Log("day kline remote api response: ")
 		t.Log(string(resp))
+
+		for _, kline := range dayKlines {
+			if kline.Timestamp < 1000000000000 {
+				t.Error("The timestamp must be 13 number. ")
+				return
+			}
+		}
 	}
 }
 

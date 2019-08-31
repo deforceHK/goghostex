@@ -406,7 +406,7 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 	for _, item := range response {
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(item[0]))
 		klines = append(klines, Kline{
-			Timestamp: t.UnixNano() / 1000000,
+			Timestamp: uint64(t.UnixNano() / int64(time.Millisecond)),
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Pair:      currency,
 			Open:      ToFloat64(item[1]),

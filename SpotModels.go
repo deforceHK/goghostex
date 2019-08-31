@@ -45,7 +45,7 @@ type MarginSubAccount struct {
 
 type Kline struct {
 	Pair      CurrencyPair
-	Timestamp int64
+	Timestamp uint64
 	Date      string
 	Open      float64
 	Close     float64
@@ -96,7 +96,6 @@ func (dr DepthRecords) Less(i, j int) bool {
 }
 
 type Depth struct {
-	//ContractType string //for future
 	Pair      CurrencyPair
 	Timestamp uint64
 	Sequence  uint64 // The increasing sequence, cause the http return sequence is not sure.
@@ -105,8 +104,8 @@ type Depth struct {
 	BidList   DepthRecords // Descending order
 }
 
-// check the depth data is right
-func (depth *Depth) Check() error {
+// Verify the depth data is right
+func (depth *Depth) Verify() error {
 	AskCount := len(depth.AskList)
 	BidCount := len(depth.BidList)
 
