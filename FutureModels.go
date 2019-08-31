@@ -1,5 +1,9 @@
 package goghostex
 
+import (
+	"errors"
+)
+
 /**
  *
  * models about account
@@ -7,16 +11,32 @@ package goghostex
  **/
 
 type FutureSubAccount struct {
-	Currency      Currency
-	AccountRights float64 //账户权益
-	KeepDeposit   float64 //保证金
-	ProfitReal    float64 //已实现盈亏
-	ProfitUnreal  float64
-	RiskRate      float64 //保证金率
+	Currency Currency
+	// The future margin 期货保证金 == marginFilled+ marginUnFilled
+	Margin float64
+	// The future is filled 已经成交的订单占用的期货保证金
+	MarginDealed float64
+	// The future is unfilled 未成交的订单占用的保证金
+	MarginUnDealed float64
+	// 保证金率
+	MarginRate float64
+	// 总值
+	BalanceTotal float64
+	// 净值
+	// BalanceNet = BalanceTotal + ProfitUnreal + ProfitReal
+	BalanceNet float64
+	// 可提取
+	// BalanceAvail = BalanceNet - Margin
+	BalanceAvail float64
+	//已实现盈亏
+	ProfitReal float64
+	// 未实现盈亏
+	ProfitUnreal float64
 }
 
 type FutureAccount struct {
-	FutureSubAccounts map[Currency]FutureSubAccount
+	SubAccount map[Currency]FutureSubAccount
+	Exchange   string
 }
 
 /**
@@ -29,10 +49,6 @@ type FutureTicker struct {
 	Ticker
 	ContractType string `json:"contract_type"`
 	ContractName string `json:"contract_name"`
-	//LimitHigh    float64 `json:"limit_high,string"`
-	//LimitLow     float64 `json:"limit_low,string"`
-	//HoldAmount   float64 `json:"hold_amount,string"`
-	//UnitAmount   float64 `json:"unit_amount,string"`
 }
 
 type FutureDepthRecords []FutureDepthRecord
@@ -55,13 +71,44 @@ func (dr FutureDepthRecords) Less(i, j int) bool {
 }
 
 type FutureDepth struct {
-	ContractType string //for future
-	ContractName string //for future
+	ContractType string // for future
+	ContractName string // for future
 	Pair         CurrencyPair
 	Timestamp    uint64
-	Date         string
-	AskList      FutureDepthRecords // Ascending order
-	BidList      FutureDepthRecords // Descending order
+	// The increasing sequence, cause the http return sequence is not sure.
+	Sequence uint64
+	Date     string
+	AskList  FutureDepthRecords // Ascending order
+	BidList  FutureDepthRecords // Descending order
+}
+
+// Do not trust the data from exchange, just verify it.
+func (fd FutureDepth) Verify() error {
+
+	AskCount := len(fd.AskList)
+	BidCount := len(fd.BidList)
+
+	if BidCount < 10 || AskCount < 10 {
+		return errors.New("The ask_list or bid_list not enough! ")
+	}
+
+	for i := 1; i < AskCount; i++ {
+		pre := fd.AskList[i-1]
+		last := fd.AskList[i]
+		if pre.Price >= last.Price {
+			return errors.New("The ask_list is not ascending ordered! ")
+		}
+	}
+
+	for i := 1; i < BidCount; i++ {
+		pre := fd.BidList[i-1]
+		last := fd.BidList[i]
+		if pre.Price <= last.Price {
+			return errors.New("The bid_list is not descending ordered! ")
+		}
+	}
+
+	return nil
 }
 
 type FutureKline struct {
@@ -86,12 +133,13 @@ type FutureOrder struct {
 	OrderTimestamp uint64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus
-	OrderType      OrderType  //0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
-	Type           FutureType //1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
+	OrderType      OrderType  // order_type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
+	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
 	LeverRate      int
 	Fee            float64
 	Currency       CurrencyPair
 	ContractType   string
+	ContractName   string // for future
 	Exchange       string
 	MatchPrice     int // some exchange need
 }

@@ -92,12 +92,12 @@ func TestSpot_MarketAPI(t *testing.T) {
 			return
 		}
 
-		if err := depth.Check(); err != nil {
+		if err := depth.Verify(); err != nil {
 			t.Error(err)
 			return
 		}
 
-		if err := depth1.Check(); err != nil {
+		if err := depth1.Verify(); err != nil {
 			t.Error(err)
 			return
 		}

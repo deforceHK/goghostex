@@ -3,7 +3,8 @@ package okex
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -34,11 +35,11 @@ type Future struct {
 	allContractInfo AllFutureContractInfo
 }
 
-//func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
+//func (ok *Future) GetFutureDepth(size int, currencyPair CurrencyPair, contractType string) (*FutureDepth, []byte, error) {
 //	panic("implement me")
 //}
-
-//func (ok *Future) GetFutureOrder(orderId string, currencyPair CurrencyPair, contractType string) (*FutureOrder, []byte, error) {
+//
+//func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
 //	panic("implement me")
 //}
 
@@ -126,7 +127,7 @@ func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) s
 }
 
 func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error) {
-	var urlPath = fmt.Sprintf(
+	var uri = fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/ticker",
 		ok.getFutureContractId(currencyPair, contractType),
 	)
@@ -141,16 +142,17 @@ func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string
 		Volume24h    float64 `json:"volume_24h,string"`
 		Timestamp    string  `json:"timestamp"`
 	}
-	resp, err := ok.DoRequest("GET", urlPath, "", &response)
+	resp, err := ok.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
-	if ok.config.Location != nil {
-		date = date.In(ok.config.Location)
-	}
-
 	ticker := FutureTicker{
 		Ticker: Ticker{
 			Pair:      currencyPair,
@@ -161,7 +163,7 @@ func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string
 			Last:      response.Last,
 			Vol:       response.Volume24h,
 			Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
-			Date:      date.Format(GO_BIRTHDAY),
+			Date:      date.In(ok.config.Location).Format(GO_BIRTHDAY),
 		},
 		ContractType: contractType,
 		ContractName: response.InstrumentId,
@@ -170,7 +172,11 @@ func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string
 	return &ticker, resp, nil
 }
 
-func (ok *Future) GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error) {
+func (ok *Future) GetFutureDepth(
+	currencyPair CurrencyPair,
+	contractType string,
+	size int,
+) (*FutureDepth, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/book?size=%d",
 		ok.getFutureContractId(currencyPair, contractType),
@@ -194,6 +200,7 @@ func (ok *Future) GetFutureDepth(currencyPair CurrencyPair, contractType string,
 	dep.Pair = currencyPair
 	dep.ContractType = contractType
 	dep.Timestamp = uint64(date.UnixNano() / int64(time.Millisecond))
+	dep.Sequence = dep.Timestamp
 	dep.Date = date.Format(GO_BIRTHDAY)
 	for _, itm := range response.Asks {
 		dep.AskList = append(dep.AskList, FutureDepthRecord{
@@ -206,7 +213,6 @@ func (ok *Future) GetFutureDepth(currencyPair CurrencyPair, contractType string,
 			Amount: ToInt64(itm[1])})
 	}
 
-	sort.Sort(sort.Reverse(dep.AskList))
 	return &dep, resp, nil
 }
 
@@ -233,7 +239,7 @@ type CrossedAccountInfo struct {
 	Equity     float64 `json:"equity,string"`
 }
 
-func (ok *Future) GetFutureUserinfo() (*FutureAccount, []byte, error) {
+func (ok *Future) GetFutureAccount() (*FutureAccount, []byte, error) {
 	urlPath := "/api/futures/v3/accounts"
 	var response struct {
 		Info map[string]map[string]interface{}
@@ -245,22 +251,27 @@ func (ok *Future) GetFutureUserinfo() (*FutureAccount, []byte, error) {
 	}
 
 	acc := new(FutureAccount)
-	acc.FutureSubAccounts = make(map[Currency]FutureSubAccount, 2)
+	acc.SubAccount = make(map[Currency]FutureSubAccount, 0)
 	for c, info := range response.Info {
 		if info["margin_mode"] == "crossed" {
 			currency := NewCurrency(c, "")
-			acc.FutureSubAccounts[currency] = FutureSubAccount{
-				Currency:      currency,
-				AccountRights: ToFloat64(info["equity"]),
-				ProfitReal:    ToFloat64(info["realized_pnl"]),
-				ProfitUnreal:  ToFloat64(info["unrealized_pnl"]),
-				KeepDeposit:   ToFloat64(info["margin_frozen"]),
-				RiskRate:      ToFloat64(info["margin_ratio"]),
+			acc.SubAccount[currency] = FutureSubAccount{
+				Currency:       currency,
+				Margin:         ToFloat64(info["margin"]),
+				MarginDealed:   ToFloat64(info["margin_frozen"]),
+				MarginUnDealed: ToFloat64(info["margin_for_unfilled"]),
+				MarginRate:     ToFloat64(info["margin_ratio"]),
+				BalanceTotal:   ToFloat64(info["total_avail_balance"]),
+				BalanceNet:     ToFloat64(info["equity"]),
+				BalanceAvail:   ToFloat64(info["can_withdraw"]),
+				ProfitReal:     ToFloat64(info["realized_pnl"]),
+				ProfitUnreal:   ToFloat64(info["unrealized_pnl"]),
 			}
 		} else {
 			//todo 逐仓模式
 		}
 	}
+
 	return acc, resp, nil
 }
 
@@ -334,7 +345,7 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 }
 
 func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
-	ord.ContractType = response.InstrumentId
+	ord.ContractName = response.InstrumentId
 	ord.OrderId = response.OrderId
 	ord.Cid = response.ClientOid
 	ord.DealAmount = response.FilledQty
@@ -343,6 +354,9 @@ func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
 	ord.Fee = response.Fee
 	ord.OrderTimestamp = uint64(response.Timestamp.UnixNano() / int64(time.Millisecond))
 	ord.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
+	if ord.Exchange == "" {
+		ord.Exchange = ok.GetExchangeName()
+	}
 	return
 }
 
@@ -363,7 +377,7 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Future) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
+func (ok *Future) CancelFutureOrder(ord *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
 		ok.getFutureContractId(ord.Currency, ord.ContractType),
@@ -377,9 +391,9 @@ func (ok *Future) CancelFutureOrder(ord *FutureOrder) (bool, []byte, error) {
 	}
 	resp, err := ok.DoRequest("POST", urlPath, "", &response)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
-	return response.Result, resp, nil
+	return resp, nil
 }
 
 func (ok *Future) GetFuturePosition(
@@ -531,56 +545,38 @@ func (ok *Future) GetDeliveryTime() (int, int, int, int) {
 /**
   since : 单位秒,开始时间
 */
-func (ok *Future) GetKlineRecords(
+func (ok *Future) GetFutureKlineRecords(
 	contractType string,
 	currency CurrencyPair,
 	period,
 	size,
 	since int,
 ) ([]FutureKline, []byte, error) {
-	urlPath := "/api/futures/v3/instruments/%s/candles?start=%s&granularity=%d"
-	contractId := ok.getFutureContractId(currency, contractType)
-	sinceTime := time.Unix(int64(since), 0).UTC()
+	uri := fmt.Sprintf(
+		"/api/futures/v3/instruments/%s/candles?",
+		ok.getFutureContractId(currency, contractType),
+	)
 
-	if since/int(time.Second) != 1 { //如果不为秒，转为秒
-		sinceTime = time.Unix(int64(since)/int64(time.Second), 0).UTC()
-	}
+	params := url.Values{}
+	params.Add(
+		"granularity",
+		fmt.Sprintf("%d", _INERNAL_KLINE_PERIOD_CONVERTER[period]),
+	)
 
-	granularity := 60
-	switch period {
-	case KLINE_PERIOD_1MIN:
-		granularity = 60
-	case KLINE_PERIOD_3MIN:
-		granularity = 180
-	case KLINE_PERIOD_5MIN:
-		granularity = 300
-	case KLINE_PERIOD_15MIN:
-		granularity = 900
-	case KLINE_PERIOD_30MIN:
-		granularity = 1800
-	case KLINE_PERIOD_1H, KLINE_PERIOD_60MIN:
-		granularity = 3600
-	case KLINE_PERIOD_2H:
-		granularity = 7200
-	case KLINE_PERIOD_4H:
-		granularity = 14400
-	case KLINE_PERIOD_6H:
-		granularity = 21600
-	case KLINE_PERIOD_1DAY:
-		granularity = 86400
-	case KLINE_PERIOD_1WEEK:
-		granularity = 604800
-	default:
-		granularity = 1800
+	if since > 0 {
+		ts, _ := strconv.ParseInt(strconv.Itoa(since)[0:10], 10, 64)
+		startTime := time.Unix(ts, 0).UTC()
+		endTime := startTime.Add(
+			time.Duration(size*_INERNAL_KLINE_PERIOD_CONVERTER[period]) * time.Second,
+		)
+		params.Add("start", startTime.Format(time.RFC3339))
+		params.Add("end", endTime.Format(time.RFC3339))
 	}
 
 	var response [][]interface{}
 	resp, err := ok.DoRequest(
 		"GET",
-		fmt.Sprintf(
-			urlPath,
-			contractId,
-			sinceTime.Format(time.RFC3339), granularity),
+		uri+params.Encode(),
 		"",
 		&response,
 	)
@@ -593,15 +589,17 @@ func (ok *Future) GetKlineRecords(
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
 		klines = append(klines, FutureKline{
 			Kline: Kline{
-				Timestamp: t.Unix(),
+				Timestamp: uint64(t.UnixNano() / int64(time.Millisecond)),
 				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
 				Pair:      currency,
 				Open:      ToFloat64(itm[1]),
 				High:      ToFloat64(itm[2]),
 				Low:       ToFloat64(itm[3]),
 				Close:     ToFloat64(itm[4]),
-				Vol:       ToFloat64(itm[5])},
-			Vol2: ToFloat64(itm[6])})
+				Vol:       ToFloat64(itm[5]),
+			},
+			Vol2: ToFloat64(itm[6]),
+		})
 	}
 
 	return klines, resp, nil
