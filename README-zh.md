@@ -13,7 +13,7 @@ goghostex支持的交易所API。如下：
 
 | |现货|杠杠|交割合约|永续合约|
 |:---|:---|:---|:---|:---
-|OKEX|YES|NO|YES|NO|
+|OKEX|YES|YES|YES|NO|
 |BINANCE|YES|NO|NO|NO
 
 ## Clone
@@ -31,13 +31,9 @@ go install
 
 ## 待完成
 
-- Support bitmex exchange.
-- Support bitstamp exchange.
 - Add `cli` features.
-- Update the order feature
-    - FOK(Fill Or Kill)
-    - IOC(Immediate Or Cancel)
-    - ROD(Rest Of Day)
+- Support bitstamp exchange.
+- Support bitmex exchange.
 
 
 ## 协议

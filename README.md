@@ -14,7 +14,7 @@ The list of goghost supported API.As below:
 
 | |SPOT|MARGIN|FUTURE|SWAP|
 |:---|:---|:---|:---|:---
-|OKEX|YES|NO|YES|NO|
+|OKEX|YES|YES|YES|NO|
 |BINANCE|YES|NO|NO|NO
 
 
@@ -33,13 +33,9 @@ go install
 
 ## Todos
 
+- Add `cli` features.
 - Support bitmex exchange.
 - Support bitstamp exchange.
-- Add `cli` features.
-- Update the order feature
-    - FOK(Fill Or Kill)
-    - IOC(Immediate Or Cancel)
-    - GTC(Good Til Cancelled)
 
 
 ## LICENSE
