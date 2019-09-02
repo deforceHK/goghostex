@@ -23,22 +23,6 @@ type SubAccount struct {
 	LoanAmount   float64
 }
 
-type MarginAccount struct {
-	Sub              map[Currency]MarginSubAccount
-	LiquidationPrice float64
-	RiskRate         float64
-	MarginRatio      float64
-}
-
-type MarginSubAccount struct {
-	Balance     float64
-	Frozen      float64
-	Available   float64
-	CanWithdraw float64
-	Loan        float64
-	LendingFee  float64
-}
-
 /**
  * models about market
  **/

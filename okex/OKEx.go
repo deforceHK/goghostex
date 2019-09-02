@@ -107,17 +107,17 @@ type OKEx struct {
 	config *APIConfig
 	Spot   *Spot
 	Future *Future
+	Margin *Margin
 	Wallet *Wallet
 	//OKExSwap   *OKExSwap
-	//OKExMargin *OKExMargin
 }
 
 func New(config *APIConfig) *OKEx {
 	okex := &OKEx{config: config}
 	okex.Spot = &Spot{okex}
+	okex.Margin = &Margin{okex}
 	okex.Future = &Future{OKEx: okex, Locker: new(sync.Mutex)}
 	okex.Wallet = &Wallet{okex}
-	//okex.OKExMargin = &OKExMargin{okex}
 	return okex
 }
 
@@ -125,7 +125,12 @@ func (ok *OKEx) GetExchangeName() string {
 	return OKEX
 }
 
-func (ok *OKEx) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+func (ok *OKEx) DoRequest(
+	httpMethod,
+	uri,
+	reqBody string,
+	response interface{},
+) ([]byte, error) {
 	url := ok.config.Endpoint + uri
 	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
 	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
