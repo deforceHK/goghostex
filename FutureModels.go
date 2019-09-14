@@ -133,7 +133,7 @@ type FutureOrder struct {
 	OrderTimestamp uint64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus
-	OrderType      OrderType  // order_type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
+	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
 	LeverRate      int
 	Fee            float64

@@ -16,15 +16,15 @@ const (
 func (ts TradeSide) String() string {
 	switch ts {
 	case 1:
-		return "BUY"
+		return "buy"
 	case 2:
-		return "SELL"
+		return "sell"
 	case 3:
-		return "BUY_MARKET"
+		return "buy_market"
 	case 4:
-		return "SELL_MARKET"
+		return "sell_market"
 	default:
-		return "UNKNOWN"
+		return "unknown"
 	}
 }
 
@@ -34,7 +34,7 @@ func (ts TradeStatus) String() string {
 	return tradeStatusSymbol[ts]
 }
 
-var tradeStatusSymbol = [...]string{"UNFINISH", "PART_FINISH", "FINISH", "CANCEL", "REJECT", "CANCEL_ING", "FAIL"}
+var tradeStatusSymbol = [...]string{"unfinish", "part_finish", "finish", "cancel", "reject", "canceling", "fail"}
 
 const (
 	ORDER_UNFINISH TradeStatus = iota
@@ -91,16 +91,16 @@ const (
 
 var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}
 
-type OrderType int
+type PlaceType int
 
 const (
-	NORMAL     OrderType = iota // normal order, need to cancel (GTC)
+	NORMAL     PlaceType = iota // normal order, need to cancel (GTC)
 	ONLY_MAKER                  // only maker
 	FOK                         // fill or kill
 	IOC                         // Immediate or Cancel
 )
 
-func (ot OrderType) String() string {
+func (ot PlaceType) String() string {
 	return orderTypeSymbol[ot]
 }
 
