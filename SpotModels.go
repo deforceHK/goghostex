@@ -116,10 +116,11 @@ func (depth *Depth) Verify() error {
 	return nil
 }
 
-/*
-	models about trade
-*/
-
+/**
+ *
+ * models about trade
+ *
+ **/
 type Order struct {
 	// cid is important, when the order api return wrong, you can find it in unfinished api
 	Cid            string
