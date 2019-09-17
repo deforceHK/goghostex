@@ -79,10 +79,6 @@ func (this *Binance) buildParamsSigned(postForm *url.Values) error {
 }
 
 func (this *Binance) adaptCurrencyPair(pair CurrencyPair) CurrencyPair {
-	if pair.CurrencyTarget.Eq(BCH) || pair.CurrencyTarget.Eq(BCC) {
-		return NewCurrencyPair(NewCurrency("BCHABC", ""), pair.CurrencyBasis).AdaptUsdToUsdt()
-	}
-
 	return pair.AdaptUsdToUsdt()
 }
 

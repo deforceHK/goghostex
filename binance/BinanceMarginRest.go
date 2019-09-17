@@ -8,42 +8,46 @@ type Margin struct {
 	*Binance
 }
 
-func (Margin) Loan(parameter BorrowParameter) (borrowId string, err error) {
+func (this *Margin) Loan(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) Repay(parameter RepaymentParameter) (repaymentId string, err error) {
+func (this *Margin) GetOneLoan(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) PlaceMarginOrder(*Order) ([]byte, error) {
+func (this *Margin) Repay(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) CancelMarginOrder(*Order) ([]byte, error) {
+func (this *Margin) PlaceMarginOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginOneOrder(*Order) ([]byte, error) {
+func (this *Margin) CancelMarginOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginUnFinishOrders(pair CurrencyPair) ([]Order, []byte, error) {
+func (this *Margin) GetMarginOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginAccount(pair CurrencyPair) (*MarginAccount, []byte, error) {
+func (this *Margin) GetMarginUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginTicker(currency CurrencyPair) (*Ticker, []byte, error) {
+func (this *Margin) GetMarginAccount(currency CurrencyPair) (*MarginAccount, []byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+func (this *Margin) GetMarginTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	panic("implement me")
 }
 
-func (Margin) GetMarginKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Margin) GetMarginDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+	panic("implement me")
+}
+
+func (this *Margin) GetMarginKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
 	panic("implement me")
 }

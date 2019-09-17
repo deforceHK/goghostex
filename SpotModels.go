@@ -136,7 +136,7 @@ type Order struct {
 	Currency       CurrencyPair
 	Side           TradeSide
 	//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
-	OrderType OrderType
+	OrderType PlaceType
 }
 
 /**

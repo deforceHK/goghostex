@@ -335,9 +335,9 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 		for i, e := range record {
 			switch i {
 			case 0:
-				r.Timestamp = int64(e.(float64))
+				r.Timestamp = uint64(e.(float64))
 				r.Date = time.Unix(
-					r.Timestamp/1000,
+					int64(r.Timestamp)/1000,
 					0,
 				).In(this.config.Location).Format(GO_BIRTHDAY)
 			case 1:
