@@ -76,15 +76,12 @@ const (
 
 //exchanges const
 const (
-	OKCOIN_CN   = "okcoin.cn"
-	OKCOIN_COM  = "okcoin.com"
-	OKEX        = "okex.com"
-	OKEX_FUTURE = "okex.com_future"
+	OKEX        = "okex"
 	OKEX_SWAP   = "okex.com_swap"
 	HUOBI       = "huobi.com"
 	HUOBI_PRO   = "huobi.pro"
 	BITFINEX    = "bitfinex.com"
-	BINANCE     = "binance.com"
+	BINANCE     = "binance"
 	BITMEX      = "bitmex.com"
 	HBDM        = "hbdm.com"
 )

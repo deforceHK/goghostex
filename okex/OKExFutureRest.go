@@ -37,7 +37,7 @@ type Future struct {
 }
 
 func (ok *Future) GetExchangeName() string {
-	return OKEX_FUTURE
+	return OKEX
 }
 
 // cny -> usd rate
