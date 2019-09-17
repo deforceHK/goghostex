@@ -19,10 +19,10 @@ import (
 type Command struct {
 	args []string
 
-	currencyTarget string
-	currencyBasis  string
-	exchange       string
-	tradeType      string
+	currencyBasis   string
+	currencyCounter string
+	exchange        string
+	tradeType       string
 
 	proxy string
 }
@@ -41,29 +41,29 @@ func (this *Command) Parse() error {
 	}
 
 	cli.StringVar(
-		&this.currencyTarget,
-		"CT",
-		"btc",
-		"Set the currency of target. Default is `btc`",
-	)
-	cli.StringVar(
-		&this.currencyTarget,
-		"currency-target",
-		"btc",
-		"Set the currency of target. Default is `btc`",
-	)
-
-	cli.StringVar(
 		&this.currencyBasis,
 		"CB",
-		"usd",
-		"Set the currency of basis. Default is `usd`",
+		"btc",
+		"Set the currency of basis. Default is `btc`",
 	)
 	cli.StringVar(
 		&this.currencyBasis,
 		"currency-basis",
+		"btc",
+		"Set the currency of basis. Default is `btc`",
+	)
+
+	cli.StringVar(
+		&this.currencyCounter,
+		"CC",
 		"usd",
-		"Set the currency of basis. Default is `usd`",
+		"Set the currency of counter. Default is `usd`",
+	)
+	cli.StringVar(
+		&this.currencyCounter,
+		"currency-counter",
+		"usd",
+		"Set the currency of counter. Default is `usd`",
 	)
 
 	cli.StringVar(
@@ -161,11 +161,11 @@ func (this *Command) parseTicker() {
 	api, _ := this.getSponAPI()
 
 	if ticker, _, err := api.GetTicker(CurrencyPair{
-		CurrencyTarget: Currency{
-			Symbol: strings.ToUpper(this.currencyTarget),
-		},
 		CurrencyBasis: Currency{
 			Symbol: strings.ToUpper(this.currencyBasis),
+		},
+		CurrencyCounter: Currency{
+			Symbol: strings.ToUpper(this.currencyCounter),
 		},
 	}); err != nil {
 		panic(err)

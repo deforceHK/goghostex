@@ -18,10 +18,10 @@ func (c Currency) Eq(c2 Currency) bool {
 type CurrencyPair struct {
 	//The target currency, you want to buy or long
 	//目标货币，你想买或者做多的。
-	CurrencyTarget Currency
-	//The basis currency, you use it to buy or to mortgage
-	//基础货币，你想用它来购买或者用它来做为抵押物。
 	CurrencyBasis Currency
+	//The counter currency, you use it to buy or to mortgage
+	//计数货币，你想用它来购买或者用它来做为抵押物。
+	CurrencyCounter Currency
 }
 
 var (
@@ -210,8 +210,8 @@ func NewCurrency(symbol, desc string) Currency {
 	}
 }
 
-func NewCurrencyPair(CurrencyTarget Currency, CurrencyBasis Currency) CurrencyPair {
-	return CurrencyPair{CurrencyTarget, CurrencyBasis}
+func NewCurrencyPair(CurrencyBasis Currency, CurrencyCounter Currency) CurrencyPair {
+	return CurrencyPair{CurrencyBasis, CurrencyCounter}
 }
 
 func NewCurrencyPair2(currencyPairSymbol string) CurrencyPair {
@@ -224,51 +224,40 @@ func NewCurrencyPair2(currencyPairSymbol string) CurrencyPair {
 }
 
 func (pair CurrencyPair) ToSymbol(joinChar string) string {
-	return strings.Join([]string{pair.CurrencyTarget.Symbol, pair.CurrencyBasis.Symbol}, joinChar)
+	return strings.Join([]string{pair.CurrencyBasis.Symbol, pair.CurrencyCounter.Symbol}, joinChar)
 }
 
 func (pair CurrencyPair) ToSymbol2(joinChar string) string {
-	return strings.Join([]string{pair.CurrencyBasis.Symbol, pair.CurrencyTarget.Symbol}, joinChar)
+	return strings.Join([]string{pair.CurrencyCounter.Symbol, pair.CurrencyBasis.Symbol}, joinChar)
 }
 
 func (pair CurrencyPair) AdaptUsdtToUsd() CurrencyPair {
-	CurrencyBasis := pair.CurrencyBasis
-	if pair.CurrencyBasis.Eq(USDT) {
-		CurrencyBasis = USD
+	CurrencyCounter := pair.CurrencyCounter
+	if pair.CurrencyCounter.Eq(USDT) {
+		CurrencyCounter = USD
 	}
-	return CurrencyPair{pair.CurrencyTarget, CurrencyBasis}
+	return CurrencyPair{pair.CurrencyBasis, CurrencyCounter}
 }
 
 func (pair CurrencyPair) AdaptUsdToUsdt() CurrencyPair {
-	CurrencyBasis := pair.CurrencyBasis
-	if pair.CurrencyBasis.Eq(USD) {
-		CurrencyBasis = USDT
+	CurrencyCounter := pair.CurrencyCounter
+	if pair.CurrencyCounter.Eq(USD) {
+		CurrencyCounter = USDT
 	}
-	return CurrencyPair{pair.CurrencyTarget, CurrencyBasis}
-}
-
-//It is currently applicable to binance and zb
-func (pair CurrencyPair) AdaptBchToBcc() CurrencyPair {
-	CurrencyTarget := pair.CurrencyTarget
-	if pair.CurrencyTarget.Eq(BCH) {
-		CurrencyTarget = BCC
-	}
-	return CurrencyPair{CurrencyTarget, pair.CurrencyBasis}
-}
-
-func (pair CurrencyPair) AdaptBccToBch() CurrencyPair {
-	if pair.CurrencyTarget.Eq(BCC) {
-		return CurrencyPair{BCH, pair.CurrencyBasis}
-	}
-	return pair
+	return CurrencyPair{pair.CurrencyBasis, CurrencyCounter}
 }
 
 //for to symbol lower , Not practical '==' operation method
 func (pair CurrencyPair) ToLower() CurrencyPair {
-	return CurrencyPair{Currency{strings.ToLower(pair.CurrencyTarget.Symbol), ""},
-		Currency{strings.ToLower(pair.CurrencyBasis.Symbol), ""}}
+	return CurrencyPair{
+		Currency{strings.ToLower(pair.CurrencyBasis.Symbol), ""},
+		Currency{strings.ToLower(pair.CurrencyCounter.Symbol), ""},
+	}
 }
 
 func (pair CurrencyPair) Reverse() CurrencyPair {
-	return CurrencyPair{pair.CurrencyBasis, pair.CurrencyTarget}
+	return CurrencyPair{
+		pair.CurrencyCounter,
+		pair.CurrencyBasis,
+	}
 }

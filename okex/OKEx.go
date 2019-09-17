@@ -96,7 +96,7 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]int{
 	KLINE_PERIOD_1WEEK: 604800,
 }
 
-var _INTERNAL_ORDER_TYPE_CONVERTER = map[OrderType]int{
+var _INTERNAL_ORDER_TYPE_CONVERTER = map[PlaceType]int{
 	NORMAL:     0,
 	ONLY_MAKER: 1,
 	FOK:        2,

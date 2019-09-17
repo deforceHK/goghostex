@@ -111,6 +111,66 @@ func (fd FutureDepth) Verify() error {
 	return nil
 }
 
+type FutureStdDepthRecords []FutureStdDepthRecord
+
+type FutureStdDepthRecord struct {
+	Price  int64
+	Amount int64
+}
+
+func (dr FutureStdDepthRecords) Len() int {
+	return len(dr)
+}
+
+func (dr FutureStdDepthRecords) Swap(i, j int) {
+	dr[i], dr[j] = dr[j], dr[i]
+}
+
+func (dr FutureStdDepthRecords) Less(i, j int) bool {
+	return dr[i].Price < dr[j].Price
+}
+
+type FutureStdDepth struct {
+	ContractType string // for future
+	ContractName string // for future
+	Pair         CurrencyPair
+	Timestamp    uint64
+	// The increasing sequence, cause the http return sequence is not sure.
+	Sequence uint64
+	Date     string
+	AskList  FutureStdDepthRecords // Ascending order
+	BidList  FutureStdDepthRecords // Descending order
+}
+
+// Do not trust the data from exchange, just verify it.
+func (fd FutureStdDepth) Verify() error {
+
+	AskCount := len(fd.AskList)
+	BidCount := len(fd.BidList)
+
+	if BidCount < 10 || AskCount < 10 {
+		return errors.New("The ask_list or bid_list not enough! ")
+	}
+
+	for i := 1; i < AskCount; i++ {
+		pre := fd.AskList[i-1]
+		last := fd.AskList[i]
+		if pre.Price >= last.Price {
+			return errors.New("The ask_list is not ascending ordered! ")
+		}
+	}
+
+	for i := 1; i < BidCount; i++ {
+		pre := fd.BidList[i-1]
+		last := fd.BidList[i]
+		if pre.Price <= last.Price {
+			return errors.New("The bid_list is not descending ordered! ")
+		}
+	}
+
+	return nil
+}
+
 type FutureKline struct {
 	Kline
 	Vol2 float64 //个数

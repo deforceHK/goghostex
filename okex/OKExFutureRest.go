@@ -3,6 +3,7 @@ package okex
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"sync"
@@ -34,14 +35,6 @@ type Future struct {
 	sync.Locker
 	allContractInfo AllFutureContractInfo
 }
-
-//func (ok *Future) GetFutureDepth(size int, currencyPair CurrencyPair, contractType string) (*FutureDepth, []byte, error) {
-//	panic("implement me")
-//}
-//
-//func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
-//	panic("implement me")
-//}
 
 func (ok *Future) GetExchangeName() string {
 	return OKEX_FUTURE
@@ -116,8 +109,8 @@ func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) s
 	contractId := ""
 	for _, itm := range ok.allContractInfo.contractInfos {
 		if itm.Alias == contractAlias &&
-			itm.UnderlyingIndex == pair.CurrencyTarget.Symbol &&
-			itm.QuoteCurrency == pair.CurrencyBasis.Symbol {
+			itm.UnderlyingIndex == pair.CurrencyBasis.Symbol &&
+			itm.QuoteCurrency == pair.CurrencyCounter.Symbol {
 			contractId = itm.InstrumentID
 			break
 		}
@@ -216,6 +209,52 @@ func (ok *Future) GetFutureDepth(
 	return &dep, resp, nil
 }
 
+func (ok *Future) GetFutureStdDepth(
+	currencyPair CurrencyPair,
+	contractType string,
+	size int,
+) (*FutureStdDepth, []byte, error) {
+	urlPath := fmt.Sprintf(
+		"/api/futures/v3/instruments/%s/book?size=%d",
+		ok.getFutureContractId(currencyPair, contractType),
+		size,
+	)
+	var response struct {
+		Bids      [][4]interface{} `json:"bids"`
+		Asks      [][4]interface{} `json:"asks"`
+		Timestamp string           `json:"timestamp"`
+	}
+	resp, err := ok.DoRequest("GET", urlPath, "", &response)
+	if err != nil {
+		return nil, nil, err
+	}
+	date, _ := time.Parse(time.RFC3339, response.Timestamp)
+	if ok.config.Location != nil {
+		date = date.In(ok.config.Location)
+	}
+
+	var dep FutureStdDepth
+	dep.Pair = currencyPair
+	dep.ContractType = contractType
+	dep.Timestamp = uint64(date.UnixNano() / int64(time.Millisecond))
+	dep.Sequence = dep.Timestamp
+	dep.Date = date.Format(GO_BIRTHDAY)
+	for _, itm := range response.Asks {
+		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
+		dep.AskList = append(dep.AskList, FutureStdDepthRecord{
+			Price:  stdPrice,
+			Amount: ToInt64(itm[1])})
+	}
+	for _, itm := range response.Bids {
+		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
+		dep.BidList = append(dep.BidList, FutureStdDepthRecord{
+			Price:  stdPrice,
+			Amount: ToInt64(itm[1])})
+	}
+
+	return &dep, resp, nil
+}
+
 func (ok *Future) GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error) {
 	//统一交易对，当周，次周，季度指数一样的
 	urlPath := fmt.Sprintf(
@@ -277,7 +316,7 @@ func (ok *Future) GetFutureAccount() (*FutureAccount, []byte, error) {
 
 func (ok *Future) normalizePrice(price float64, pair CurrencyPair) string {
 	for _, info := range ok.allContractInfo.contractInfos {
-		if info.UnderlyingIndex == pair.CurrencyTarget.Symbol && info.QuoteCurrency == pair.CurrencyBasis.Symbol {
+		if info.UnderlyingIndex == pair.CurrencyBasis.Symbol && info.QuoteCurrency == pair.CurrencyCounter.Symbol {
 			var bit = 0
 			for info.TickSize < 1 {
 				bit++
@@ -322,7 +361,7 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 	param.Size = fmt.Sprint(order.Amount)
 	param.Leverage = order.LeverRate
 	param.MatchPrice = order.MatchPrice
-	param.OrderType = int(order.OrderType)
+	param.OrderType = int(order.PlaceType)
 
 	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
 	if param.MatchPrice == 1 && param.OrderType != 0 {
@@ -531,7 +570,8 @@ func (ok *Future) GetFee() (float64, error) { panic("") }
 
 func (ok *Future) GetContractValue(currencyPair CurrencyPair) (float64, error) {
 	for _, info := range ok.allContractInfo.contractInfos {
-		if info.UnderlyingIndex == currencyPair.CurrencyTarget.Symbol && info.QuoteCurrency == currencyPair.CurrencyBasis.Symbol {
+		if info.UnderlyingIndex == currencyPair.CurrencyBasis.Symbol &&
+			info.QuoteCurrency == currencyPair.CurrencyCounter.Symbol {
 			return ToFloat64(info.ContractVal), nil
 		}
 	}
