@@ -76,14 +76,14 @@ const (
 
 //exchanges const
 const (
-	OKEX        = "okex"
-	OKEX_SWAP   = "okex.com_swap"
-	HUOBI       = "huobi.com"
-	HUOBI_PRO   = "huobi.pro"
-	BITFINEX    = "bitfinex.com"
-	BINANCE     = "binance"
-	BITMEX      = "bitmex.com"
-	HBDM        = "hbdm.com"
+	OKEX      = "okex"
+	OKEX_SWAP = "okex.com_swap"
+	HUOBI     = "huobi.com"
+	HUOBI_PRO = "huobi.pro"
+	BITFINEX  = "bitfinex.com"
+	BINANCE   = "binance"
+	BITMEX    = "bitmex.com"
+	HBDM      = "hbdm.com"
 )
 
 var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}

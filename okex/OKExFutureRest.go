@@ -22,7 +22,9 @@ type FutureContractInfo struct {
 	ContractVal     string  `json:"contract_val"`     //the contract vol in usd
 	Listing         string  `json:"listing"`
 	Delivery        string  `json:"delivery"` // delivery date
-	Alias           string  `json:"alias"`    // this_week next_week quarter
+	DueTimestamp    uint64  `json:"due_timestamp"`
+	DueDate         string  `json:"due_date"`
+	Alias           string  `json:"alias"` // this_week next_week quarter
 }
 
 type AllFutureContractInfo struct {
@@ -79,7 +81,61 @@ func (ok *Future) GetFutureContractInfo() ([]FutureContractInfo, []byte, error) 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	for i, item := range response {
+		if dueTime, err := time.ParseInLocation("2006-01-02", item.Delivery, loc); err != nil {
+			return nil, nil, err
+		} else {
+			dueTime = dueTime.Add(16 * time.Hour).In(ok.config.Location)
+			response[i].DueDate = dueTime.Format(GO_BIRTHDAY)
+			response[i].DueTimestamp = uint64(dueTime.UnixNano() / int64(time.Millisecond))
+		}
+	}
+
 	return response, resp, nil
+}
+
+func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) FutureContractInfo {
+
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(loc)
+	hour := now.Hour()
+	minute := now.Minute()
+
+	if ok.allContractInfo.uTime.IsZero() || (hour == 16 && minute <= 11) {
+		ok.Lock()
+		defer ok.Unlock()
+
+		contractInfo, _, err := ok.GetFutureContractInfo()
+		if err == nil {
+			ok.allContractInfo.uTime = time.Now()
+			ok.allContractInfo.contractInfos = contractInfo
+		} else {
+			panic(err)
+		}
+	}
+
+	useAlias := contractName == THIS_WEEK_CONTRACT ||
+		contractName == NEXT_WEEK_CONTRACT ||
+		contractName == QUARTER_CONTRACT
+
+	for _, itm := range ok.allContractInfo.contractInfos {
+		if useAlias &&
+			itm.Alias == contractName &&
+			itm.UnderlyingIndex == pair.CurrencyBasis.Symbol &&
+			itm.QuoteCurrency == pair.CurrencyCounter.Symbol {
+			return itm
+		}
+
+		if !useAlias &&
+			itm.InstrumentID == contractName &&
+			itm.UnderlyingIndex == pair.CurrencyBasis.Symbol &&
+			itm.QuoteCurrency == pair.CurrencyCounter.Symbol {
+			return itm
+		}
+	}
+	panic("Can not find the Contract info")
 }
 
 func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) string {
@@ -89,11 +145,12 @@ func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) s
 		return contractAlias
 	}
 
-	now := time.Now()
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(loc)
 	hour := now.Hour()
-	mintue := now.Minute()
+	minute := now.Minute()
 
-	if ok.allContractInfo.uTime.IsZero() || (hour == 16 && mintue <= 11) {
+	if ok.allContractInfo.uTime.IsZero() || (hour == 16 && minute <= 11) {
 		ok.Lock()
 		defer ok.Unlock()
 
@@ -587,14 +644,14 @@ func (ok *Future) GetDeliveryTime() (int, int, int, int) {
 */
 func (ok *Future) GetFutureKlineRecords(
 	contractType string,
-	currency CurrencyPair,
+	pair CurrencyPair,
 	period,
 	size,
 	since int,
 ) ([]FutureKline, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/candles?",
-		ok.getFutureContractId(currency, contractType),
+		ok.getFutureContractId(pair, contractType),
 	)
 
 	params := url.Values{}
@@ -624,6 +681,7 @@ func (ok *Future) GetFutureKlineRecords(
 		return nil, nil, err
 	}
 
+	contract := ok.getFutureContract(pair, contractType)
 	var klines []FutureKline
 	for _, itm := range response {
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
@@ -631,13 +689,15 @@ func (ok *Future) GetFutureKlineRecords(
 			Kline: Kline{
 				Timestamp: uint64(t.UnixNano() / int64(time.Millisecond)),
 				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
-				Pair:      currency,
+				Pair:      pair,
 				Open:      ToFloat64(itm[1]),
 				High:      ToFloat64(itm[2]),
 				Low:       ToFloat64(itm[3]),
 				Close:     ToFloat64(itm[4]),
 				Vol:       ToFloat64(itm[5]),
 			},
+			DueTimestamp:contract.DueTimestamp,
+			DueDate: contract.DueDate,
 			Vol2: ToFloat64(itm[6]),
 		})
 	}

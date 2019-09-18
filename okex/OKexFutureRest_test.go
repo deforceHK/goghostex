@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	FUTURE_API_KEY        = ""
-	FUTURE_API_SECRETKEY  = ""
-	FUTURE_API_PASSPHRASE = ""
+	FUTURE_API_KEY        = "a127cc13-2c21-4b19-9a3b-7be62ca8a6f1"
+	FUTURE_API_SECRETKEY  = "B7318B036B1C5C37BEA45DC3B12AD804"
+	FUTURE_API_PASSPHRASE = "strengthening"
 )
 
 /**
@@ -168,16 +168,15 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if Contracts, body, err := ok.Future.GetFutureContractInfo();err!=nil{
+	if Contracts, body, err := ok.Future.GetFutureContractInfo(); err != nil {
 		t.Error(err)
 		return
-	}else{
+	} else {
 		t.Log(Contracts)
 
 		t.Log("contract info remote api response: ")
 		t.Log(string(body))
 	}
-
 
 }
 
