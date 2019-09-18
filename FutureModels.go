@@ -173,6 +173,8 @@ func (fd FutureStdDepth) Verify() error {
 
 type FutureKline struct {
 	Kline
+	DueTimestamp uint64
+	DueDate string
 	Vol2 float64 //个数
 }
 

@@ -168,16 +168,15 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if Contracts, body, err := ok.Future.GetFutureContractInfo();err!=nil{
+	if Contracts, body, err := ok.Future.GetFutureContractInfo(); err != nil {
 		t.Error(err)
 		return
-	}else{
+	} else {
 		t.Log(Contracts)
 
 		t.Log("contract info remote api response: ")
 		t.Log(string(body))
 	}
-
 
 }
 
