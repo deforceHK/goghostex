@@ -20,8 +20,8 @@ type remoteOrder struct {
 	Symbol              string  `json:"symbol"`
 	OrderId             int64   `json:"orderId"`
 	ClientOrderId       string  `json:"clientOrderId"`
-	TransactTime        uint64  `json:"transactTime"` // exist when order
-	Time                uint64  `json:"time"`         // exist when get order info
+	TransactTime        int64  `json:"transactTime"` // exist when order
+	Time                int64  `json:"time"`         // exist when get order info
 	Price               float64 `json:"price,string"`
 	OrigQty             float64 `json:"origQty,string"`
 	ExecutedQty         float64 `json:"executedQty,string"`         // order deal amount
@@ -250,7 +250,7 @@ func (this *Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
 	} else {
 		var ticker Ticker
 		ticker.Pair = currency
-		ticker.Timestamp = uint64(response.Timestamp)
+		ticker.Timestamp = response.Timestamp
 		ticker.Date = time.Unix(
 			response.Timestamp/1000,
 			0,
@@ -277,7 +277,7 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 		Message      string          `json:"message,-"`
 		Asks         [][]interface{} `json:"asks"` // The binance return asks Ascending ordered
 		Bids         [][]interface{} `json:"bids"` // The binance return bids Descending ordered
-		LastUpdateId uint64          `json:"lastUpdateId"`
+		LastUpdateId int64          `json:"lastUpdateId"`
 	}{}
 
 	apiUri := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair2.ToSymbol(""), size)
@@ -291,7 +291,7 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 	depth := new(Depth)
 	depth.Pair = pair
 	now := time.Now()
-	depth.Timestamp = uint64(now.UnixNano() / 1000000)
+	depth.Timestamp = now.UnixNano() / int64(time.Millisecond)
 	depth.Date = now.In(this.config.Location).Format(GO_BIRTHDAY)
 	depth.Sequence = response.LastUpdateId
 
@@ -335,7 +335,7 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 		for i, e := range record {
 			switch i {
 			case 0:
-				r.Timestamp = uint64(e.(float64))
+				r.Timestamp = int64(e.(float64))
 				r.Date = time.Unix(
 					int64(r.Timestamp)/1000,
 					0,

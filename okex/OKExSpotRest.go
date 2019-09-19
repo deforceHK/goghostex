@@ -232,7 +232,7 @@ func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 	if date, err := time.Parse(time.RFC3339, response.Timestamp); err != nil {
 		return err
 	} else {
-		order.OrderTimestamp = uint64(date.UnixNano() / 1000000)
+		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
 		order.OrderDate = date.In(this.config.Location).Format(GO_BIRTHDAY)
 		return nil
 	}
@@ -320,7 +320,7 @@ func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
 		Sell:      response.BestAsk,
 		Buy:       response.BestBid,
 		Vol:       response.BaseVolume24h,
-		Timestamp: uint64(time.Duration(date.UnixNano() / int64(time.Millisecond))),
+		Timestamp: date.UnixNano() / int64(time.Millisecond),
 		Date:      date.In(this.config.Location).Format(GO_BIRTHDAY),
 	}, resp, nil
 }
@@ -346,7 +346,7 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 	dep := new(Depth)
 	dep.Pair = currency
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
-	dep.Timestamp = uint64(date.UnixNano() / 1000000)
+	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
 	dep.Date = date.In(this.config.Location).Format(GO_BIRTHDAY)
 	dep.Sequence = dep.Timestamp
 
@@ -406,7 +406,7 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 	for _, item := range response {
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(item[0]))
 		klines = append(klines, Kline{
-			Timestamp: uint64(t.UnixNano() / int64(time.Millisecond)),
+			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Pair:      currency,
 			Open:      ToFloat64(item[1]),

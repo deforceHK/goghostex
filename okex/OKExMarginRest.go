@@ -310,7 +310,7 @@ func (this *Margin) adaptOrder(order *Order, response *OrderResponse) error {
 	if date, err := time.Parse(time.RFC3339, response.Timestamp); err != nil {
 		return err
 	} else {
-		order.OrderTimestamp = uint64(date.UnixNano() / 1000000)
+		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
 		order.OrderDate = date.In(this.config.Location).Format(GO_BIRTHDAY)
 		return nil
 	}
