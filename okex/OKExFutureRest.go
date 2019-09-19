@@ -22,7 +22,7 @@ type FutureContractInfo struct {
 	ContractVal     string  `json:"contract_val"`     //the contract vol in usd
 	Listing         string  `json:"listing"`
 	Delivery        string  `json:"delivery"` // delivery date
-	DueTimestamp    uint64  `json:"due_timestamp"`
+	DueTimestamp    int64  `json:"due_timestamp"`
 	DueDate         string  `json:"due_date"`
 	Alias           string  `json:"alias"` // this_week next_week quarter
 }
@@ -89,7 +89,7 @@ func (ok *Future) GetFutureContractInfo() ([]FutureContractInfo, []byte, error) 
 		} else {
 			dueTime = dueTime.Add(16 * time.Hour).In(ok.config.Location)
 			response[i].DueDate = dueTime.Format(GO_BIRTHDAY)
-			response[i].DueTimestamp = uint64(dueTime.UnixNano() / int64(time.Millisecond))
+			response[i].DueTimestamp = dueTime.UnixNano() / int64(time.Millisecond)
 		}
 	}
 
@@ -212,7 +212,7 @@ func (ok *Future) GetFutureTicker(currencyPair CurrencyPair, contractType string
 			High:      response.High24h,
 			Last:      response.Last,
 			Vol:       response.Volume24h,
-			Timestamp: uint64(date.UnixNano() / int64(time.Millisecond)),
+			Timestamp: date.UnixNano() / int64(time.Millisecond),
 			Date:      date.In(ok.config.Location).Format(GO_BIRTHDAY),
 		},
 		ContractType: contractType,
@@ -249,7 +249,7 @@ func (ok *Future) GetFutureDepth(
 	var dep FutureDepth
 	dep.Pair = currencyPair
 	dep.ContractType = contractType
-	dep.Timestamp = uint64(date.UnixNano() / int64(time.Millisecond))
+	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
 	dep.Sequence = dep.Timestamp
 	dep.Date = date.Format(GO_BIRTHDAY)
 	for _, itm := range response.Asks {
@@ -293,7 +293,7 @@ func (ok *Future) GetFutureStdDepth(
 	var dep FutureStdDepth
 	dep.Pair = currencyPair
 	dep.ContractType = contractType
-	dep.Timestamp = uint64(date.UnixNano() / int64(time.Millisecond))
+	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
 	dep.Sequence = dep.Timestamp
 	dep.Date = date.Format(GO_BIRTHDAY)
 	for _, itm := range response.Asks {
@@ -435,7 +435,7 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 	now := time.Now()
 	order.Cid = response.ClientOid
 	order.OrderId = response.OrderId
-	order.OrderTimestamp = uint64(now.UnixNano() / int64(time.Millisecond))
+	order.OrderTimestamp = now.UnixNano() / int64(time.Millisecond)
 	order.OrderDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
 	return resp, nil
 }
@@ -448,7 +448,7 @@ func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
 	ord.AvgPrice = response.PriceAvg
 	ord.Status = ok.adaptOrderState(response.State)
 	ord.Fee = response.Fee
-	ord.OrderTimestamp = uint64(response.Timestamp.UnixNano() / int64(time.Millisecond))
+	ord.OrderTimestamp = response.Timestamp.UnixNano() / int64(time.Millisecond)
 	ord.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
 	if ord.Exchange == "" {
 		ord.Exchange = ok.GetExchangeName()
@@ -687,7 +687,7 @@ func (ok *Future) GetFutureKlineRecords(
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
 		klines = append(klines, FutureKline{
 			Kline: Kline{
-				Timestamp: uint64(t.UnixNano() / int64(time.Millisecond)),
+				Timestamp: t.UnixNano() / int64(time.Millisecond),
 				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
 				Pair:      pair,
 				Open:      ToFloat64(itm[1]),

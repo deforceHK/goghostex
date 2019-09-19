@@ -82,7 +82,7 @@ func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
 		Vol:       ToFloat64(response.Volume),
 		Sell:      ToFloat64(response.Sell),
 		Buy:       ToFloat64(response.Buy),
-		Timestamp: uint64(response.Timestamp * 1000),
+		Timestamp: int64(response.Timestamp) * 1000,
 		Date: time.Unix(
 			int64(response.Timestamp),
 			0,
@@ -97,7 +97,7 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 		Asks      [][]interface{} `json:"asks"`
 		Status    string          `json:"status"`
 		Reason    string          `json:"reason"`
-		Timestamp uint64          `json:"timestamp,string"`
+		Timestamp int64          `json:"timestamp,string"`
 	}{}
 
 	resp, err := this.DoRequest("GET", uri, "", &response) //&response)

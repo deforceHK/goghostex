@@ -74,9 +74,9 @@ type FutureDepth struct {
 	ContractType string // for future
 	ContractName string // for future
 	Pair         CurrencyPair
-	Timestamp    uint64
+	Timestamp    int64
 	// The increasing sequence, cause the http return sequence is not sure.
-	Sequence uint64
+	Sequence int64
 	Date     string
 	AskList  FutureDepthRecords // Ascending order
 	BidList  FutureDepthRecords // Descending order
@@ -134,9 +134,9 @@ type FutureStdDepth struct {
 	ContractType string // for future
 	ContractName string // for future
 	Pair         CurrencyPair
-	Timestamp    uint64
+	Timestamp    int64
 	// The increasing sequence, cause the http return sequence is not sure.
-	Sequence uint64
+	Sequence int64
 	Date     string
 	AskList  FutureStdDepthRecords // Ascending order
 	BidList  FutureStdDepthRecords // Descending order
@@ -173,7 +173,7 @@ func (fd FutureStdDepth) Verify() error {
 
 type FutureKline struct {
 	Kline
-	DueTimestamp uint64
+	DueTimestamp int64
 	DueDate string
 	Vol2 float64 //个数
 }
@@ -192,7 +192,7 @@ type FutureOrder struct {
 	Amount         float64
 	AvgPrice       float64
 	DealAmount     float64
-	OrderTimestamp uint64 // unit: ms
+	OrderTimestamp int64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus
 	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC

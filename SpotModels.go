@@ -29,7 +29,7 @@ type SubAccount struct {
 
 type Kline struct {
 	Pair      CurrencyPair
-	Timestamp uint64
+	Timestamp int64
 	Date      string
 	Open      float64
 	Close     float64
@@ -46,7 +46,7 @@ type Ticker struct {
 	High      float64      `json:"high"`
 	Low       float64      `json:"low"`
 	Vol       float64      `json:"vol"`
-	Timestamp uint64       `json:"timestamp"` // unit:ms
+	Timestamp int64       `json:"timestamp"` // unit:ms
 	Date      string       `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
@@ -56,7 +56,7 @@ type Trade struct {
 	Type      TradeSide    `json:"type"`
 	Amount    float64      `json:"amount,string"`
 	Price     float64      `json:"price,string"`
-	Timestamp uint64       `json:"timestamp"`
+	Timestamp int64       `json:"timestamp"`
 	Pair      CurrencyPair `json:"omitempty"`
 }
 
@@ -81,8 +81,8 @@ func (dr DepthRecords) Less(i, j int) bool {
 
 type Depth struct {
 	Pair      CurrencyPair
-	Timestamp uint64
-	Sequence  uint64 // The increasing sequence, cause the http return sequence is not sure.
+	Timestamp int64
+	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
 	Date      string
 	AskList   DepthRecords // Ascending order
 	BidList   DepthRecords // Descending order
@@ -130,7 +130,7 @@ type Order struct {
 	DealAmount     float64
 	Fee            float64
 	OrderId        string
-	OrderTimestamp uint64
+	OrderTimestamp int64
 	OrderDate      string
 	Status         TradeStatus
 	Currency       CurrencyPair
