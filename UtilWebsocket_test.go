@@ -48,6 +48,7 @@ func TestNewWsConn(t *testing.T) {
 		"socks5://127.0.0.1:1090",
 	).Heartbeat(
 		[]byte("ping"),
+		0,
 		5*time.Second,
 	).UnCompressFunc(GzipDecode).ProtoHandleFunc(ProtoHandle).Build()
 	t.Log(ws.Subscribe(map[string]string{

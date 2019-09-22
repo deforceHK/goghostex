@@ -46,7 +46,7 @@ type Ticker struct {
 	High      float64      `json:"high"`
 	Low       float64      `json:"low"`
 	Vol       float64      `json:"vol"`
-	Timestamp int64       `json:"timestamp"` // unit:ms
+	Timestamp int64        `json:"timestamp"` // unit:ms
 	Date      string       `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
@@ -56,7 +56,7 @@ type Trade struct {
 	Type      TradeSide    `json:"type"`
 	Amount    float64      `json:"amount,string"`
 	Price     float64      `json:"price,string"`
-	Timestamp int64       `json:"timestamp"`
+	Timestamp int64        `json:"timestamp"`
 	Pair      CurrencyPair `json:"omitempty"`
 }
 

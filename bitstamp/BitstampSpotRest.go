@@ -97,7 +97,7 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 		Asks      [][]interface{} `json:"asks"`
 		Status    string          `json:"status"`
 		Reason    string          `json:"reason"`
-		Timestamp int64          `json:"timestamp,string"`
+		Timestamp int64           `json:"timestamp,string"`
 	}{}
 
 	resp, err := this.DoRequest("GET", uri, "", &response) //&response)

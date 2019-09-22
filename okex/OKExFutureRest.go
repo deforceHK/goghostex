@@ -22,7 +22,7 @@ type FutureContractInfo struct {
 	ContractVal     string  `json:"contract_val"`     //the contract vol in usd
 	Listing         string  `json:"listing"`
 	Delivery        string  `json:"delivery"` // delivery date
-	DueTimestamp    int64  `json:"due_timestamp"`
+	DueTimestamp    int64   `json:"due_timestamp"`
 	DueDate         string  `json:"due_date"`
 	Alias           string  `json:"alias"` // this_week next_week quarter
 }
@@ -696,9 +696,9 @@ func (ok *Future) GetFutureKlineRecords(
 				Close:     ToFloat64(itm[4]),
 				Vol:       ToFloat64(itm[5]),
 			},
-			DueTimestamp:contract.DueTimestamp,
-			DueDate: contract.DueDate,
-			Vol2: ToFloat64(itm[6]),
+			DueTimestamp: contract.DueTimestamp,
+			DueDate:      contract.DueDate,
+			Vol2:         ToFloat64(itm[6]),
 		})
 	}
 
