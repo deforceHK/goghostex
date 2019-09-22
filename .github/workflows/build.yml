@@ -1,0 +1,45 @@
+name: build
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-16.04
+    steps:
+      - name: Set up Go 1.12
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.12
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+          path: go/src/github.com/strengthening/goghostex
+
+      - name: Get dependencies
+        run: |
+          mkdir -p $GOPATH/bin
+          export PATH=$PATH:$GOPATH/bin
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
+        env:
+          GOPATH: /home/runner/work/goghostex/go
+
+      - name: Check the program norm
+        run: go vet ./...
+        env:
+          GOPATH: /home/runner/work/goghostex/go
+
+      - name: Build
+        run: go build -v ./...
+        env:
+          GOPATH: /home/runner/work/goghostex/go
