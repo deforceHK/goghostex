@@ -20,8 +20,8 @@ type remoteOrder struct {
 	Symbol              string  `json:"symbol"`
 	OrderId             int64   `json:"orderId"`
 	ClientOrderId       string  `json:"clientOrderId"`
-	TransactTime        int64  `json:"transactTime"` // exist when order
-	Time                int64  `json:"time"`         // exist when get order info
+	TransactTime        int64   `json:"transactTime"` // exist when order
+	Time                int64   `json:"time"`         // exist when get order info
 	Price               float64 `json:"price,string"`
 	OrigQty             float64 `json:"origQty,string"`
 	ExecutedQty         float64 `json:"executedQty,string"`         // order deal amount
@@ -277,7 +277,7 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 		Message      string          `json:"message,-"`
 		Asks         [][]interface{} `json:"asks"` // The binance return asks Ascending ordered
 		Bids         [][]interface{} `json:"bids"` // The binance return bids Descending ordered
-		LastUpdateId int64          `json:"lastUpdateId"`
+		LastUpdateId int64           `json:"lastUpdateId"`
 	}{}
 
 	apiUri := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair2.ToSymbol(""), size)

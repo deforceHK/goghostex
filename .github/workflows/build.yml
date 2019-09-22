@@ -35,7 +35,7 @@ jobs:
           GOPATH: /home/runner/work/goghostex/go
 
       - name: Check the program norm
-        run: go vet ./...
+        run: go vet -composites=false ./...
         env:
           GOPATH: /home/runner/work/goghostex/go
 
