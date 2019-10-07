@@ -103,13 +103,15 @@ func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) Futu
 	hour := now.Hour()
 	minute := now.Minute()
 
-	if ok.allContractInfo.uTime.IsZero() || (hour == 16 && minute <= 11) {
+	if ok.allContractInfo.uTime.IsZero() ||
+		(now.Weekday() == time.Friday && hour == 16 && minute <= 11 &&
+			ok.allContractInfo.uTime.Before(now.In(ok.config.Location).Add(-11*time.Minute))) {
 		ok.Lock()
 		defer ok.Unlock()
 
 		contractInfo, _, err := ok.GetFutureContractInfo()
 		if err == nil {
-			ok.allContractInfo.uTime = time.Now()
+			ok.allContractInfo.uTime = time.Now().In(ok.config.Location)
 			ok.allContractInfo.contractInfos = contractInfo
 		} else {
 			panic(err)
