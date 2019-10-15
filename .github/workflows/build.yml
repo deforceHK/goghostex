@@ -65,6 +65,6 @@ jobs:
       - name: Ready to release, and update the gobuild lastest image
         run: |
           cd /home/runner/work/goghostex/go/src/github.com/strengthening/goghostex
-          docker build --rm -t registry.cn-hongkong.aliyuncs.com/strengthening/gobuild .
-          docker push registry.cn-hongkong.aliyuncs.com/strengthening/gobuild
+          docker build --rm -t registry.cn-hongkong.aliyuncs.com/strengthening/goghostex .
+          docker push registry.cn-hongkong.aliyuncs.com/strengthening/goghostex
 

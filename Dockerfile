@@ -1,4 +1,3 @@
-FROM registry.cn-hongkong.aliyuncs.com/strengthening/gobuild:latest
+FROM golang:alpine
 RUN mkdir -p /go/src/github.com/strengthening/goghostex
 COPY . /go/src/github.com/strengthening/goghostex
-
