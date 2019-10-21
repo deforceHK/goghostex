@@ -2,11 +2,12 @@ package okex
 
 import (
 	"encoding/json"
-	"github.com/strengthening/ghost-trade/constant"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/strengthening/ghost-trade/constant"
 
 	. "github.com/strengthening/goghostex"
 )
