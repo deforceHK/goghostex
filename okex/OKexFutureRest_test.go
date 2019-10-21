@@ -2,6 +2,7 @@ package okex
 
 import (
 	"encoding/json"
+	"github.com/strengthening/ghost-trade/constant"
 	"net/http"
 	"net/url"
 	"testing"
@@ -11,9 +12,9 @@ import (
 )
 
 const (
-	FUTURE_API_KEY        = ""
-	FUTURE_API_SECRETKEY  = ""
-	FUTURE_API_PASSPHRASE = ""
+	FUTURE_API_KEY        = "d765b134-4482-41d4-a5d6-944dc6061210"
+	FUTURE_API_SECRETKEY  = "B7318B036B1C5C37BEA45DC3B12AD804"
+	FUTURE_API_PASSPHRASE = "betathisway"
 )
 
 /**
@@ -178,6 +179,17 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(body))
 	}
 
+
+	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
+		CurrencyPair{BTC, USD},
+		constant.CONTRACT_TYPE_THIS_WEEK,
+	);err != nil {
+		t.Log(marketPrice)
+
+		t.Log("the remote api response:")
+		t.Log(string(body))
+	}
+
 }
 
 /**
@@ -227,153 +239,153 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	//ticker, _, err := ok.Future.GetFutureTicker(
-	//	CurrencyPair{ETC, USD},
-	//	THIS_WEEK_CONTRACT,
-	//)
-	//if err != nil {
-	//	t.Error(err)
-	//	return
-	//}
-	//
-	//order := FutureOrder{
-	//	Cid:          UUID(),
-	//	Price:        ticker.Last * 1.03,
-	//	Amount:       1,
-	//	PlaceType:    NORMAL,
-	//	Type:         OPEN_SHORT,
-	//	LeverRate:    20,
-	//	Currency:     CurrencyPair{ETC, USD},
-	//	ContractType: THIS_WEEK_CONTRACT,
-	//	MatchPrice:   0,
-	//}
-	//preCid := order.Cid
-	//
-	//if resp, err := ok.Future.PlaceFutureOrder(&order); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	if standard, err := json.Marshal(order); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Place Order standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Place Order remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//
-	//	if preCid != order.Cid {
-	//		t.Error("The cid is not same in the api. ")
-	//		return
-	//	}
-	//}
-	//
-	//if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	if standard, err := json.Marshal(order); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Get Order standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Get Order remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//}
-	//
-	//if resp, err := ok.Future.CancelFutureOrder(&order); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	if standard, err := json.Marshal(order); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Cancel Order standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Cancel Order remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//}
-	//
-	//if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	if standard, err := json.Marshal(order); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Get Order after standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Get Order after remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//
-	//	if order.Status != ORDER_CANCEL {
-	//		t.Error("The order must bi canceled. ")
-	//		return
-	//	}
-	//}
-	//
-	//onlyMakerOrder := FutureOrder{
-	//	Cid:          UUID(),
-	//	Price:        ticker.Last * 0.99,
-	//	Amount:       1,
-	//	PlaceType:    ONLY_MAKER,
-	//	Type:         OPEN_SHORT,
-	//	LeverRate:    20,
-	//	Currency:     CurrencyPair{ETC, USD},
-	//	ContractType: THIS_WEEK_CONTRACT,
-	//	MatchPrice:   0,
-	//}
-	//
-	//if resp, err := ok.Future.PlaceFutureOrder(&onlyMakerOrder); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	if standard, err := json.Marshal(onlyMakerOrder); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Place only maker Order standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Place only maker Order remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//}
-	//
-	//if resp, err := ok.Future.GetFutureOrder(&onlyMakerOrder); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	if standard, err := json.Marshal(onlyMakerOrder); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		t.Log("Get only maker Order after standard struct: ")
-	//		t.Log(string(standard))
-	//
-	//		t.Log("Get only maker Order after remote api struct: ")
-	//		t.Log(string(resp))
-	//	}
-	//
-	//	if onlyMakerOrder.Status != ORDER_CANCEL {
-	//		t.Error("The only maker order must bi canceled. ")
-	//		return
-	//	}
-	//}
+	ticker, _, err := ok.Future.GetFutureTicker(
+		CurrencyPair{ETC, USD},
+		THIS_WEEK_CONTRACT,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	order := FutureOrder{
+		Cid:          UUID(),
+		Price:        ticker.Last * 1.03,
+		Amount:       1,
+		PlaceType:    NORMAL,
+		Type:         OPEN_SHORT,
+		LeverRate:    20,
+		Currency:     CurrencyPair{ETC, USD},
+		ContractType: THIS_WEEK_CONTRACT,
+		MatchPrice:   0,
+	}
+	preCid := order.Cid
+
+	if resp, err := ok.Future.PlaceFutureOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		if standard, err := json.Marshal(order); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Place Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Place Order remote api struct: ")
+			t.Log(string(resp))
+		}
+
+		if preCid != order.Cid {
+			t.Error("The cid is not same in the api. ")
+			return
+		}
+	}
+
+	if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		if standard, err := json.Marshal(order); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Get Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Get Order remote api struct: ")
+			t.Log(string(resp))
+		}
+	}
+
+	if resp, err := ok.Future.CancelFutureOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		if standard, err := json.Marshal(order); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Cancel Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Cancel Order remote api struct: ")
+			t.Log(string(resp))
+		}
+	}
+
+	if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		if standard, err := json.Marshal(order); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Get Order after standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Get Order after remote api struct: ")
+			t.Log(string(resp))
+		}
+
+		if order.Status != ORDER_CANCEL {
+			t.Error("The order must bi canceled. ")
+			return
+		}
+	}
+
+	onlyMakerOrder := FutureOrder{
+		Cid:          UUID(),
+		Price:        ticker.Last * 0.99,
+		Amount:       1,
+		PlaceType:    ONLY_MAKER,
+		Type:         OPEN_SHORT,
+		LeverRate:    20,
+		Currency:     CurrencyPair{ETC, USD},
+		ContractType: THIS_WEEK_CONTRACT,
+		MatchPrice:   0,
+	}
+
+	if resp, err := ok.Future.PlaceFutureOrder(&onlyMakerOrder); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		if standard, err := json.Marshal(onlyMakerOrder); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Place only maker Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Place only maker Order remote api struct: ")
+			t.Log(string(resp))
+		}
+	}
+
+	if resp, err := ok.Future.GetFutureOrder(&onlyMakerOrder); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		if standard, err := json.Marshal(onlyMakerOrder); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Get only maker Order after standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Get only maker Order after remote api struct: ")
+			t.Log(string(resp))
+		}
+
+		if onlyMakerOrder.Status != ORDER_CANCEL {
+			t.Error("The only maker order must bi canceled. ")
+			return
+		}
+	}
 
 }
