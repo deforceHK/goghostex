@@ -642,8 +642,8 @@ func (ok *Future) GetDeliveryTime() (int, int, int, int) {
 }
 
 /**
-  since : 单位秒,开始时间
-*/
+ * since : 单位秒,开始时间
+**/
 func (ok *Future) GetFutureKlineRecords(
 	contractType string,
 	pair CurrencyPair,
