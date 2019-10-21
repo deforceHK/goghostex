@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/strengthening/ghost-trade/constant"
-
 	. "github.com/strengthening/goghostex"
 )
 
@@ -183,7 +181,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
 		CurrencyPair{BTC, USD},
-		constant.CONTRACT_TYPE_THIS_WEEK,
+		THIS_WEEK_CONTRACT,
 	);err != nil {
 		t.Log(marketPrice)
 
