@@ -30,6 +30,11 @@ git clone https://github.com/strengthening/goghostex.git
 go install
 ```
 
+## Test
+
+```
+go test -v ./{package name}/... -test.run {func name}
+```
 
 ## Todos
 
