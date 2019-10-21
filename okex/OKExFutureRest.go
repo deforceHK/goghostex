@@ -711,6 +711,32 @@ func (ok *Future) GetTrades(contract_type string, currencyPair CurrencyPair, sin
 	panic("")
 }
 
+func (ok *Future) GetFutureMarkPrice(pair CurrencyPair, contractType string) (float64, []byte, error) {
+	uri := fmt.Sprintf(
+		"/api/futures/v3/instruments/%s/mark_price",
+		ok.getFutureContractId(pair, contractType),
+	)
+
+	response := struct {
+		InstrumentId string `json:"instrument_id"`
+		MarkPrice  float64 `json:"mark_price,string"`
+		Timestamp    string `json:"timestamp"`
+	}{}
+
+	resp, err := ok.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
+
+	if err != nil {
+		return 0, resp, err
+	}
+
+	return response.MarkPrice, resp, nil
+}
+
 //特殊接口
 /*
  市价全平仓
