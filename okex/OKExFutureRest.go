@@ -97,6 +97,8 @@ func (ok *Future) GetFutureContractInfo() ([]FutureContractInfo, []byte, error) 
 }
 
 func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) FutureContractInfo {
+	ok.Lock()
+	defer ok.Unlock()
 
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
@@ -106,8 +108,6 @@ func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) Futu
 	if ok.allContractInfo.uTime.IsZero() ||
 		(now.Weekday() == time.Friday && hour == 16 && minute <= 11 &&
 			ok.allContractInfo.uTime.Before(now.In(ok.config.Location).Add(-11*time.Minute))) {
-		ok.Lock()
-		defer ok.Unlock()
 
 		contractInfo, _, err := ok.GetFutureContractInfo()
 		if err == nil {
@@ -718,9 +718,9 @@ func (ok *Future) GetFutureMarkPrice(pair CurrencyPair, contractType string) (fl
 	)
 
 	response := struct {
-		InstrumentId string `json:"instrument_id"`
-		MarkPrice  float64 `json:"mark_price,string"`
-		Timestamp    string `json:"timestamp"`
+		InstrumentId string  `json:"instrument_id"`
+		MarkPrice    float64 `json:"mark_price,string"`
+		Timestamp    string  `json:"timestamp"`
 	}{}
 
 	resp, err := ok.DoRequest(

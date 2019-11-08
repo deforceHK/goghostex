@@ -178,11 +178,10 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(body))
 	}
 
-
 	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
 		CurrencyPair{BTC, USD},
 		THIS_WEEK_CONTRACT,
-	);err != nil {
+	); err != nil {
 		t.Log(marketPrice)
 
 		t.Log("the remote api response:")

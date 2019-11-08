@@ -29,13 +29,13 @@ type SubAccount struct {
 
 type Kline struct {
 	Pair      CurrencyPair
-	Timestamp int64
-	Date      string
-	Open      float64
-	Close     float64
-	High      float64
-	Low       float64
-	Vol       float64
+	Timestamp int64   `json:"timestamp"`
+	Date      string  `json:"date"`
+	Open      float64 `json:"open"`
+	Close     float64 `json:"close"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Vol       float64 `json:"vol"`
 }
 
 type Ticker struct {
