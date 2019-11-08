@@ -103,11 +103,12 @@ func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) Futu
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 	hour := now.Hour()
-	theKeyTime := time.Date(now.Year(), now.Month(), now.Day(), 16,0,0,30,now.Location())
+	theKeyTime := time.Date(now.Year(), now.Month(), now.Day(), 16,0,0,0,now.Location())
 
 	if ok.allContractInfo.uTime.IsZero() ||
 		//在周五下午16点一个小时时间内请求任何链接皆可以。
-		(now.Weekday() == time.Friday && hour == 16 && ok.allContractInfo.uTime.Before(theKeyTime)) {
+		(now.Weekday() == time.Friday && hour == 16 && now.After(theKeyTime) &&
+			ok.allContractInfo.uTime.Before(theKeyTime)) {
 
 		contractInfo, _, err := ok.GetFutureContractInfo()
 		if err == nil {
@@ -147,18 +148,24 @@ func (ok *Future) getFutureContractId(pair CurrencyPair, contractAlias string) s
 		return contractAlias
 	}
 
+	ok.Lock()
+	defer ok.Unlock()
+
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 	hour := now.Hour()
-	minute := now.Minute()
+	theKeyTime := time.Date(now.Year(), now.Month(), now.Day(), 16,0,0,0,now.Location())
 
-	if ok.allContractInfo.uTime.IsZero() || (hour == 16 && minute <= 11) {
-		ok.Lock()
-		defer ok.Unlock()
+	if ok.allContractInfo.uTime.IsZero()  ||
+		//在周五下午16点一个小时时间内请求任何链接皆可以。
+		(now.Weekday() == time.Friday &&
+			hour == 16 &&
+			now.After(theKeyTime)&&
+			ok.allContractInfo.uTime.Before(theKeyTime)) {
 
 		contractInfo, _, err := ok.GetFutureContractInfo()
 		if err == nil {
-			ok.allContractInfo.uTime = time.Now()
+			ok.allContractInfo.uTime = now
 			ok.allContractInfo.contractInfos = contractInfo
 		} else {
 			panic(err)
