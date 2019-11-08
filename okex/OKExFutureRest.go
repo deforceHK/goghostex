@@ -103,15 +103,15 @@ func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) Futu
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 	hour := now.Hour()
-	minute := now.Minute()
+	theKeyTime := time.Date(now.Year(), now.Month(), now.Day(), 16,0,0,30,now.Location())
 
 	if ok.allContractInfo.uTime.IsZero() ||
-		(now.Weekday() == time.Friday && hour == 16 && minute <= 11 &&
-			ok.allContractInfo.uTime.Before(now.In(ok.config.Location).Add(-11*time.Minute))) {
+		//在周五下午16点一个小时时间内请求任何链接皆可以。
+		(now.Weekday() == time.Friday && hour == 16 && ok.allContractInfo.uTime.Before(theKeyTime)) {
 
 		contractInfo, _, err := ok.GetFutureContractInfo()
 		if err == nil {
-			ok.allContractInfo.uTime = time.Now().In(ok.config.Location)
+			ok.allContractInfo.uTime = now
 			ok.allContractInfo.contractInfos = contractInfo
 		} else {
 			panic(err)
