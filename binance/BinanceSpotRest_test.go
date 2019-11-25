@@ -143,6 +143,22 @@ func TestSpot_MarketAPI(t *testing.T) {
 		t.Log("day kline remote api response: ")
 		t.Log(string(resp))
 	}
+
+	if body, err := bn.Spot.ExchangeInfo(); err != nil {
+		t.Log(err)
+		return
+	} else {
+
+		info :=map[string]json.RawMessage{}
+		if err := json.Unmarshal(body, &info);err!=nil{
+			panic(err)
+		}else{
+			for key := range info{
+				t.Log(key)
+			}
+			t.Log(string(info["rateLimits"]))
+		}
+	}
 }
 
 /**

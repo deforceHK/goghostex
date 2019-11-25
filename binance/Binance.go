@@ -99,3 +99,19 @@ func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interfa
 		return resp, json.Unmarshal(resp, &response)
 	}
 }
+
+func (this *Binance) ExchangeInfo() ([]byte, error) {
+
+	body, err := this.DoRequest(
+		"GET",
+		API_V3+"exchangeInfo",
+		"",
+		nil,
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return body, nil
+	}
+}
