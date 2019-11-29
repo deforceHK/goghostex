@@ -4,7 +4,7 @@ const (
 	GO_BIRTHDAY = "2006-01-02 15:04:05"
 )
 
-type TradeSide int
+type TradeSide int64
 
 const (
 	BUY = 1 + iota
@@ -28,7 +28,7 @@ func (ts TradeSide) String() string {
 	}
 }
 
-type TradeStatus int
+type TradeStatus int64
 
 func (ts TradeStatus) String() string {
 	return tradeStatusSymbol[ts]
@@ -103,7 +103,7 @@ func (ot PlaceType) String() string {
 
 var futureTypeSymbol = [...]string{"", "OPEN_LONG", "OPEN_SHORT", "LIQUIDATE_LONG", "LIQUIDATE_SHORT"}
 
-type FutureType int
+type FutureType int64
 
 const (
 	OPEN_LONG       FutureType = 1 + iota //开多

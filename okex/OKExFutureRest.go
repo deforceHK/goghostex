@@ -119,10 +119,7 @@ func (ok *Future) getFutureContract(pair CurrencyPair, contractName string) Futu
 		}
 	}
 
-	useAlias := contractName == THIS_WEEK_CONTRACT ||
-		contractName == NEXT_WEEK_CONTRACT ||
-		contractName == QUARTER_CONTRACT
-
+	useAlias := contractName == THIS_WEEK_CONTRACT || contractName == NEXT_WEEK_CONTRACT || contractName == QUARTER_CONTRACT
 	for _, itm := range ok.allContractInfo.contractInfos {
 		if useAlias &&
 			itm.Alias == contractName &&
@@ -404,12 +401,12 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 	var param struct {
 		ClientOid    string `json:"client_oid"`
 		InstrumentId string `json:"instrument_id"`
-		Type         int    `json:"type"`
-		OrderType    int    `json:"order_type"`
+		Type         int64    `json:"type"`
+		OrderType    int64    `json:"order_type"`
 		Price        string `json:"price"`
 		Size         string `json:"size"`
-		MatchPrice   int    `json:"match_price"`
-		Leverage     int    `json:"leverage"`
+		MatchPrice   int64    `json:"match_price"`
+		Leverage     int64    `json:"leverage"`
 	}
 
 	var response struct {
@@ -422,12 +419,12 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 
 	param.InstrumentId = ok.getFutureContractId(order.Currency, order.ContractType)
 	param.ClientOid = order.Cid
-	param.Type = int(order.Type)
+	param.Type = int64(order.Type)
 	param.Price = ok.normalizePrice(order.Price, order.Currency)
 	param.Size = fmt.Sprint(order.Amount)
 	param.Leverage = order.LeverRate
 	param.MatchPrice = order.MatchPrice
-	param.OrderType = int(order.PlaceType)
+	param.OrderType = int64(order.PlaceType)
 
 	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
 	if param.MatchPrice == 1 && param.OrderType != 0 {
@@ -453,7 +450,7 @@ func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
 	ord.ContractName = response.InstrumentId
 	ord.OrderId = response.OrderId
 	ord.Cid = response.ClientOid
-	ord.DealAmount = response.FilledQty
+	ord.DealAmount = int64(response.FilledQty)
 	ord.AvgPrice = response.PriceAvg
 	ord.Status = ok.adaptOrderState(response.State)
 	ord.Fee = response.Fee

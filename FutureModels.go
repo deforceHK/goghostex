@@ -189,21 +189,21 @@ type FutureOrder struct {
 	Cid            string
 	OrderId        string
 	Price          float64
-	Amount         float64
+	Amount         int64
 	AvgPrice       float64
-	DealAmount     float64
+	DealAmount     int64
 	OrderTimestamp int64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus
 	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
-	LeverRate      int
+	LeverRate      int64
 	Fee            float64
 	Currency       CurrencyPair
 	ContractType   string
 	ContractName   string // for future
 	Exchange       string
-	MatchPrice     int // some exchange need
+	MatchPrice     int64 // some exchange need
 }
 
 type FuturePosition struct {

@@ -149,11 +149,11 @@ func TestSpot_MarketAPI(t *testing.T) {
 		return
 	} else {
 
-		info :=map[string]json.RawMessage{}
-		if err := json.Unmarshal(body, &info);err!=nil{
+		info := map[string]json.RawMessage{}
+		if err := json.Unmarshal(body, &info); err != nil {
 			panic(err)
-		}else{
-			for key := range info{
+		} else {
+			for key := range info {
 				t.Log(key)
 			}
 			t.Log(string(info["rateLimits"]))

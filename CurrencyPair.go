@@ -210,15 +210,14 @@ func NewCurrency(symbol, desc string) Currency {
 	}
 }
 
-func NewCurrencyPair(CurrencyBasis Currency, CurrencyCounter Currency) CurrencyPair {
+func newCurrencyPair(CurrencyBasis Currency, CurrencyCounter Currency) CurrencyPair {
 	return CurrencyPair{CurrencyBasis, CurrencyCounter}
 }
 
-func NewCurrencyPair2(currencyPairSymbol string) CurrencyPair {
+func NewCurrencyPair(currencyPairSymbol string) CurrencyPair {
 	currencys := strings.Split(currencyPairSymbol, "_")
 	if len(currencys) == 2 {
-		return CurrencyPair{NewCurrency(currencys[0], ""),
-			NewCurrency(currencys[1], "")}
+		return newCurrencyPair(NewCurrency(currencys[0], ""), NewCurrency(currencys[1], ""))
 	}
 	return UNKNOWN_PAIR
 }
