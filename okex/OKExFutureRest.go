@@ -227,9 +227,10 @@ func (ok *Future) GetFutureDepth(
 	contractType string,
 	size int,
 ) (*FutureDepth, []byte, error) {
+	fc := ok.GetFutureContract(currencyPair, contractType)
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/book?size=%d",
-		ok.GetInstrumentId(currencyPair, contractType),
+		fc.InstrumentID,
 		size,
 	)
 	var response struct {
@@ -249,6 +250,7 @@ func (ok *Future) GetFutureDepth(
 	var dep FutureDepth
 	dep.Pair = currencyPair
 	dep.ContractType = contractType
+	dep.DueTimestamp = fc.DueTimestamp
 	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
 	dep.Sequence = dep.Timestamp
 	dep.Date = date.Format(GO_BIRTHDAY)
@@ -272,12 +274,7 @@ func (ok *Future) GetFutureStdDepth(
 	size int,
 ) (*FutureStdDepth, []byte, error) {
 	fc := ok.GetFutureContract(currencyPair, contractType)
-
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/instruments/%s/book?size=%d",
-		fc.InstrumentID,
-		size,
-	)
+	urlPath := fmt.Sprintf("/api/futures/v3/instruments/%s/book?size=%d", fc.InstrumentID, size)
 	var response struct {
 		Bids      [][4]interface{} `json:"bids"`
 		Asks      [][4]interface{} `json:"asks"`

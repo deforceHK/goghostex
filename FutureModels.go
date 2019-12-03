@@ -75,6 +75,7 @@ type FutureDepth struct {
 	ContractName string // for future
 	Pair         CurrencyPair
 	Timestamp    int64
+	DueTimestamp int64
 	// The increasing sequence, cause the http return sequence is not sure.
 	Sequence int64
 	Date     string

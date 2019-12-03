@@ -64,7 +64,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if depth, body, err := ok.Future.GetFutureDepth(
-		CurrencyPair{BTC, USD},
+		NewCurrencyPair("btc_usd"),
 		THIS_WEEK_CONTRACT,
 		20,
 	); err != nil {
