@@ -146,7 +146,7 @@ func (this *Command) getNonAuthConfig() *APIConfig {
 	return config
 }
 
-func (this *Command) getSponAPI() (API, error) {
+func (this *Command) getSponAPI() (SpotAPI, error) {
 	config := this.getNonAuthConfig()
 	switch this.exchange {
 	case "okex":

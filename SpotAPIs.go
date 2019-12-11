@@ -1,7 +1,7 @@
 package goghostex
 
 // api interface
-type API interface {
+type SpotAPI interface {
 	//just the orderid, get order info by func GetOneOrder
 
 	LimitBuy(*Order) ([]byte, error)
