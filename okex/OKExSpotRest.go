@@ -375,13 +375,16 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 
 	params := url.Values{}
 	if since > 0 {
-		ts, err := strconv.ParseInt(strconv.Itoa(since)[0:10], 10, 64)
+		startTimeFmt := fmt.Sprintf("%d", since)
+		if len(startTimeFmt) >= 10 {
+			startTimeFmt = startTimeFmt[0:10]
+		}
+		ts, err := strconv.ParseInt(startTimeFmt, 10, 64)
 		if err != nil {
 			return nil, nil, err
 		}
 		sinceTime := time.Unix(ts, 0).UTC()
 		endTime := time.Now().UTC()
-
 		params.Add("start", sinceTime.Format(time.RFC3339))
 		params.Add("end", endTime.Format(time.RFC3339))
 	}

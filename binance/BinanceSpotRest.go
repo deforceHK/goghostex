@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -313,13 +312,21 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 }
 
 func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
+	if len(startTimeFmt) >= 10 {
+		startTimeFmt = startTimeFmt[0:10]
+	}
+
+	if len(endTimeFmt) >= 10 {
+		endTimeFmt = endTimeFmt[0:10]
+	}
 
 	currency := this.adaptCurrencyPair(pair)
 	params := url.Values{}
 	params.Set("symbol", strings.ToUpper(currency.ToSymbol("")))
 	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", strconv.Itoa(since)[0:10])
-	params.Set("endTime", strconv.Itoa(int(time.Now().UnixNano()/1000000)))
+	params.Set("startTime", startTimeFmt)
+	params.Set("endTime", endTimeFmt)
 	params.Set("limit", fmt.Sprintf("%d", size))
 
 	uri := API_V1 + KLINE_URI + "?" + params.Encode()
