@@ -313,12 +313,12 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 
 func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
 	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
-	if len(startTimeFmt) >= 10 {
-		startTimeFmt = startTimeFmt[0:10]
+	if len(startTimeFmt) > 13 {
+		startTimeFmt = startTimeFmt[0:13]
 	}
 
-	if len(endTimeFmt) >= 10 {
-		endTimeFmt = endTimeFmt[0:10]
+	if len(endTimeFmt) > 13 {
+		endTimeFmt = endTimeFmt[0:13]
 	}
 
 	currency := this.adaptCurrencyPair(pair)
