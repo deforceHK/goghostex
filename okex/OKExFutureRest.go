@@ -654,9 +654,7 @@ func (ok *Future) GetFutureKlineRecords(
 	if since > 0 {
 		ts, _ := strconv.ParseInt(strconv.Itoa(since)[0:10], 10, 64)
 		startTime := time.Unix(ts, 0).UTC()
-		endTime := startTime.Add(
-			time.Duration(size*_INERNAL_KLINE_PERIOD_CONVERTER[period]) * time.Second,
-		)
+		endTime := time.Now().UTC()
 		params.Add("start", startTime.Format(time.RFC3339))
 		params.Add("end", endTime.Format(time.RFC3339))
 	}
