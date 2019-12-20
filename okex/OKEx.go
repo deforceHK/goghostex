@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -205,4 +206,88 @@ func (ok *OKEx) IsoTime() string {
 	isoBytes := []byte(iso)
 	iso = string(isoBytes[:10]) + "T" + string(isoBytes[11:23]) + "Z"
 	return iso
+}
+
+func (ok *OKEx) ContractTimestamp(
+	timestamp int64,
+	contractType string,
+) (
+	startTimestamp int64,
+	swapTimestamp int64,
+	dueTimestamp int64,
+) {
+
+	stdTimestamp := fmt.Sprintf("%d", timestamp)[:10]
+	timestamp, _ = strconv.ParseInt(stdTimestamp, 10, 64)
+
+	m := time.Unix(timestamp, 0).In(ok.config.Location)
+	momentDay := time.Date(
+		m.Year(),
+		m.Month(),
+		m.Day(),
+		0,
+		0,
+		0,
+		0,
+		ok.config.Location,
+	)
+
+	var weekDay = int(m.Weekday()) // 周日: 0 周一: 1 周二: 2 周三: 3 周四： 4 周五： 5 周六： 6
+	var hour = m.Hour()
+	var thisWeek time.Time
+
+	if weekDay < 5 || (weekDay == 5 && hour < 16) {
+		thisWeek = momentDay.AddDate(0, 0, 5-weekDay).Add(16 * time.Hour)
+	} else {
+		thisWeek = momentDay.AddDate(0, 0, 7-weekDay+5).Add(16 * time.Hour)
+	}
+
+	if contractType == "this_week" {
+		dueTimestamp = thisWeek.UnixNano() / int64(time.Millisecond)
+		startTimestamp = thisWeek.AddDate(0, 0, -7).UnixNano() / int64(time.Millisecond)
+		swapTimestamp = startTimestamp
+	} else if contractType == "next_week" {
+		dueTimestamp = thisWeek.AddDate(0, 0, 7).UnixNano() / int64(time.Millisecond)
+		swapTimestamp = thisWeek.UnixNano() / int64(time.Millisecond)
+		startTimestamp = thisWeek.AddDate(0, 0, -7).UnixNano() / int64(time.Millisecond)
+	} else {
+		mFlag := thisWeek.AddDate(0, 0, 14)
+		for int(mFlag.Month()) != 3 &&
+			int(mFlag.Month()) != 6 &&
+			int(mFlag.Month()) != 9 &&
+			int(mFlag.Month()) != 12 {
+			mFlag = mFlag.AddDate(0, 0, 7)
+		}
+
+		// 所在合约月份的最后一个周五
+		mFlag = time.Date(
+			mFlag.Year(), mFlag.Month(), 1, 16, 0, 0, 0, ok.config.Location,
+		).AddDate(
+			0, 1, 0,
+		)
+
+		for int(mFlag.Weekday()) != 5 {
+			mFlag = mFlag.AddDate(0, 0, -1)
+		}
+		dueTimestamp = mFlag.UnixNano() / int64(time.Millisecond)
+		swapTimestamp = mFlag.AddDate(0, 0, -14).UnixNano() / int64(time.Millisecond)
+
+		mFlag = mFlag.AddDate(0, 0, -105)
+		mFlag = time.Date(
+			mFlag.Year(),
+			mFlag.Month(),
+			1,
+			16,
+			0,
+			0,
+			0,
+			ok.config.Location,
+		).AddDate(0, 1, 0)
+
+		for mFlag.Weekday() != 5 {
+			mFlag = mFlag.AddDate(0, 0, -1)
+		}
+		startTimestamp = mFlag.AddDate(0, 0, -14).UnixNano() / int64(time.Millisecond)
+	}
+	return
 }
