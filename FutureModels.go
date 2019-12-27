@@ -195,6 +195,8 @@ type FutureOrder struct {
 	Amount         int64
 	AvgPrice       float64
 	DealAmount     int64
+	PlaceTimestamp int64
+	PlaceDatetime  string
 	OrderTimestamp int64 // unit: ms
 	OrderDate      string
 	Status         TradeStatus

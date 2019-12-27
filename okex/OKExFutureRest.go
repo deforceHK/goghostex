@@ -422,13 +422,17 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 		param.OrderType = 0
 	}
 
+	now := time.Now()
+	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.PlaceDatetime = now.In(ok.config.Location).Format(GO_BIRTHDAY)
+
 	reqBody, _, _ := ok.BuildRequestBody(param)
 	resp, err := ok.DoRequest("POST", urlPath, reqBody, &response)
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
+	now = time.Now()
 	order.Cid = response.ClientOid
 	order.OrderId = response.OrderId
 	order.OrderTimestamp = now.UnixNano() / int64(time.Millisecond)
