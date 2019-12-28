@@ -15,6 +15,12 @@ const (
 	WALLET_API_PASSPHRASE = ""
 
 	WALLET_PROXY_URL = "socks5://127.0.0.1:1090"
+
+
+)
+
+var (
+	currency Currency = LTC
 )
 
 func TestWallet_GetAccount(t *testing.T) {
@@ -41,7 +47,7 @@ func TestWallet_GetAccount(t *testing.T) {
 		return
 	}
 
-	ltcAcc, exist := acc.SubAccounts[LTC]
+	ltcAcc, exist := acc.SubAccounts[currency]
 	if !exist || ltcAcc.Amount < 1 {
 		t.Error("不能继续测试下去了。")
 		return
@@ -76,7 +82,6 @@ func TestWallet_GetAccount(t *testing.T) {
 		From:WALLET,
 		To:FUTURE,
 		Amount: 1,
-
 		ToInstrumentId: NewCurrencyPair("ltc_usd").ToLower().ToSymbol("-"),
 	}
 
