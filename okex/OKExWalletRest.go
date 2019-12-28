@@ -19,6 +19,9 @@ const (
 	_
 	TIPS //余币宝
 	SWAP //永续合约
+	_
+	_
+	OPTION //期权
 )
 
 const (
@@ -66,8 +69,9 @@ func (ok *Wallet) GetAccount() (*Account, []byte, error) {
 	if err != nil {
 		return nil, resp, err
 	}
+
 	var acc Account
-	acc.SubAccounts = make(map[Currency]SubAccount, 2)
+	acc.SubAccounts = make(map[Currency]SubAccount, 0)
 	acc.Exchange = OKEX
 	for _, itm := range response {
 		currency := NewCurrency(itm.Currency, "")
@@ -79,6 +83,23 @@ func (ok *Wallet) GetAccount() (*Account, []byte, error) {
 	}
 	return &acc, resp, nil
 }
+
+//func (ok *Wallet) GetAsset() ([]byte, error) {
+//	//struct {
+//	//	AccoutType string `json:"accout_type"`
+//	//
+//	//}{}
+//
+//	//reqBody, _, _ := ok.BuildRequestBody()
+//	resp, err := ok.DoRequest(
+//		"GET",
+//		"/api/account/v3/asset-valuation",
+//		"",
+//		nil,
+//	)
+//
+//	return resp, err
+//}
 
 /*
  解释说明
