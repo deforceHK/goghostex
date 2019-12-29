@@ -138,51 +138,51 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if dayKline, body, err := ok.Future.GetFutureKlineRecords(
-		THIS_WEEK_CONTRACT,
-		CurrencyPair{BTC, USD},
-		KLINE_PERIOD_1DAY,
-		20,
-		int(time.Now().Add(-20*24*time.Hour).UnixNano()/1000000),
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		standard, err := json.Marshal(dayKline)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		t.Log("dayKline standard struct: ")
-		t.Log(string(standard))
-
-		t.Log("dayKline remote api response: ")
-		t.Log(string(body))
-
-		for _, kline := range dayKline {
-			if kline.Timestamp < 1000000000000 {
-				t.Error("The timestamp must be 13 number. ")
-				return
-			}
-		}
-	}
-
-	Contracts := ok.Future.GetFutureContract(
-		CurrencyPair{BTC, USD},
-		QUARTER_CONTRACT,
-	)
-	t.Log(Contracts)
-
-	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
-		CurrencyPair{BTC, USD},
-		THIS_WEEK_CONTRACT,
-	); err != nil {
-		t.Log(marketPrice)
-
-		t.Log("the remote api response:")
-		t.Log(string(body))
-	}
+	//if dayKline, body, err := ok.Future.GetFutureKlineRecords(
+	//	THIS_WEEK_CONTRACT,
+	//	CurrencyPair{BTC, USD},
+	//	KLINE_PERIOD_1DAY,
+	//	20,
+	//	int(time.Now().Add(-20*24*time.Hour).UnixNano()/1000000),
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(dayKline)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("dayKline standard struct: ")
+	//	t.Log(string(standard))
+	//
+	//	t.Log("dayKline remote api response: ")
+	//	t.Log(string(body))
+	//
+	//	for _, kline := range dayKline {
+	//		if kline.Timestamp < 1000000000000 {
+	//			t.Error("The timestamp must be 13 number. ")
+	//			return
+	//		}
+	//	}
+	//}
+	//
+	//Contracts := ok.Future.GetFutureContract(
+	//	CurrencyPair{BTC, USD},
+	//	QUARTER_CONTRACT,
+	//)
+	//t.Log(Contracts)
+	//
+	//if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
+	//	CurrencyPair{BTC, USD},
+	//	THIS_WEEK_CONTRACT,
+	//); err != nil {
+	//	t.Log(marketPrice)
+	//
+	//	t.Log("the remote api response:")
+	//	t.Log(string(body))
+	//}
 
 }
 

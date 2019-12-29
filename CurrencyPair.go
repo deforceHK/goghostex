@@ -1,10 +1,12 @@
 package goghostex
 
-import "strings"
+import (
+	"strings"
+)
 
 type Currency struct {
-	Symbol string
-	Desc   string
+	Symbol string `json:"symbol"`
+	Desc   string `json:"-"`
 }
 
 func (c Currency) String() string {

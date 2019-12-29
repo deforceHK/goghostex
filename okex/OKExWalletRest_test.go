@@ -15,8 +15,6 @@ const (
 	WALLET_API_PASSPHRASE = ""
 
 	WALLET_PROXY_URL = "socks5://127.0.0.1:1090"
-
-
 )
 
 var (
@@ -78,19 +76,17 @@ func TestWallet_GetAccount(t *testing.T) {
 	//}
 
 	tParam := TransferParameter{
-		Currency:LTC.Symbol,
-		From:WALLET,
-		To:FUTURE,
-		Amount: 1,
+		Currency:       LTC.Symbol,
+		From:           WALLET,
+		To:             FUTURE,
+		Amount:         1,
 		ToInstrumentId: NewCurrencyPair("ltc_usd").ToLower().ToSymbol("-"),
 	}
 
-	if err := ok.Wallet.Transfer(tParam);err!=nil{
+	if err := ok.Wallet.Transfer(tParam); err != nil {
 		t.Error(err)
 		return
 	}
-
-
 
 	//fmt.Println(acc)
 	//fmt.Println(string(body))
