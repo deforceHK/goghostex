@@ -29,6 +29,7 @@ type SubAccount struct {
 
 type Kline struct {
 	Pair      CurrencyPair `json:"symbol"`
+	Exchange  string       `json:"exchange"`
 	Timestamp int64        `json:"timestamp"`
 	Date      string       `json:"date"`
 	Open      float64      `json:"open"`
