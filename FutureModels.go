@@ -175,10 +175,10 @@ func (fd FutureStdDepth) Verify() error {
 }
 
 type FutureKline struct {
-	Kline        `json:",-"`
-	DueTimestamp int64   `json:"due_timestamp"`
-	DueDate      string  `json:"due_date"`
-	Vol2         float64 `json:"vol_2"` //个数
+	Kline        `json:",-"` // 按照kline中的字段进行解析。
+	DueTimestamp int64       `json:"due_timestamp"`
+	DueDate      string      `json:"due_date"`
+	Vol2         float64     `json:"vol_2"` //个数
 }
 
 /**

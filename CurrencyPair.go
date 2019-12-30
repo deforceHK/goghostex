@@ -1,6 +1,7 @@
 package goghostex
 
 import (
+	"errors"
 	"strings"
 )
 
@@ -228,10 +229,6 @@ func (pair CurrencyPair) ToSymbol(joinChar string) string {
 	return strings.Join([]string{pair.CurrencyBasis.Symbol, pair.CurrencyCounter.Symbol}, joinChar)
 }
 
-func (pair CurrencyPair) ToSymbol2(joinChar string) string {
-	return strings.Join([]string{pair.CurrencyCounter.Symbol, pair.CurrencyBasis.Symbol}, joinChar)
-}
-
 func (pair CurrencyPair) AdaptUsdtToUsd() CurrencyPair {
 	CurrencyCounter := pair.CurrencyCounter
 	if pair.CurrencyCounter.Eq(USDT) {
@@ -261,4 +258,20 @@ func (pair CurrencyPair) Reverse() CurrencyPair {
 		pair.CurrencyCounter,
 		pair.CurrencyBasis,
 	}
+}
+
+func (pair CurrencyPair) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + pair.ToLower().ToSymbol("_") + `"`), nil
+}
+
+func (pair CurrencyPair) UnmarshalJSON(input []byte) error {
+	currencies := strings.Split(string(input), "_")
+
+	if len(currencies) != 2 {
+		return errors.New("The symbol can not bind currency pair. ")
+	}
+
+	pair.CurrencyBasis = NewCurrency(currencies[0], "")
+	pair.CurrencyBasis = NewCurrency(currencies[1], "")
+	return nil
 }
