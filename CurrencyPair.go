@@ -1,7 +1,6 @@
 package goghostex
 
 import (
-	"errors"
 	"strings"
 )
 
@@ -264,14 +263,20 @@ func (pair CurrencyPair) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + pair.ToLower().ToSymbol("_") + `"`), nil
 }
 
-func (pair CurrencyPair) UnmarshalJSON(input []byte) error {
-	currencies := strings.Split(string(input), "_")
+// Important ! uncomment here cause the func can not chanage the pair value. so the Currencypair just can used in MarshalJSON
+// you can use Symbol string column instead the CurrencyPair when MarshaJSON.
 
-	if len(currencies) != 2 {
-		return errors.New("The symbol can not bind currency pair. ")
-	}
-
-	pair.CurrencyBasis = NewCurrency(currencies[0], "")
-	pair.CurrencyBasis = NewCurrency(currencies[1], "")
-	return nil
-}
+//func (pair CurrencyPair) UnmarshalJSON(input []byte) error {
+//	symbol := string(input)[1:]
+//	symbol = symbol[0: len(symbol)-1]
+//	currencies := strings.Split(symbol, "_")
+//
+//	if len(currencies) != 2 {
+//		return errors.New("The symbol can not bind currency pair. ")
+//	}
+//
+//	pair.CurrencyBasis = NewCurrency(currencies[0],"")
+//	pair.CurrencyCounter = NewCurrency(currencies[1],"")
+//	fmt.Println(pair)
+//	return nil
+//}
