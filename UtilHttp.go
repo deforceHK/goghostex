@@ -15,7 +15,15 @@ func NewHttpRequest(
 	postData string,
 	requstHeaders map[string]string,
 ) ([]byte, error) {
-	req, _ := http.NewRequest(reqType, reqUrl, strings.NewReader(postData))
+
+	var req *http.Request
+	if strings.ToUpper(reqType) == http.MethodGet {
+		//todo if here change to the newRequestWithoutContext
+		req, _ = http.NewRequest(strings.ToUpper(reqType), reqUrl, nil)
+	} else {
+		req, _ = http.NewRequest(strings.ToUpper(reqType), reqUrl, strings.NewReader(postData))
+	}
+
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Set(
 			"User-Agent",
@@ -40,7 +48,14 @@ func NewHttpRequest(
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("HttpStatusCode:%d ,Desc:%s", resp.StatusCode, string(bodyData)))
+		return nil, errors.New(fmt.Sprintf(
+			"HttpStatusCode: %d, HttpMethod: %s, Response: %s, Request: %s, Url: %s",
+			resp.StatusCode,
+			reqType,
+			string(bodyData),
+			postData,
+			reqUrl,
+		))
 	}
 
 	return bodyData, nil
