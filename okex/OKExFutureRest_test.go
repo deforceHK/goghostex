@@ -274,6 +274,11 @@ func TestFuture_TradeAPI(t *testing.T) {
 			t.Error("The cid is not same in the api. ")
 			return
 		}
+
+		if order.OrderId == "" {
+			t.Error("The order_id can not be empty string. ")
+			return
+		}
 	}
 
 	if resp, err := ok.Future.GetFutureOrder(&order); err != nil {

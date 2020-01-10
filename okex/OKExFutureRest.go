@@ -440,27 +440,32 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Future) adaptOrder(response futureOrderResponse, ord *FutureOrder) {
-	ord.ContractName = response.InstrumentId
-	ord.OrderId = response.OrderId
-	ord.Cid = response.ClientOid
-	ord.DealAmount = int64(response.FilledQty)
-	ord.AvgPrice = response.PriceAvg
-	ord.Status = ok.adaptOrderState(response.State)
-	ord.Fee = response.Fee
-	ord.OrderTimestamp = response.Timestamp.UnixNano() / int64(time.Millisecond)
-	ord.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
-	if ord.Exchange == "" {
-		ord.Exchange = ok.GetExchangeName()
+func (ok *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
+	order.ContractName = response.InstrumentId
+	order.OrderId = response.OrderId
+	order.Cid = response.ClientOid
+	order.DealAmount = int64(response.FilledQty)
+	order.AvgPrice = response.PriceAvg
+	order.Status = ok.adaptOrderState(response.State)
+	order.Fee = response.Fee
+	order.OrderTimestamp = response.Timestamp.UnixNano() / int64(time.Millisecond)
+	order.OrderDate = response.Timestamp.In(ok.config.Location).Format(GO_BIRTHDAY)
+	if order.Exchange == "" {
+		order.Exchange = ok.GetExchangeName()
 	}
 	return
 }
 
 func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
+	orderId := order.OrderId
+	if orderId == "" {
+		orderId = order.Cid
+	}
+
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
 		ok.GetInstrumentId(order.Currency, order.ContractType),
-		order.OrderId,
+		orderId,
 	)
 
 	var response futureOrderResponse
@@ -473,11 +478,16 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Future) CancelFutureOrder(ord *FutureOrder) ([]byte, error) {
+func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
+	orderId := order.OrderId
+	if orderId == "" {
+		orderId = order.Cid
+	}
+
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
-		ok.GetInstrumentId(ord.Currency, ord.ContractType),
-		ord.OrderId,
+		ok.GetInstrumentId(order.Currency, order.ContractType),
+		orderId,
 	)
 	var response struct {
 		Result       bool   `json:"result"`
