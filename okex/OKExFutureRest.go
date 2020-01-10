@@ -442,8 +442,12 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 
 func (ok *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
 	order.ContractName = response.InstrumentId
-	order.OrderId = response.OrderId
-	order.Cid = response.ClientOid
+	if response.OrderId != "" {
+		order.OrderId = response.OrderId
+	}
+	if response.ClientOid != "" {
+		order.Cid = response.ClientOid
+	}
 	order.DealAmount = int64(response.FilledQty)
 	order.AvgPrice = response.PriceAvg
 	order.Status = ok.adaptOrderState(response.State)
@@ -457,15 +461,10 @@ func (ok *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
 }
 
 func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
-	orderId := order.OrderId
-	if orderId == "" {
-		orderId = order.Cid
-	}
-
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
 		ok.GetInstrumentId(order.Currency, order.ContractType),
-		orderId,
+		order.OrderId,
 	)
 
 	var response futureOrderResponse
@@ -479,15 +478,10 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 }
 
 func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
-	orderId := order.OrderId
-	if orderId == "" {
-		orderId = order.Cid
-	}
-
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
 		ok.GetInstrumentId(order.Currency, order.ContractType),
-		orderId,
+		order.OrderId,
 	)
 	var response struct {
 		Result       bool   `json:"result"`
