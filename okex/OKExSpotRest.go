@@ -411,6 +411,7 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 		klines = append(klines, Kline{
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
+			Exchange:  OKEX,
 			Pair:      currency,
 			Open:      ToFloat64(item[1]),
 			High:      ToFloat64(item[2]),

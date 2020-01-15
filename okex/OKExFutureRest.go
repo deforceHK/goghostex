@@ -687,6 +687,7 @@ func (ok *Future) GetFutureKlineRecords(
 				Timestamp: t.UnixNano() / int64(time.Millisecond),
 				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
 				Pair:      pair,
+				Exchange:  OKEX,
 				Open:      ToFloat64(itm[1]),
 				High:      ToFloat64(itm[2]),
 				Low:       ToFloat64(itm[3]),
