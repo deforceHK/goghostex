@@ -84,6 +84,7 @@ const (
 	BINANCE   = "binance"
 	BITMEX    = "bitmex.com"
 	HBDM      = "hbdm.com"
+	COINBASE  = "coinbase"
 )
 
 var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}
