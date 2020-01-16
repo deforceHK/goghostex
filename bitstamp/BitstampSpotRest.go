@@ -1,6 +1,8 @@
 package bitstamp
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -131,6 +133,68 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 	return dep, resp, nil
 }
 
+// bitstamp kline api can only return the nearly hour data. Cause it's api design.
 func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
-	panic("implement me")
+	if period != KLINE_PERIOD_1MIN {
+		return nil, nil, errors.New("Can not support the period in bitstamp. ")
+	}
+
+	uri := fmt.Sprintf(
+		"/api/v2/transactions/%s/?time=hour",
+		strings.ToLower(pair.ToSymbol("")),
+	)
+	response := make([]struct {
+		Date   int64   `json:"date,string"`
+		Price  float64 `json:"price,string"`
+		Amount float64 `json:"amount,string"`
+	}, 0)
+
+	resp, err := this.DoRequest("GET", uri, "", &response) //&response)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(response) == 0 {
+		return nil, nil, errors.New("Have not receive enough data. ")
+	}
+
+	klineRecord := make(map[int64]Kline, 0)
+	klineTimestamp := make([]int64, 0)
+	for _, order := range response {
+		minTimestamp := order.Date / 60 * 60 * 1000
+		kline, exist := klineRecord[minTimestamp]
+		if !exist {
+			t := time.Unix(minTimestamp/1000, 0)
+			kline = Kline{
+				Timestamp: minTimestamp,
+				Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
+				Pair:      pair,
+				Exchange:  BITSTAMP,
+				Open:      order.Price,
+				High:      order.Price,
+				Low:       order.Price,
+				Close:     order.Price,
+				Vol:       order.Amount,
+			}
+			klineRecord[minTimestamp] = kline
+			klineTimestamp = append(klineTimestamp, minTimestamp)
+			continue
+		}
+
+		kline.Open = order.Price
+		kline.Vol += order.Amount
+		if order.Price > kline.High {
+			kline.High = order.Price
+		}
+		if order.Price < kline.Low {
+			kline.Low = order.Price
+		}
+		klineRecord[minTimestamp] = kline
+	}
+
+	klines := make([]Kline, 0)
+	for i := 0; i < len(klineTimestamp); i++ {
+		klines = append(klines, klineRecord[klineTimestamp[i]])
+	}
+
+	return klines, resp, nil
 }

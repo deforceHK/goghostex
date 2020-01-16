@@ -66,3 +66,41 @@ func TestSpot_GetDepth(t *testing.T) {
 
 	fmt.Println(string(resp))
 }
+
+func TestSpot_GetKlineRecords(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse("socks5://127.0.0.1:1090")
+				},
+			},
+		},
+		ApiKey:        "",
+		ApiSecretKey:  "",
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	b := New(config)
+	klines, _, err := b.Spot.GetKlineRecords(
+		CurrencyPair{BTC, USD},
+		KLINE_PERIOD_1MIN,
+		0,
+		0,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	body, err := json.Marshal(klines)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(string(body))
+}
