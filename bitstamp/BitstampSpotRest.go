@@ -192,7 +192,7 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 	}
 
 	klines := make([]Kline, 0)
-	for i := 0; i < len(klineTimestamp); i++ {
+	for i := 0; i < len(klineTimestamp)-1; i++ {
 		klines = append(klines, klineRecord[klineTimestamp[i]])
 	}
 
