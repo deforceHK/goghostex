@@ -14,6 +14,34 @@ type Spot struct {
 	*Bitstamp
 }
 
+func (this *Spot) LimitBuy(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) LimitSell(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) MarketBuy(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) MarketSell(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) CancelOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) GetOneOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+	panic("implement me")
+}
+
 func (this *Spot) GetOrderHistorys(pair CurrencyPair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
@@ -23,30 +51,6 @@ func (this *Spot) GetTrades(pair CurrencyPair, since int64) ([]Trade, error) {
 }
 
 func (this *Spot) GetExchangeName() string {
-	panic("implement me")
-}
-
-func (this *Spot) LimitBuy(amount, price string, pair CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (this *Spot) LimitSell(amount, price string, pair CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (this *Spot) MarketBuy(amount, price string, pair CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (this *Spot) MarketSell(amount, price string, pair CurrencyPair) (*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (this *Spot) CancelOrder(orderId string, pair CurrencyPair) (bool, []byte, error) {
-	panic("implement me")
-}
-
-func (this *Spot) GetOneOrder(orderId string, pair CurrencyPair) (*Order, []byte, error) {
 	panic("implement me")
 }
 
@@ -140,7 +144,7 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 	}
 
 	uri := fmt.Sprintf(
-		"/api/v2/transactions/%s/?time=hour",
+		"/api/v2/transactions/%s/?time=day",
 		strings.ToLower(pair.ToSymbol("")),
 	)
 	response := make([]struct {
