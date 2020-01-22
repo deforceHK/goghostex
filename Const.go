@@ -80,7 +80,7 @@ const (
 	OKEX_SWAP = "okex.com_swap"
 	HUOBI     = "huobi.com"
 	HUOBI_PRO = "huobi.pro"
-	BITFINEX  = "bitfinex.com"
+	BITFINEX  = "bitfinex"
 	BINANCE   = "binance"
 	BITMEX    = "bitmex.com"
 	HBDM      = "hbdm.com"
