@@ -144,7 +144,7 @@ func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([
 	}
 
 	uri := fmt.Sprintf(
-		"/api/v2/transactions/%s/?time=day",
+		"/api/v2/transactions/%s/?time=hour",
 		strings.ToLower(pair.ToSymbol("")),
 	)
 	response := make([]struct {

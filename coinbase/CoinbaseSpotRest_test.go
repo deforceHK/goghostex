@@ -1,9 +1,9 @@
 package coinbase
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -21,14 +21,8 @@ const (
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(SPOT_PROXY_URL)
-				},
-			},
-		},
+		Endpoint:   ENDPOINT,
+		HttpClient: &http.Client{},
 		//ApiKey:        SPOT_API_KEY,
 		//ApiSecretKey:  SPOT_API_SECRETKEY,
 		//ApiPassphrase: SPOT_API_PASSPHRASE,
@@ -37,7 +31,7 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 
 	cb := New(config)
 
-	klines, resp, err := cb.Spot.GetKlineRecords(
+	klines, _, err := cb.Spot.GetKlineRecords(
 		CurrencyPair{BTC, USD},
 		KLINE_PERIOD_1MIN,
 		300,
@@ -49,7 +43,13 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 		return
 	}
 
-	fmt.Println(klines)
-	fmt.Println(string(resp))
+	raw, err := json.Marshal(klines)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(string(raw))
+	//fmt.Println(string(resp))
 
 }
