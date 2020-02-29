@@ -312,6 +312,24 @@ func (ok *Future) GetFutureStdDepth(
 	return &dep, resp, nil
 }
 
+func (ok *Future) GetFutureLimit(pair CurrencyPair, contractType string) (float64, float64, error) {
+
+	fc := ok.GetFutureContract(pair, contractType)
+	urlPath := fmt.Sprintf("/api/futures/v3/instruments/%s/price_limit", fc.InstrumentID)
+
+	response := struct {
+		Highest float64 `json:"highest,string"`
+		Lowest  float64 `json:"lowest,string"`
+	}{}
+
+	_, err := ok.DoRequest("GET", urlPath, "", &response)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return response.Highest, response.Lowest, nil
+}
+
 func (ok *Future) GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error) {
 	//统一交易对，当周，次周，季度指数一样的
 	urlPath := fmt.Sprintf(
