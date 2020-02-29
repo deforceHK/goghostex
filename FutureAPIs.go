@@ -6,6 +6,8 @@ type FutureRestAPI interface {
 	GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error)
 	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error)
 	GetFutureStdDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureStdDepth, []byte, error)
+	GetFutureLimit(pair CurrencyPair, contractType string) (float64, float64, error)
+
 	GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error)
 	GetFutureAccount() (*FutureAccount, []byte, error)
 
