@@ -152,7 +152,7 @@ func (fd FutureStdDepth) Verify() error {
 	BidCount := len(fd.BidList)
 
 	if BidCount < 10 || AskCount < 10 {
-		return errors.New("The ask_list or bid_list not enough! ")
+		return errors.New(fd.Pair.ToSymbol("_") + " currency pair ask_list or bid_list not enough! ")
 	}
 
 	for i := 1; i < AskCount; i++ {
@@ -176,9 +176,9 @@ func (fd FutureStdDepth) Verify() error {
 
 type FutureKline struct {
 	Kline        `json:",-"` // 按照kline中的字段进行解析。
-	DueTimestamp int64       `json:"due_timestamp"`
-	DueDate      string      `json:"due_date"`
-	Vol2         float64     `json:"vol_2"` //个数
+	DueTimestamp int64   `json:"due_timestamp"`
+	DueDate      string  `json:"due_date"`
+	Vol2         float64 `json:"vol_2"` //个数
 }
 
 /**
