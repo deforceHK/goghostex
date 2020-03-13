@@ -2,6 +2,7 @@ package goghostex
 
 import (
 	"errors"
+	"fmt"
 )
 
 /**
@@ -151,8 +152,14 @@ func (fd FutureStdDepth) Verify() error {
 	AskCount := len(fd.AskList)
 	BidCount := len(fd.BidList)
 
-	if BidCount < 10 || AskCount < 10 {
-		return errors.New(fd.Pair.ToSymbol("_") + " currency pair ask_list or bid_list not enough! ")
+	if BidCount < 5 || AskCount < 5 {
+		return errors.New(
+			fmt.Sprintf(
+				"%s , %s currency pair ask_list or bid_list not enough! ",
+				fd.Pair.ToSymbol("_"),
+				fd.ContractType,
+			),
+		)
 	}
 
 	for i := 1; i < AskCount; i++ {
@@ -176,9 +183,9 @@ func (fd FutureStdDepth) Verify() error {
 
 type FutureKline struct {
 	Kline        `json:",-"` // 按照kline中的字段进行解析。
-	DueTimestamp int64   `json:"due_timestamp"`
-	DueDate      string  `json:"due_date"`
-	Vol2         float64 `json:"vol_2"` //个数
+	DueTimestamp int64       `json:"due_timestamp"`
+	DueDate      string      `json:"due_date"`
+	Vol2         float64     `json:"vol_2"` //个数
 }
 
 /**
