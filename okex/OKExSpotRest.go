@@ -97,40 +97,6 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 	return account, resp, nil
 }
 
-/**
- *
- * Must Set Client Oid
- *
- **/
-//func (this *Spot) BatchPlaceOrders(orders []Order) ([]PlaceOrderResponse, []byte, error) {
-//	var param []PlaceOrderParam
-//	var response map[string][]PlaceOrderResponse
-//
-//	for _, ord := range orders {
-//		param = append(param, PlaceOrderParam{
-//			InstrumentId: ord.Currency.AdaptUsdToUsdt().ToSymbol("-"),
-//			ClientOid:    ord.Cid,
-//			Side:         strings.ToLower(ord.Side.String()),
-//			Size:         ord.Amount,
-//			Price:        ord.Price,
-//			Type:         "limit",
-//			OrderType:    0})
-//	}
-//	reqBody, _, _ := this.BuildRequestBody(param)
-//	resp, err := this.DoRequest("POST", "/api/spot/v3/batch_orders", reqBody, &response)
-//	if err != nil {
-//		return nil, nil, err
-//	}
-//
-//	var ret []PlaceOrderResponse
-//
-//	for _, v := range response {
-//		ret = append(ret, v...)
-//	}
-//
-//	return ret, resp, nil
-//}
-
 func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
 		return nil, errors.New("The order side is not buy. ")
