@@ -30,14 +30,17 @@ var (
 	UNKNOWN = Currency{"UNKNOWN", ""}
 
 	USD = Currency{"USD", ""}
+	EUR = Currency{"EUR", ""}
 	CNY = Currency{"CNY", ""}
 	KRW = Currency{"KRW", ""}
 	JPY = Currency{"JPY", ""}
 
 	USDT = Currency{"USDT", ""}
-	PAX  = Currency{"PAX", "https://www.paxos.com/"}
 	USDC = Currency{"USDC", "https://www.centre.io/"}
-	EUR  = Currency{"EUR", ""}
+	PAX  = Currency{"PAX", "https://www.paxos.com/"}
+	DAI  = Currency{"DAI", ""}
+	BUSD = Currency{"BUSD", ""}
+
 	BTC  = Currency{"BTC", "https://bitcoin.org/"}
 	XBT  = Currency{"XBT", ""}
 	BCC  = Currency{"BCC", ""}
@@ -58,9 +61,14 @@ var (
 	NEO  = Currency{"NEO", ""}
 	HSR  = Currency{"HSR", ""}
 	BSV  = Currency{"BSV", ""}
-	OKB  = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation"}
-	HT   = Currency{"HT", "HuoBi Token"}
-	BNB  = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance."}
+	LINK = Currency{"LINK", ""}
+	XTZ  = Currency{"XTZ", ""}
+	DASH = Currency{"DASH", ""}
+	ADA  = Currency{"ADA", ""}
+
+	OKB = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation"}
+	HT  = Currency{"HT", "HuoBi Token"}
+	BNB = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance."}
 
 	// crypto to national currency pair
 	BTC_USD = CurrencyPair{BTC, USD}
@@ -167,49 +175,66 @@ func (c Currency) AdaptBccToBch() Currency {
 	return c
 }
 
+var currencyRelation = map[string]Currency{
+	//fiat currency
+	"usd": USD,
+	"USD": USD,
+	"eur": EUR,
+	"EUR": EUR,
+	"cny": CNY,
+	"CNY": CNY,
+	"jpy": JPY,
+	"JPY": JPY,
+	"krw": KRW,
+	"KRW": KRW,
+
+	//stable coin
+	"usdt": USDT,
+	"USDT": USDT,
+	"usdc": USDC,
+	"USDC": USDC,
+	"pax":  PAX,
+	"PAX":  PAX,
+	"dai":  DAI,
+	"DAI":  DAI,
+	"busd": BUSD,
+	"BUSD": BUSD,
+
+	//crypto currency
+	"btc":  BTC,
+	"BTC":  BTC,
+	"xbt":  XBT,
+	"XBT":  XBT,
+	"eth":  ETH,
+	"ETH":  ETH,
+	"eos":  EOS,
+	"EOS":  EOS,
+	"bch":  BCH,
+	"BCH":  BCH,
+	"ltc":  LTC,
+	"LTC":  LTC,
+	"ans":  ANS,
+	"ANS":  ANS,
+	"neo":  NEO,
+	"NEO":  NEO,
+	"link": LINK,
+	"LINK": LINK,
+
+	//exchange coin
+	"okb": OKB,
+	"OKB": OKB,
+	"ht":  HT,
+	"HT":  HT,
+	"bnb": BNB,
+	"BNB": BNB,
+}
+
 func NewCurrency(symbol, desc string) Currency {
-	switch symbol {
-	case "cny", "CNY":
-		return CNY
-	case "usdt", "USDT":
-		return USDT
-	case "usd", "USD":
-		return USD
-	case "usdc", "USDC":
-		return USDC
-	case "pax", "PAX":
-		return PAX
-	case "jpy", "JPY":
-		return JPY
-	case "krw", "KRW":
-		return KRW
-	case "eur", "EUR":
-		return EUR
-	case "btc", "BTC":
-		return BTC
-	case "xbt", "XBT":
-		return XBT
-	case "bch", "BCH":
-		return BCH
-	case "bcc", "BCC":
-		return BCC
-	case "ltc", "LTC":
-		return LTC
-	case "sc", "SC":
-		return SC
-	case "ans", "ANS":
-		return ANS
-	case "neo", "NEO":
-		return NEO
-	case "okb", "OKB":
-		return OKB
-	case "ht", "HT":
-		return HT
-	case "bnb", "BNB":
-		return BNB
-	default:
-		return Currency{strings.ToUpper(symbol), desc}
+	currency, exist := currencyRelation[symbol]
+	if exist {
+		return currency
 	}
+	return Currency{strings.ToUpper(symbol), desc}
 }
 
 func newCurrencyPair(CurrencyBasis Currency, CurrencyCounter Currency) CurrencyPair {

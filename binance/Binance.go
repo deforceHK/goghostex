@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	. "github.com/strengthening/goghostex"
@@ -53,8 +54,11 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 
 func New(config *APIConfig) *Binance {
 	binance := &Binance{config: config}
-	binance.Spot = &Spot{
-		Binance: binance,
+	binance.Spot = &Spot{Binance: binance}
+	binance.Swap = &Swap{
+		Binance:       binance,
+		Locker:        new(sync.Mutex),
+		swapContracts: SwapContracts{},
 	}
 	return binance
 }
@@ -62,6 +66,7 @@ func New(config *APIConfig) *Binance {
 type Binance struct {
 	config *APIConfig
 	Spot   *Spot
+	Swap   *Swap
 }
 
 func (this *Binance) GetExchangeName() string {
