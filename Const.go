@@ -117,3 +117,8 @@ const (
 func (ft FutureType) String() string {
 	return futureTypeSymbol[ft]
 }
+
+const (
+	CROSS    = "cross"
+	ISOLATED = "isolated"
+)

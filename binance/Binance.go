@@ -2,8 +2,8 @@ package binance
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
@@ -74,9 +74,9 @@ func (this *Binance) GetExchangeName() string {
 }
 
 func (this *Binance) buildParamsSigned(postForm *url.Values) error {
-	tonce := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
+	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/1000000)
+	postForm.Set("timestamp", timestamp)
 	postForm.Set("recvWindow", "60000")
-	postForm.Set("timestamp", tonce)
 	payload := postForm.Encode()
 	sign, _ := GetParamHmacSHA256Sign(this.config.ApiSecretKey, payload)
 	postForm.Set("signature", sign)
