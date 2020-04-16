@@ -127,9 +127,6 @@ func (depth *SwapStdDepth) Verify() error {
 	return nil
 }
 
-type SwapAccount struct {
-}
-
 type SwapKline struct {
 	//Kline `json:",-"` // 按照kline中的字段进行解析。
 	Pair      Pair    `json:"symbol"`
@@ -148,22 +145,59 @@ type SwapOrder struct {
 	Cid            string
 	OrderId        string
 	Price          float64
-	Amount         int64
+	Amount         float64
 	AvgPrice       float64
-	DealAmount     int64
+	DealAmount     float64
 	PlaceTimestamp int64
 	PlaceDatetime  string
-	OrderTimestamp int64 // unit: ms
-	OrderDate      string
+	DealTimestamp  int64 // unit: ms
+	DealDatetime   string
 	Status         TradeStatus
-	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
+	PlaceType      PlaceType  // place_type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
+	MarginType     string     // margin_type 全仓：crossed 逐仓：isolated
 	LeverRate      int64
 	Fee            float64
-	Currency       CurrencyPair
+	Pair           Pair
 	Exchange       string
-	MatchPrice     int64 // some exchange need
 }
 
 type SwapPosition struct {
+	Pair           Pair
+	Type           FutureType //open_long or open_short
+	Amount         float64    // position amount
+	Price          float64    // position price
+	MarkPrice      float64
+	LiquidatePrice float64
+	MarginType     string
+	MarginAmount   float64
+	Leverage       int64
+}
+
+type SwapAccount struct {
+	Exchange string
+	// In swap, the usdt is default.
+	Currency Currency
+	// The future margin 期货保证金 == marginFilled+ marginUnFilled
+	Margin float64
+	// The future is filled 已经成交的订单占用的期货保证金
+	MarginPosition float64
+	// The future is unfilled 未成交的订单占用的保证金
+	MarginOpen float64
+	// 保证金率
+	MarginRate float64
+	// 总值
+	BalanceTotal float64
+	// 净值
+	// BalanceNet = BalanceTotal + ProfitUnreal + ProfitReal
+	BalanceNet float64
+	// 可提取
+	// BalanceAvail = BalanceNet - Margin
+	BalanceAvail float64
+	//已实现盈亏
+	ProfitReal float64
+	// 未实现盈亏
+	ProfitUnreal float64
+
+	Positions []*SwapPosition
 }

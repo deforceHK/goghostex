@@ -115,4 +115,69 @@ func TestSwap_MarketAPI(t *testing.T) {
 		t.Log(string(klineRaw))
 		t.Log(string(resp))
 	}
+
+	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{BTC, USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(openAmount)
+		t.Log(timestamp)
+		return
+	}
+}
+
+func TestFuture_TradeAPI(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+	if account, raw, err := bn.Swap.GetAccount(); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		rawAccount, _ := json.Marshal(account)
+		t.Log(string(rawAccount))
+		t.Log(string(raw))
+	}
+
+	//if orders, resp, err := bn.Swap.GetOrders(Pair{LTC, USDT}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	raw, _ := json.Marshal(orders)
+	//	t.Log(string(raw))
+	//	t.Log(string(resp))
+	//}
+
+	//if orders, resp, err := bn.Swap.GetUnFinishOrders(Pair{LTC, USDT}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//
+	//	raw, _ := json.Marshal(orders)
+	//	t.Log(string(raw))
+	//	t.Log(string(resp))
+	//}
+	//
+	//if s, resp, err := bn.Swap.GetPosition(Pair{LTC, USDT}, OPEN_LONG); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(string(resp))
+	//	t.Log(s)
+	//}
 }
