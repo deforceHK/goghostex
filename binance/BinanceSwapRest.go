@@ -300,6 +300,37 @@ func (swap *Swap) GetOpenAmount(pair Pair) (float64, int64, []byte, error) {
 	return responses[len(responses)-1].Amount, responses[len(responses)-1].Timestamp, resp, nil
 }
 
+func (swap *Swap) GetFee() (float64, error) {
+	panic("implement me")
+}
+
+func (swap *Swap) GetFundingFees(pair Pair) ([][]interface{}, []byte, error) {
+	param := url.Values{}
+	param.Set("symbol", pair.ToSymbol("", true))
+	param.Set("limit", "500")
+
+	rawFees := make([]struct {
+		FundingRate float64 `json:"fundingRate,string"`
+		FundingTime int64   `json:"fundingTime"`
+	}, 0)
+
+	if resp, err := swap.DoRequest(
+		http.MethodGet,
+		"/fapi/v1/fundingRate?"+param.Encode(),
+		"",
+		&rawFees,
+	); err != nil {
+		return nil, nil, err
+	} else {
+		fees := make([][]interface{}, 0)
+		for _, f := range rawFees {
+			fee := []interface{}{f.FundingRate, f.FundingTime}
+			fees = append(fees, fee)
+		}
+		return fees, resp, nil
+	}
+}
+
 var placeTypeRelation = map[PlaceType]string{
 	NORMAL:     "GTC",
 	ONLY_MAKER: "GTX",
@@ -352,8 +383,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", fmt.Sprintf("%f", order.Price))
-	param.Set("quantity", fmt.Sprintf("%f", order.Amount))
+	param.Set("price", swap.normalPrice(order.Price, order.Pair))
+	param.Set("quantity", swap.normalAmount(order.Amount, order.Pair))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
 	// "FOK": 无法全部立即成交就撤销。
@@ -370,6 +401,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		DealAmount float64 `json:"executedQty,string"`
 		OrderId    int64   `json:"orderId"`
 		UpdateTime int64   `json:"updateTime"`
+		Price      float64 `json:"price,string"`
+		Amount     float64 `json:"origQty,string"`
 	}
 
 	now := time.Now()
@@ -387,6 +420,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	order.DealTimestamp = response.UpdateTime
 	order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
 	order.Status = statusRelation[response.Status]
+	order.Price = response.Price
+	order.Amount = response.Amount
 	if response.DealAmount > 0 {
 		order.AvgPrice = response.CumQuote / response.DealAmount
 		order.DealAmount = response.DealAmount
@@ -456,6 +491,8 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 		Status     string  `json:"status"`
 		CumQuote   float64 `json:"cumQuote,string"`
 		DealAmount float64 `json:"executedQty,string"`
+		Price      float64 `json:"price,string"`
+		Amount     float64 `json:"origQty,string"`
 		OrderId    int64   `json:"orderId"`
 		UpdateTime int64   `json:"updateTime"`
 	}
@@ -475,6 +512,8 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	order.DealTimestamp = response.UpdateTime
 	order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
 	order.Status = statusRelation[response.Status]
+	order.Price = response.Price
+	order.Amount = response.Amount
 	if response.DealAmount > 0 {
 		order.AvgPrice = response.CumQuote / response.DealAmount
 		order.DealAmount = response.DealAmount
@@ -836,11 +875,8 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 }
 
 func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount float64, opType int) ([]byte, error) {
-	if openType != OPEN_LONG && openType != OPEN_SHORT {
-		return nil, errors.New("error open type. ")
-	}
 	sidePosition := "LONG"
-	if openType == OPEN_SHORT {
+	if openType == OPEN_SHORT || openType == LIQUIDATE_SHORT {
 		sidePosition = "SHORT"
 	}
 
@@ -863,10 +899,6 @@ func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount floa
 	} else {
 		return resp, nil
 	}
-}
-
-func (swap *Swap) GetFee() (float64, error) {
-	panic("implement me")
 }
 
 func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
@@ -981,4 +1013,16 @@ func (swap *Swap) getFutureType(side, sidePosition string) FutureType {
 	} else {
 		panic("input error, do not use BOTH. ")
 	}
+}
+
+// standard the price
+func (swap *Swap) normalPrice(price float64, pair Pair) string {
+	contract := swap.getContract(pair)
+	return FloatToString(price, int(contract.PricePrecision))
+}
+
+// standard the amount
+func (swap *Swap) normalAmount(amount float64, pair Pair) string {
+	contract := swap.getContract(pair)
+	return FloatToString(amount, int(contract.AmountPrecision))
 }

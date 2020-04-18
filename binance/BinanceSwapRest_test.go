@@ -2,6 +2,7 @@ package binance
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -122,7 +123,14 @@ func TestSwap_MarketAPI(t *testing.T) {
 	} else {
 		t.Log(openAmount)
 		t.Log(timestamp)
+	}
+
+	if fees, _, err := bn.Swap.GetFundingFees(Pair{BTC, USDT}); err != nil {
+		t.Error(err)
 		return
+	} else {
+		t.Log(fees)
+		//t.Log(string(resp))
 	}
 }
 
@@ -152,6 +160,59 @@ func TestFuture_TradeAPI(t *testing.T) {
 		rawAccount, _ := json.Marshal(account)
 		t.Log(string(rawAccount))
 		t.Log(string(raw))
+
+		if account.BalanceAvail < 1 {
+			t.Error("There have no enough asset to trade. ")
+			return
+		}
+	}
+
+	pair := Pair{LTC, USDT}
+	ticker, _, err := bn.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	fmt.Println(ticker.Buy)
+
+	order := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Sell * 1.03,
+		Amount:    0.0123333333333,
+		PlaceType: NORMAL,
+		Type:      OPEN_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+	//preCid := order.Cid
+
+	if resp, err := bn.Swap.PlaceOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(order)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.GetOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(order)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.CancelOrder(&order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(order)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
 	}
 
 	//if orders, resp, err := bn.Swap.GetOrders(Pair{LTC, USDT}); err != nil {

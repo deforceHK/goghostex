@@ -15,6 +15,10 @@ type SwapRestAPI interface {
 
 	GetOpenAmount(pair Pair) (float64, int64, []byte, error)
 
+	GetFundingFees(pair Pair) ([][]interface{}, []byte, error)
+
+	GetFee() (float64, error)
+
 	GetAccount() (*SwapAccount, []byte, error)
 
 	PlaceOrder(order *SwapOrder) ([]byte, error)
@@ -32,6 +36,4 @@ type SwapRestAPI interface {
 	AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
 
 	ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
-
-	GetFee() (float64, error)
 }
