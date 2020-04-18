@@ -25,9 +25,9 @@ type SwapRestAPI interface {
 
 	CancelOrder(order *SwapOrder) ([]byte, error)
 
-	GetOrders(pair Pair) ([]*SwapOrder, []byte, error)
-
 	GetOrder(order *SwapOrder) ([]byte, error)
+
+	GetOrders(pair Pair) ([]*SwapOrder, []byte, error)
 
 	GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error)
 
