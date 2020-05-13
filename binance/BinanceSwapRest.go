@@ -107,10 +107,10 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 
 func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 
-	if size > 1000 {
-		size = 1000
-	} else if size < 5 {
-		size = 5
+	sizes := map[int]int{5: 2, 10: 2, 20: 2, 50: 2, 100: 5, 500: 10, 1000: 20}
+	_, exist := sizes[size]
+	if !exist {
+		size = 100
 	}
 
 	response := struct {
