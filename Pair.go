@@ -13,16 +13,16 @@ type Pair struct {
 	Counter Currency
 }
 
-func newPair(basis Currency, counter Currency) CurrencyPair {
-	return CurrencyPair{basis, counter}
+func newPair(basis Currency, counter Currency) Pair {
+	return Pair{basis, counter}
 }
 
-func NewPair(symbol string, sepChar string) CurrencyPair {
+func NewPair(symbol string, sepChar string) Pair {
 	currencys := strings.Split(symbol, sepChar)
 	if len(currencys) == 2 {
 		return newPair(NewCurrency(currencys[0], ""), NewCurrency(currencys[1], ""))
 	}
-	return UNKNOWN_PAIR
+	return Pair{UNKNOWN, UNKNOWN}
 }
 
 func (pair Pair) String() string {
