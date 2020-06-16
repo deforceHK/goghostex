@@ -60,6 +60,9 @@ func New(config *APIConfig) *Binance {
 		Locker:        new(sync.Mutex),
 		swapContracts: SwapContracts{},
 	}
+	binance.Margin = &Margin{
+		Binance: binance,
+	}
 	return binance
 }
 
@@ -67,6 +70,7 @@ type Binance struct {
 	config *APIConfig
 	Spot   *Spot
 	Swap   *Swap
+	Margin *Margin
 }
 
 func (this *Binance) GetExchangeName() string {
@@ -74,7 +78,7 @@ func (this *Binance) GetExchangeName() string {
 }
 
 func (this *Binance) buildParamsSigned(postForm *url.Values) error {
-	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/1000000)
+	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
 	postForm.Set("timestamp", timestamp)
 	postForm.Set("recvWindow", "60000")
 	payload := postForm.Encode()

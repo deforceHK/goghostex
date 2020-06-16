@@ -68,10 +68,24 @@ const (
 )
 
 const (
-	THIS_WEEK_CONTRACT = "this_week" //周合约
-	NEXT_WEEK_CONTRACT = "next_week" //次周合约
-	QUARTER_CONTRACT   = "quarter"   //季度合约
-	SWAP_CONTRACT      = "swap"      //永续合约
+	THIS_WEEK_CONTRACT    = "this_week"    //周合约
+	NEXT_WEEK_CONTRACT    = "next_week"    //次周合约
+	QUARTER_CONTRACT      = "quarter"      //季度合约
+	NEXT_QUARTER_CONTRACT = "next_quarter" //次季合约
+	SWAP_CONTRACT         = "swap"         //永续合约
+)
+
+// account flow subject
+const (
+	SUBJECT_SETTLE                  = "settle"
+	SUBJECT_COMMISSION              = "commission"
+	SUBJECT_FUNDING_FEE             = "funding_fee"
+	SUBJECT_FREEZE                  = "freeze"
+	SUBJECT_UNFREEZE                = "unfreeze"
+	SUBJECT_COLLATERAL_TRANSFER_IN  = "transfer_collateral_in"
+	SUBJECT_COLLATERAL_TRANSFER_OUT = "transfer_collateral_out"
+	SUBJECT_TRANSFER_IN             = "transfer_in"
+	SUBJECT_TRANSFER_OUT            = "transfer_out"
 )
 
 //exchanges const

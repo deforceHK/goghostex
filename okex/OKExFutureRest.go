@@ -27,7 +27,7 @@ type FutureContract struct {
 	Delivery            string  `json:"delivery"`              // delivery date 交割日期
 	DueTimestamp        int64   `json:"due_timestamp"`
 	DueDate             string  `json:"due_date"`
-	Alias               string  `json:"alias"` // this_week next_week quarter
+	Alias               string  `json:"alias"` // this_week next_week quarter next_quarter
 	IsInverse           bool    `json:"is_inverse,string"`
 }
 
@@ -110,8 +110,14 @@ func (ok *Future) updateFutureContracts() ([]byte, error) {
 		item.DueDate = dueTime.Format(GO_BIRTHDAY)
 		item.DueTimestamp = dueTime.UnixNano() / int64(time.Millisecond)
 
+		contractType := item.Alias
+		if contractType == "bi_quarter" {
+			contractType = NEXT_QUARTER_CONTRACT
+			item.Alias = NEXT_QUARTER_CONTRACT
+		}
 		contract1, contract2 := item, item
-		contractTypeItem := fmt.Sprintf("%s,%s,%s", item.BaseCurrency, item.QuoteCurrency, item.Alias)
+
+		contractTypeItem := fmt.Sprintf("%s,%s,%s", item.BaseCurrency, item.QuoteCurrency, contractType)
 		dueTimestampItem := fmt.Sprintf("%s,%s,%d", item.BaseCurrency, item.QuoteCurrency, item.DueTimestamp)
 		futureContracts.contractTypeKV[contractTypeItem] = contract1
 		futureContracts.dueTimestampKV[dueTimestampItem] = contract2
@@ -159,7 +165,10 @@ func (ok *Future) GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, [
 
 // 获取instrument_id
 func (ok *Future) GetInstrumentId(pair CurrencyPair, contractAlias string) string {
-	if contractAlias != QUARTER_CONTRACT && contractAlias != NEXT_WEEK_CONTRACT && contractAlias != THIS_WEEK_CONTRACT {
+	if contractAlias != NEXT_QUARTER_CONTRACT &&
+		contractAlias != QUARTER_CONTRACT &&
+		contractAlias != NEXT_WEEK_CONTRACT &&
+		contractAlias != THIS_WEEK_CONTRACT {
 		return contractAlias
 	}
 

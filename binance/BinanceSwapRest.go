@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ const (
 	SWAP_DEPTH_URI  = "/fapi/v1/depth?symbol=%s&limit=%d"
 	SWAP_KLINE_URI  = "/fapi/v1/klines"
 
+	SWAP_INCOME_URI       = "/fapi/v1/income?"
 	SWAP_ACCOUNT_URI      = "/fapi/v1/account?"
 	SWAP_PLACE_ORDER_URI  = "/fapi/v1/order?"
 	SWAP_CANCEL_ORDER_URI = "/fapi/v1/order?"
@@ -863,6 +865,88 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 	}
 
 	return account, resp, nil
+
+}
+
+func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
+
+	params := url.Values{}
+	if err := swap.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	responses := make([]*struct {
+		Symbol     string  `json:"symbol"`
+		IncomeType string  `json:"incomeType"`
+		Income     float64 `json:"income,string"`
+		Asset      string  `json:"asset"`
+		Info       string  `json:"info"`
+		Time       int64   `json:"time"`
+	}, 0)
+
+	resp, err := swap.DoRequest(http.MethodGet, SWAP_INCOME_URI+params.Encode(), "", &responses)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	pairRecord := make(map[string]Pair, 0)
+	items := make([]*SwapAccountItem, 0)
+
+	for i := len(responses) - 1; i >= 0; i-- {
+		r := responses[i]
+		if r.Symbol == "" {
+			r.Symbol = "BTCUSDT" //默认btcusdt为主要操作账户。
+		}
+
+		p, exist := pairRecord[r.Symbol]
+		if !exist {
+			lenSymbol := len(r.Symbol)
+			p = NewPair(
+				r.Symbol[:lenSymbol-4]+"_"+r.Symbol[lenSymbol-4:],
+				"_",
+			)
+			pairRecord[r.Symbol] = p
+		}
+
+		dateTime := time.Unix(r.Time/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+		sai := &SwapAccountItem{
+			p, BINANCE, swap.transferSubject(r.Income, r.IncomeType),
+			2, NewCurrency(r.Asset, ""), r.Income,
+			r.Time, dateTime, r.Info,
+		}
+
+		items = append(items, sai)
+	}
+
+	return items, resp, nil
+}
+
+var subjectKV = map[string]string{
+	"COMMISSION":   SUBJECT_COMMISSION,
+	"REALIZED_PNL": SUBJECT_SETTLE,
+	"FUNDING_FEE":  SUBJECT_FUNDING_FEE,
+}
+
+func (swap *Swap) transferSubject(income float64, remoteSubject string) string {
+	if remoteSubject == "TRANSFER" {
+		if income > 0 {
+			return SUBJECT_TRANSFER_IN
+		}
+		return SUBJECT_TRANSFER_OUT
+	}
+
+	if remoteSubject == "CROSS_COLLATERAL_TRANSFER" {
+		if income > 0 {
+			return SUBJECT_COLLATERAL_TRANSFER_IN
+		}
+		return SUBJECT_COLLATERAL_TRANSFER_OUT
+	}
+
+	if subject, exist := subjectKV[remoteSubject]; exist {
+		return subject
+	} else {
+		return strings.ToLower(remoteSubject)
+	}
 
 }
 
