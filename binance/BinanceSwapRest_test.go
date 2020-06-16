@@ -134,6 +134,45 @@ func TestSwap_MarketAPI(t *testing.T) {
 	}
 }
 
+func TestSwap_Account(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+	if items, raw, err := bn.Swap.GetAccountFlow(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(string(raw))
+
+		for _, i := range items {
+			t.Log(*i)
+		}
+
+		//rawAccount, _ := json.Marshal(account)
+		//t.Log(string(rawAccount))
+		//t.Log(string(raw))
+		//
+		//if account.BalanceAvail < 1 {
+		//	t.Error("There have no enough asset to trade. ")
+		//	return
+		//}
+	}
+}
+
 func TestFuture_TradeAPI(t *testing.T) {
 
 	config := &APIConfig{

@@ -45,7 +45,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	ok := New(config)
 	if ticker, body, err := ok.Future.GetFutureTicker(
 		CurrencyPair{BTC, USD},
-		THIS_WEEK_CONTRACT,
+		NEXT_QUARTER_CONTRACT,
 	); err != nil {
 		t.Error(err)
 		return
@@ -65,7 +65,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	if depth, body, err := ok.Future.GetFutureDepth(
 		NewCurrencyPair("btc_usd"),
-		THIS_WEEK_CONTRACT,
+		NEXT_QUARTER_CONTRACT,
 		20,
 	); err != nil {
 		t.Error(err)
@@ -85,7 +85,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 		if depth1, _, err := ok.Future.GetFutureDepth(
 			CurrencyPair{BTC, USD},
-			THIS_WEEK_CONTRACT,
+			NEXT_QUARTER_CONTRACT,
 			20,
 		); err != nil {
 			t.Error(err)
@@ -109,7 +109,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if minKline, body, err := ok.Future.GetFutureKlineRecords(
-		THIS_WEEK_CONTRACT,
+		NEXT_QUARTER_CONTRACT,
 		CurrencyPair{BTC, USD},
 		KLINE_PERIOD_1MIN,
 		20,
@@ -139,7 +139,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if dayKline, body, err := ok.Future.GetFutureKlineRecords(
-		THIS_WEEK_CONTRACT,
+		NEXT_QUARTER_CONTRACT,
 		CurrencyPair{BTC, USD},
 		KLINE_PERIOD_1DAY,
 		20,
@@ -170,7 +170,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	Contracts := ok.Future.GetFutureContract(
 		CurrencyPair{BTC, USD},
-		QUARTER_CONTRACT,
+		NEXT_QUARTER_CONTRACT,
 	)
 	t.Log(Contracts)
 

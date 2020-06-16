@@ -68,10 +68,11 @@ const (
 )
 
 const (
-	THIS_WEEK_CONTRACT = "this_week" //周合约
-	NEXT_WEEK_CONTRACT = "next_week" //次周合约
-	QUARTER_CONTRACT   = "quarter"   //季度合约
-	SWAP_CONTRACT      = "swap"      //永续合约
+	THIS_WEEK_CONTRACT    = "this_week"    //周合约
+	NEXT_WEEK_CONTRACT    = "next_week"    //次周合约
+	QUARTER_CONTRACT      = "quarter"      //季度合约
+	NEXT_QUARTER_CONTRACT = "next_quarter" //次季合约
+	SWAP_CONTRACT         = "swap"         //永续合约
 )
 
 //exchanges const

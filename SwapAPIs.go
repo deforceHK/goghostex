@@ -36,4 +36,6 @@ type SwapRestAPI interface {
 	AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
 
 	ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
+
+	GetAccountFlow() ([]*SwapAccountItem, []byte, error)
 }
