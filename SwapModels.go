@@ -201,3 +201,16 @@ type SwapAccount struct {
 
 	Positions []*SwapPosition
 }
+
+type SwapAccountItem struct {
+	Pair     Pair
+	Exchange string
+	Subject  string
+
+	SettleMode     int64 // 1: basis 2: counter
+	SettleCurrency Currency
+	Amount         float64
+	Timestamp      int64
+	DateTime       string
+	Info           string
+}
