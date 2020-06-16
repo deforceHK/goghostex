@@ -75,6 +75,19 @@ const (
 	SWAP_CONTRACT         = "swap"         //永续合约
 )
 
+// account flow subject
+const (
+	SUBJECT_SETTLE                  = "settle"
+	SUBJECT_COMMISSION              = "commission"
+	SUBJECT_FUNDING_FEE             = "funding_fee"
+	SUBJECT_FREEZE                  = "freeze"
+	SUBJECT_UNFREEZE                = "unfreeze"
+	SUBJECT_COLLATERAL_TRANSFER_IN  = "transfer_collateral_in"
+	SUBJECT_COLLATERAL_TRANSFER_OUT = "transfer_collateral_out"
+	SUBJECT_TRANSFER_IN             = "transfer_in"
+	SUBJECT_TRANSFER_OUT            = "transfer_out"
+)
+
 //exchanges const
 const (
 	OKEX      = "okex"

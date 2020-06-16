@@ -110,7 +110,6 @@ func (ok *Future) updateFutureContracts() ([]byte, error) {
 		item.DueDate = dueTime.Format(GO_BIRTHDAY)
 		item.DueTimestamp = dueTime.UnixNano() / int64(time.Millisecond)
 
-
 		contractType := item.Alias
 		if contractType == "bi_quarter" {
 			contractType = NEXT_QUARTER_CONTRACT

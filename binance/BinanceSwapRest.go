@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -867,14 +868,6 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 
 }
 
-func (swap *Swap) AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	return swap.modifyMargin(pair, openType, marginAmount, 1)
-}
-
-func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	return swap.modifyMargin(pair, openType, marginAmount, 2)
-}
-
 func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 	params := url.Values{}
@@ -902,7 +895,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 	for i := len(responses) - 1; i >= 0; i-- {
 		r := responses[i]
 		if r.Symbol == "" {
-			continue
+			r.Symbol = "BTCUSDT" //默认btcusdt为主要操作账户。
 		}
 
 		p, exist := pairRecord[r.Symbol]
@@ -917,7 +910,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 		dateTime := time.Unix(r.Time/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
 		sai := &SwapAccountItem{
-			p, BINANCE, r.IncomeType,
+			p, BINANCE, swap.transferSubject(r.Income, r.IncomeType),
 			2, NewCurrency(r.Asset, ""), r.Income,
 			r.Time, dateTime, r.Info,
 		}
@@ -926,6 +919,43 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 	}
 
 	return items, resp, nil
+}
+
+var subjectKV = map[string]string{
+	"COMMISSION":   SUBJECT_COMMISSION,
+	"REALIZED_PNL": SUBJECT_SETTLE,
+	"FUNDING_FEE":  SUBJECT_FUNDING_FEE,
+}
+
+func (swap *Swap) transferSubject(income float64, remoteSubject string) string {
+	if remoteSubject == "TRANSFER" {
+		if income > 0 {
+			return SUBJECT_TRANSFER_IN
+		}
+		return SUBJECT_TRANSFER_OUT
+	}
+
+	if remoteSubject == "CROSS_COLLATERAL_TRANSFER" {
+		if income > 0 {
+			return SUBJECT_COLLATERAL_TRANSFER_IN
+		}
+		return SUBJECT_COLLATERAL_TRANSFER_OUT
+	}
+
+	if subject, exist := subjectKV[remoteSubject]; exist {
+		return subject
+	} else {
+		return strings.ToLower(remoteSubject)
+	}
+
+}
+
+func (swap *Swap) AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
+	return swap.modifyMargin(pair, openType, marginAmount, 1)
+}
+
+func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
+	return swap.modifyMargin(pair, openType, marginAmount, 2)
 }
 
 func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount float64, opType int) ([]byte, error) {

@@ -60,8 +60,8 @@ func New(config *APIConfig) *Binance {
 		Locker:        new(sync.Mutex),
 		swapContracts: SwapContracts{},
 	}
-	binance.Margin =&Margin{
-		Binance:       binance,
+	binance.Margin = &Margin{
+		Binance: binance,
 	}
 	return binance
 }
