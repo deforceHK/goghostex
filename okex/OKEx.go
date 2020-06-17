@@ -107,15 +107,16 @@ var _INTERNAL_ORDER_TYPE_CONVERTER = map[PlaceType]int{
 type OKEx struct {
 	config *APIConfig
 	Spot   *Spot
-	Future *Future
 	Margin *Margin
+	Swap   *Swap
+	Future *Future
 	Wallet *Wallet
-	//OKExSwap   *OKExSwap
 }
 
 func New(config *APIConfig) *OKEx {
 	okex := &OKEx{config: config}
 	okex.Spot = &Spot{okex}
+	okex.Swap = &Swap{okex}
 	okex.Margin = &Margin{okex}
 	okex.Future = &Future{OKEx: okex, Locker: new(sync.Mutex)}
 	okex.Wallet = &Wallet{okex}
