@@ -2,7 +2,6 @@ package binance
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -173,6 +172,8 @@ func TestSwap_Account(t *testing.T) {
 	}
 }
 
+// must set both
+// place the order ---> get the order info ---> cancel the order -> get the order info
 func TestFuture_TradeAPI(t *testing.T) {
 
 	config := &APIConfig{
@@ -206,50 +207,78 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	pair := Pair{LTC, USDT}
+	pair := Pair{BTC, USDT}
 	ticker, _, err := bn.Swap.GetTicker(pair)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	fmt.Println(ticker.Buy)
-
-	order := SwapOrder{
+	orderShort := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Sell * 1.03,
-		Amount:    0.0123333333333,
+		Amount:    0.012,
 		PlaceType: NORMAL,
 		Type:      OPEN_SHORT,
 		LeverRate: 20,
 		Pair:      pair,
 		Exchange:  BINANCE,
 	}
-	//preCid := order.Cid
 
-	if resp, err := bn.Swap.PlaceOrder(&order); err != nil {
+	orderLong := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Buy * 0.97,
+		Amount:    0.012,
+		PlaceType: NORMAL,
+		Type:      OPEN_LONG,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 下空单
+	if resp, err := bn.Swap.PlaceOrder(&orderShort); err != nil {
 		t.Error(err)
 		return
 	} else {
-		stdOrder, _ := json.Marshal(order)
+		stdOrder, _ := json.Marshal(orderShort)
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
 
-	if resp, err := bn.Swap.GetOrder(&order); err != nil {
+	// 下多单
+	if resp, err := bn.Swap.PlaceOrder(&orderLong); err != nil {
 		t.Error(err)
 		return
 	} else {
-		stdOrder, _ := json.Marshal(order)
+		stdOrder, _ := json.Marshal(orderLong)
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
 
-	if resp, err := bn.Swap.CancelOrder(&order); err != nil {
+	if resp, err := bn.Swap.GetOrder(&orderShort); err != nil {
 		t.Error(err)
 		return
 	} else {
-		stdOrder, _ := json.Marshal(order)
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.CancelOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.CancelOrder(&orderLong); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderLong)
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
