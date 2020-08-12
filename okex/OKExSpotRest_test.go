@@ -47,7 +47,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	ok := New(config)
 	// ticker unit test
 	if ticker, resp, err := ok.Spot.GetTicker(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -67,7 +67,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	// depth unit test
 	if depth, resp, err := ok.Spot.GetDepth(
 		20,
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -86,7 +86,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 		// make sure the later request get bigger sequence
 		depth1, _, _ := ok.Spot.GetDepth(
 			20,
-			CurrencyPair{BTC, USDT},
+			Pair{Basis: BTC, Counter: USDT},
 		)
 
 		if depth1.Sequence <= depth.Sequence {
@@ -107,7 +107,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// klines unit test
 	if minKlines, resp, err := ok.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1MIN,
 		10,
 		int(time.Now().Add(-24*time.Hour).UnixNano()),
@@ -134,7 +134,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	}
 
 	if dayKlines, resp, err := ok.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1DAY,
 		10,
 		int(time.Now().Add(-20*24*time.Hour).UnixNano()),
@@ -210,7 +210,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	testPrice := 0.0
 	// ticker unit test
 	if ticker, _, err := ok.Spot.GetTicker(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -219,7 +219,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	normalOrder := Order{
-		Currency:  CurrencyPair{BTC, USDT},
+		Pair:      Pair{Basis: BTC, Counter: USDT},
 		Price:     testPrice,
 		Amount:    0.005,
 		Side:      SELL,
@@ -259,7 +259,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	if orders, resp, err := ok.Spot.GetUnFinishOrders(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return

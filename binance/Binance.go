@@ -87,10 +87,6 @@ func (this *Binance) buildParamsSigned(postForm *url.Values) error {
 	return nil
 }
 
-func (this *Binance) adaptCurrencyPair(pair CurrencyPair) CurrencyPair {
-	return pair.AdaptUsdToUsdt()
-}
-
 func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	resp, err := NewHttpRequest(
 		this.config.HttpClient,

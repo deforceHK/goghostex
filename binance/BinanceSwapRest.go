@@ -140,14 +140,14 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	for _, bid := range response.Bids {
 		price := ToFloat64(bid[0])
 		amount := ToFloat64(bid[1])
-		depthItem := DepthItem{price, amount}
+		depthItem := DepthItem{Price: price, Amount: amount}
 		depth.BidList = append(depth.BidList, depthItem)
 	}
 
 	for _, ask := range response.Asks {
 		price := ToFloat64(ask[0])
 		amount := ToFloat64(ask[1])
-		depthItem := DepthItem{price, amount}
+		depthItem := DepthItem{Price: price, Amount: amount}
 		depth.AskList = append(depth.AskList, depthItem)
 	}
 
@@ -187,14 +187,14 @@ func (swap *Swap) GetStdDepth(pair Pair, size int) (*SwapStdDepth, []byte, error
 	for _, bid := range response.Bids {
 		price := int64(math.Floor(ToFloat64(bid[0])*100000000 + 0.5))
 		amount := ToFloat64(bid[1])
-		dsi := DepthStdItem{price, amount}
+		dsi := DepthStdItem{Price: price, Amount: amount}
 		depth.BidList = append(depth.BidList, dsi)
 	}
 
 	for _, ask := range response.Asks {
 		price := int64(math.Floor(ToFloat64(ask[0])*100000000 + 0.5))
 		amount := ToFloat64(ask[1])
-		dsi := DepthStdItem{price, amount}
+		dsi := DepthStdItem{Price: price, Amount: amount}
 		depth.AskList = append(depth.AskList, dsi)
 	}
 
@@ -838,8 +838,8 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 		}
 
 		pair := Pair{
-			NewCurrency(p.Symbol[0:len(p.Symbol)-4], ""),
-			NewCurrency(p.Symbol[len(p.Symbol)-4:len(p.Symbol)], ""),
+			Basis:   NewCurrency(p.Symbol[0:len(p.Symbol)-4], ""),
+			Counter: NewCurrency(p.Symbol[len(p.Symbol)-4:len(p.Symbol)], ""),
 		}
 		futureType := OPEN_LONG
 		if p.PositionSide == "SHORT" {
@@ -910,9 +910,9 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 		dateTime := time.Unix(r.Time/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
 		sai := &SwapAccountItem{
-			p, BINANCE, swap.transferSubject(r.Income, r.IncomeType),
-			2, NewCurrency(r.Asset, ""), r.Income,
-			r.Time, dateTime, r.Info,
+			Pair: p, Exchange: BINANCE, Subject: swap.transferSubject(r.Income, r.IncomeType),
+			SettleMode: 2, SettleCurrency: NewCurrency(r.Asset, ""), Amount: r.Income,
+			Timestamp: r.Time, DateTime: dateTime, Info: r.Info,
 		}
 
 		items = append(items, sai)
@@ -1049,7 +1049,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 	uTime := time.Unix(rawExchangeInfo.ServerTime/1000, 0).In(swap.config.Location)
 	for _, c := range rawExchangeInfo.Symbols {
-		pair := Pair{NewCurrency(c.BaseAsset, ""), NewCurrency(c.CounterAsset, "")}
+		pair := Pair{Basis: NewCurrency(c.BaseAsset, ""), Counter: NewCurrency(c.CounterAsset, "")}
 		var stdSymbol = pair.ToSymbol("_", false)
 		var priceMaxScale float64
 		var priceMinScale float64

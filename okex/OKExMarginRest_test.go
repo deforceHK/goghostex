@@ -36,7 +36,7 @@ func TestMargin_MarketAPI(t *testing.T) {
 
 	ok := New(config)
 	if resp, err := ok.Margin.GetMarginInfo(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -72,7 +72,7 @@ func TestMargin_LoanAPI(t *testing.T) {
 
 	ok := New(config)
 	if account, resp, err := ok.Margin.GetMarginAccount(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -84,9 +84,9 @@ func TestMargin_LoanAPI(t *testing.T) {
 	}
 
 	loan := LoanRecord{
-		CurrencyPair: CurrencyPair{BTC, USDT},
-		Currency:     USDT,
-		Amount:       1,
+		Pair:     Pair{Basis: BTC, Counter: USDT},
+		Currency: USDT,
+		Amount:   1,
 	}
 
 	if resp, err := ok.Margin.Loan(&loan); err != nil {
@@ -166,7 +166,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 
 	ok := New(config)
 	if _, resp, err := ok.Margin.GetMarginAccount(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -176,7 +176,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 
 	testPrice := 0.0
 	if ticker, resp, err := ok.Margin.GetMarginTicker(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -188,7 +188,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 	}
 
 	normalOrder := Order{
-		Currency:  CurrencyPair{BTC, USDT},
+		Pair:      Pair{Basis: BTC, Counter: USDT},
 		Price:     testPrice,
 		Amount:    0.005,
 		Side:      SELL,
@@ -220,7 +220,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		}
 	}
 
-	if orders, _, err := ok.Margin.GetMarginUnFinishOrders(CurrencyPair{BTC, USDT}); err != nil {
+	if orders, _, err := ok.Margin.GetMarginUnFinishOrders(Pair{Basis: BTC, Counter: USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
