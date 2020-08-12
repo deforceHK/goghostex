@@ -434,10 +434,10 @@ func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
 		OrderId      string `json:"order_id"`
 	}
 
-	param.InstrumentId = ok.GetInstrumentId(order.Currency, order.ContractType)
+	param.InstrumentId = ok.GetInstrumentId(order.Pair, order.ContractType)
 	param.ClientOid = order.Cid
 	param.Type = int64(order.Type)
-	param.Price = ok.normalizePrice(order.Price, order.Currency)
+	param.Price = ok.normalizePrice(order.Price, order.Pair)
 	param.Size = fmt.Sprint(order.Amount)
 	param.Leverage = order.LeverRate
 	param.MatchPrice = order.MatchPrice
@@ -490,7 +490,7 @@ func (ok *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
 func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
-		ok.GetInstrumentId(order.Currency, order.ContractType),
+		ok.GetInstrumentId(order.Pair, order.ContractType),
 		order.OrderId,
 	)
 
@@ -507,7 +507,7 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
-		ok.GetInstrumentId(order.Currency, order.ContractType),
+		ok.GetInstrumentId(order.Pair, order.ContractType),
 		order.OrderId,
 	)
 	var response struct {

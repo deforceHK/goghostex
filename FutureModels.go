@@ -211,7 +211,7 @@ type FutureOrder struct {
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
 	LeverRate      int64
 	Fee            float64
-	Currency       Pair
+	Pair           Pair
 	ContractType   string
 	ContractName   string // for future
 	Exchange       string
