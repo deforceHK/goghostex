@@ -131,7 +131,7 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 	param := struct {
 		InstrumentId string `json:"instrument_id"`
 	}{
-		order.Currency.AdaptUsdToUsdt().ToLower().ToSymbol("-"),
+		order.Pair.ToSymbol("-", true),
 	}
 	reqBody, _, _ := this.BuildRequestBody(param)
 	var response struct {
@@ -206,7 +206,7 @@ func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 
 //orderId can set client oid or orderId
 func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
-	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Currency.AdaptUsdToUsdt().ToSymbol("-")
+	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Pair.ToSymbol("-", true)
 	var response OrderResponse
 	resp, err := this.DoRequest(
 		"GET",
@@ -225,10 +225,10 @@ func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/orders_pending?instrument_id=%s",
-		currency.AdaptUsdToUsdt().ToSymbol("-"),
+		pair.ToSymbol("-", true),
 	)
 	var response []OrderResponse
 	resp, err := this.DoRequest(
@@ -243,7 +243,7 @@ func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, err
 
 	var orders []Order
 	for _, itm := range response {
-		order := Order{Currency: currency}
+		order := Order{Pair: pair}
 		if err := this.adaptOrder(&order, &itm); err != nil {
 			return nil, nil, err
 		}
@@ -253,14 +253,14 @@ func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, err
 	return orders, resp, nil
 }
 
-func (this *Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("unsupported")
 }
 
-func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
+func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/ticker",
-		pair.AdaptUsdToUsdt().ToSymbol("-"),
+		pair.ToSymbol("-", true),
 	)
 
 	var response struct {
@@ -291,10 +291,10 @@ func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
 	}, resp, nil
 }
 
-func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/book?size=%d",
-		currency.AdaptUsdToUsdt().ToSymbol("-"),
+		pair.ToSymbol("-", true),
 		size,
 	)
 
@@ -310,7 +310,7 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 	}
 
 	dep := new(Depth)
-	dep.Pair = currency
+	dep.Pair = pair
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
 	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
 	dep.Date = date.In(this.config.Location).Format(GO_BIRTHDAY)
@@ -333,10 +333,10 @@ func (this *Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, err
 	return dep, resp, nil
 }
 
-func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/candles?",
-		currency.AdaptUsdToUsdt().ToSymbol("-"),
+		pair.ToSymbol("-", true),
 	)
 
 	params := url.Values{}
@@ -378,7 +378,7 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Exchange:  OKEX,
-			Pair:      currency,
+			Pair:      pair,
 			Open:      ToFloat64(item[1]),
 			High:      ToFloat64(item[2]),
 			Low:       ToFloat64(item[3]),
@@ -391,14 +391,14 @@ func (this *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 }
 
 //非个人，整个交易所的交易记录
-func (this *Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
+func (this *Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
 	panic("unsupported")
 }
 
 func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 	uri := "/api/spot/v3/orders"
 	param := PlaceOrderParam{
-		InstrumentId: order.Currency.AdaptUsdToUsdt().ToLower().ToSymbol("-"),
+		InstrumentId: order.Pair.ToSymbol("-", true),
 	}
 
 	if order.Cid == "" {

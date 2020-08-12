@@ -74,7 +74,7 @@ func (dr FutureDepthRecords) Less(i, j int) bool {
 type FutureDepth struct {
 	ContractType string // for future
 	ContractName string // for future
-	Pair         CurrencyPair
+	Pair         Pair
 	Timestamp    int64
 	DueTimestamp int64
 	// The increasing sequence, cause the http return sequence is not sure.
@@ -135,7 +135,7 @@ func (dr FutureStdDepthRecords) Less(i, j int) bool {
 type FutureStdDepth struct {
 	ContractType string // for future
 	ContractName string // for future
-	Pair         CurrencyPair
+	Pair         Pair
 	Timestamp    int64
 	DueTimestamp int64
 
@@ -156,7 +156,7 @@ func (fd FutureStdDepth) Verify() error {
 		return errors.New(
 			fmt.Sprintf(
 				"%s , %s currency pair ask_list or bid_list not enough! ",
-				fd.Pair.ToSymbol("_"),
+				fd.Pair.ToSymbol("_", false),
 				fd.ContractType,
 			),
 		)
@@ -211,7 +211,7 @@ type FutureOrder struct {
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
 	LeverRate      int64
 	Fee            float64
-	Currency       CurrencyPair
+	Currency       Pair
 	ContractType   string
 	ContractName   string // for future
 	Exchange       string
@@ -231,7 +231,7 @@ type FuturePosition struct {
 	SellPriceAvg   float64
 	SellPriceCost  float64
 	SellProfitReal float64
-	Symbol         CurrencyPair //btc_usd:比特币,ltc_usd:莱特币
+	Symbol         Pair //btc_usd:比特币,ltc_usd:莱特币
 	ContractType   string
 	ContractId     int64
 	ForceLiquPrice float64 //预估爆仓价

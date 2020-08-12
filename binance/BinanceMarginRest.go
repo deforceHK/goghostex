@@ -32,22 +32,22 @@ func (this *Margin) GetMarginOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+func (this *Margin) GetMarginUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginAccount(currency CurrencyPair) (*MarginAccount, []byte, error) {
+func (this *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginTicker(currency CurrencyPair) (*Ticker, []byte, error) {
+func (this *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+func (this *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	panic("implement me")
 }

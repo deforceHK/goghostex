@@ -14,8 +14,8 @@ const (
 )
 
 type MarginAccount struct {
-	CurrencyPair CurrencyPair
-	SubAccount   map[Currency]MarginSubAccount
+	Pair       Pair
+	SubAccount map[Currency]MarginSubAccount
 
 	LiquidationPrice float64 //预计爆仓价格
 	RiskRate         float64
@@ -37,17 +37,17 @@ type MarginSubAccount struct {
 }
 
 type LoanRecord struct {
-	CurrencyPair      CurrencyPair // The loan currency pair
-	Currency          Currency     // Currency
-	Amount            float64      // Loan amount
-	AmountLoaned      float64      // Loaned amount
-	AmountInterest    float64      // Loan interest
-	Status            LoanStatus   // The loan record status
-	LoanId            string       // Remote loan record id
-	LoanTimestamp     int64        // Loan timestamp
-	LoanDate          string       // Loan date
-	RepayId           string       // Remote loan record repay id
-	RepayTimestamp    int64        // Repay Timestamp
-	RepayDate         string       // Repay Date
-	RepayDeadlineDate string       // Repay Deadline Date
+	Pair              Pair       // The loan currency pair
+	Currency          Currency   // Currency
+	Amount            float64    // Loan amount
+	AmountLoaned      float64    // Loaned amount
+	AmountInterest    float64    // Loan interest
+	Status            LoanStatus // The loan record status
+	LoanId            string     // Remote loan record id
+	LoanTimestamp     int64      // Loan timestamp
+	LoanDate          string     // Loan date
+	RepayId           string     // Remote loan record repay id
+	RepayTimestamp    int64      // Repay Timestamp
+	RepayDate         string     // Repay Date
+	RepayDeadlineDate string     // Repay Deadline Date
 }

@@ -9,11 +9,11 @@ type MarginAPI interface {
 	PlaceMarginOrder(*Order) ([]byte, error)
 	CancelMarginOrder(*Order) ([]byte, error)
 	GetMarginOneOrder(*Order) ([]byte, error)
-	GetMarginUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error)
-	GetMarginAccount(currency CurrencyPair) (*MarginAccount, []byte, error)
+	GetMarginUnFinishOrders(pair Pair) ([]Order, []byte, error)
+	GetMarginAccount(pair Pair) (*MarginAccount, []byte, error)
 
-	GetMarginTicker(currency CurrencyPair) (*Ticker, []byte, error)
-	GetMarginDepth(size int, currency CurrencyPair) (*Depth, []byte, error)
-	GetMarginKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error)
+	GetMarginTicker(pair Pair) (*Ticker, []byte, error)
+	GetMarginDepth(size int, pair Pair) (*Depth, []byte, error)
+	GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error)
 	GetExchangeName() string
 }

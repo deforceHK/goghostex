@@ -80,7 +80,7 @@ func TestWallet_GetAccount(t *testing.T) {
 		From:           WALLET,
 		To:             FUTURE,
 		Amount:         1,
-		ToInstrumentId: NewCurrencyPair("ltc_usd").ToLower().ToSymbol("-"),
+		ToInstrumentId: NewPair("ltc_usd", "_").ToSymbol("-", false),
 	}
 
 	if err := ok.Wallet.Transfer(tParam); err != nil {

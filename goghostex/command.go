@@ -160,11 +160,11 @@ func (this *Command) getSponAPI() (SpotAPI, error) {
 func (this *Command) parseTicker() {
 	api, _ := this.getSponAPI()
 
-	if ticker, _, err := api.GetTicker(CurrencyPair{
-		CurrencyBasis: Currency{
+	if ticker, _, err := api.GetTicker(Pair{
+		Basis: Currency{
 			Symbol: strings.ToUpper(this.currencyBasis),
 		},
-		CurrencyCounter: Currency{
+		Counter: Currency{
 			Symbol: strings.ToUpper(this.currencyCounter),
 		},
 	}); err != nil {

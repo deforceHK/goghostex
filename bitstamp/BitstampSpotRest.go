@@ -38,15 +38,15 @@ func (this *Spot) GetOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetOrderHistorys(pair CurrencyPair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetTrades(pair CurrencyPair, since int64) ([]Trade, error) {
+func (this *Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
 	panic("implement me")
 }
 
@@ -54,7 +54,7 @@ func (this *Spot) GetExchangeName() string {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnfinishOrders(pair CurrencyPair) ([]Order, []byte, error) {
+func (this *Spot) GetUnfinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
@@ -62,9 +62,9 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
+func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 
-	uri := "/api/v2/ticker/" + strings.ToLower(pair.ToSymbol(""))
+	uri := "/api/v2/ticker/" + pair.ToSymbol("", false)
 	response := struct {
 		High      float64 `json:"high,string"`
 		Low       float64 `json:"low,string"`
@@ -96,8 +96,8 @@ func (this *Spot) GetTicker(pair CurrencyPair) (*Ticker, []byte, error) {
 	}, resp, nil
 }
 
-func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) {
-	uri := "/api/v2/order_book/" + strings.ToLower(pair.ToSymbol(""))
+func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+	uri := "/api/v2/order_book/" + pair.ToSymbol("", false)
 	response := struct {
 		Bids      [][]interface{} `json:"bids"`
 		Asks      [][]interface{} `json:"asks"`
@@ -138,14 +138,14 @@ func (this *Spot) GetDepth(size int, pair CurrencyPair) (*Depth, []byte, error) 
 }
 
 // bitstamp kline api can only return the nearly hour data. Cause it's api design.
-func (this *Spot) GetKlineRecords(pair CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	if period != KLINE_PERIOD_1MIN {
 		return nil, nil, errors.New("Can not support the period in bitstamp. ")
 	}
 
 	uri := fmt.Sprintf(
 		"/api/v2/transactions/%s/?time=day",
-		strings.ToLower(pair.ToSymbol("")),
+		strings.ToLower(pair.ToSymbol("", false)),
 	)
 	response := make([]struct {
 		Date   int64   `json:"date,string"`

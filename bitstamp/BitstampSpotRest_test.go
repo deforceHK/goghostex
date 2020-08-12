@@ -29,7 +29,7 @@ func TestSpot_GetTicker(t *testing.T) {
 	}
 
 	b := New(config)
-	ticker, resp, err := b.Spot.GetTicker(CurrencyPair{BTC, USD})
+	ticker, resp, err := b.Spot.GetTicker(Pair{Basis: BTC, Counter: USD})
 	if err != nil {
 		t.Error(err)
 		return
@@ -58,7 +58,7 @@ func TestSpot_GetDepth(t *testing.T) {
 	}
 
 	b := New(config)
-	_, resp, err := b.Spot.GetDepth(10, CurrencyPair{BTC, USD})
+	_, resp, err := b.Spot.GetDepth(10, Pair{Basis: BTC, Counter: USD})
 	if err != nil {
 		t.Error(err)
 		return
@@ -80,7 +80,7 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 
 	b := New(config)
 	klines, _, err := b.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		0,
 		0,
