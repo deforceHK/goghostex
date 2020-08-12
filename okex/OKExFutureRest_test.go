@@ -349,7 +349,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	//	PlaceType:    ONLY_MAKER,
 	//	Type:         OPEN_SHORT,
 	//	LeverRate:    20,
-	//	Currency:     CurrencyPair{LTC, USD},
+	//	Pair:     Pair{LTC, USD},
 	//	ContractType: THIS_WEEK_CONTRACT,
 	//	MatchPrice:   0,
 	//}

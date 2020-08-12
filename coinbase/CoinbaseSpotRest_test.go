@@ -22,7 +22,7 @@ const (
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	config := &APIConfig{
-		Endpoint:   ENDPOINT,
+		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
 			Transport: &http.Transport{
 				Proxy: func(req *http.Request) (*url.URL, error) {
