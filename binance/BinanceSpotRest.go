@@ -126,7 +126,6 @@ func (binance *Spot) CancelOrder(order *Order) ([]byte, error) {
 }
 
 func (binance *Spot) GetOneOrder(order *Order) ([]byte, error) {
-	//pair := binance.adaptCurrencyPair(order.Currency)
 	if order.OrderId == "" {
 		return nil, errors.New("You must get the order_id. ")
 	}

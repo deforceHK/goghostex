@@ -524,12 +524,12 @@ func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
 }
 
 func (ok *Future) GetFuturePosition(
-	currencyPair Pair,
+	pair Pair,
 	contractType string,
 ) ([]FuturePosition, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/%s/position",
-		ok.GetInstrumentId(currencyPair, contractType),
+		ok.GetInstrumentId(pair, contractType),
 	)
 	var response struct {
 		Result     bool   `json:"result"`
@@ -576,7 +576,7 @@ func (ok *Future) GetFuturePosition(
 
 	for _, pos := range response.Holding {
 		postions = append(postions, FuturePosition{
-			Symbol:         currencyPair,
+			Symbol:         pair,
 			ContractType:   contractType,
 			ContractId:     ToInt64(pos.InstrumentId[8:]),
 			BuyAmount:      pos.LongQty,
@@ -625,12 +625,12 @@ type futureOrderResponse struct {
 }
 
 func (ok *Future) GetUnFinishFutureOrders(
-	currencyPair Pair,
+	pair Pair,
 	contractType string,
 ) ([]FutureOrder, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s?state=6&limit=100",
-		ok.GetInstrumentId(currencyPair, contractType),
+		ok.GetInstrumentId(pair, contractType),
 	)
 	var response struct {
 		Result    bool                  `json:"result"`
@@ -656,8 +656,8 @@ func (ok *Future) GetUnFinishFutureOrders(
 
 func (ok *Future) GetFee() (float64, error) { panic("") }
 
-func (ok *Future) GetContractValue(currencyPair Pair) (float64, error) {
-	fc := ok.GetFutureContract(currencyPair, QUARTER_CONTRACT)
+func (ok *Future) GetContractValue(pair Pair) (float64, error) {
+	fc := ok.GetFutureContract(pair, QUARTER_CONTRACT)
 	return ToFloat64(fc.ContractVal), nil
 }
 
