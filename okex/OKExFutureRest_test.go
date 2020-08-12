@@ -44,7 +44,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	ok := New(config)
 	if ticker, body, err := ok.Future.GetFutureTicker(
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		NEXT_QUARTER_CONTRACT,
 	); err != nil {
 		t.Error(err)
@@ -64,7 +64,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if depth, body, err := ok.Future.GetFutureDepth(
-		NewCurrencyPair("btc_usd"),
+		NewPair("btc_usd", "_"),
 		NEXT_QUARTER_CONTRACT,
 		20,
 	); err != nil {
@@ -84,7 +84,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(body))
 
 		if depth1, _, err := ok.Future.GetFutureDepth(
-			CurrencyPair{BTC, USD},
+			Pair{Basis: BTC, Counter: USD},
 			NEXT_QUARTER_CONTRACT,
 			20,
 		); err != nil {
@@ -110,7 +110,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	if minKline, body, err := ok.Future.GetFutureKlineRecords(
 		NEXT_QUARTER_CONTRACT,
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		20,
 		int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
@@ -140,7 +140,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 
 	if dayKline, body, err := ok.Future.GetFutureKlineRecords(
 		NEXT_QUARTER_CONTRACT,
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1DAY,
 		20,
 		int(time.Now().Add(-20*24*time.Hour).UnixNano()/1000000),
@@ -169,13 +169,13 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	Contracts := ok.Future.GetFutureContract(
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		NEXT_QUARTER_CONTRACT,
 	)
 	t.Log(Contracts)
 
 	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		THIS_WEEK_CONTRACT,
 	); err != nil {
 		t.Log(marketPrice)
@@ -234,7 +234,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	}
 
 	ticker, _, err := ok.Future.GetFutureTicker(
-		CurrencyPair{LTC, USD},
+		Pair{Basis: LTC, Counter: USD},
 		THIS_WEEK_CONTRACT,
 	)
 	if err != nil {
@@ -249,7 +249,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		PlaceType:    NORMAL,
 		Type:         OPEN_SHORT,
 		LeverRate:    20,
-		Currency:     CurrencyPair{LTC, USD},
+		Currency:     Pair{Basis: LTC, Counter: USD},
 		ContractType: THIS_WEEK_CONTRACT,
 		MatchPrice:   0,
 	}
@@ -349,7 +349,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	//	PlaceType:    ONLY_MAKER,
 	//	Type:         OPEN_SHORT,
 	//	LeverRate:    20,
-	//	Currency:     CurrencyPair{LTC, USD},
+	//	Pair:     Pair{LTC, USD},
 	//	ContractType: THIS_WEEK_CONTRACT,
 	//	MatchPrice:   0,
 	//}

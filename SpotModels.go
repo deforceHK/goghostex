@@ -28,37 +28,37 @@ type SubAccount struct {
  **/
 
 type Kline struct {
-	Pair      CurrencyPair `json:"symbol"`
-	Exchange  string       `json:"exchange"`
-	Timestamp int64        `json:"timestamp"`
-	Date      string       `json:"date"`
-	Open      float64      `json:"open"`
-	Close     float64      `json:"close"`
-	High      float64      `json:"high"`
-	Low       float64      `json:"low"`
-	Vol       float64      `json:"vol"`
+	Pair      Pair    `json:"symbol"`
+	Exchange  string  `json:"exchange"`
+	Timestamp int64   `json:"timestamp"`
+	Date      string  `json:"date"`
+	Open      float64 `json:"open"`
+	Close     float64 `json:"close"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Vol       float64 `json:"vol"`
 }
 
 type Ticker struct {
-	Pair      CurrencyPair `json:"-"`
-	Last      float64      `json:"last"`
-	Buy       float64      `json:"buy"`
-	Sell      float64      `json:"sell"`
-	High      float64      `json:"high"`
-	Low       float64      `json:"low"`
-	Vol       float64      `json:"vol"`
-	Timestamp int64        `json:"timestamp"` // unit:ms
-	Date      string       `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
+	Pair      Pair    `json:"-"`
+	Last      float64 `json:"last"`
+	Buy       float64 `json:"buy"`
+	Sell      float64 `json:"sell"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Vol       float64 `json:"vol"`
+	Timestamp int64   `json:"timestamp"` // unit:ms
+	Date      string  `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
 // record
 type Trade struct {
-	Tid       int64        `json:"tid"`
-	Type      TradeSide    `json:"type"`
-	Amount    float64      `json:"amount,string"`
-	Price     float64      `json:"price,string"`
-	Timestamp int64        `json:"timestamp"`
-	Pair      CurrencyPair `json:"omitempty"`
+	Tid       int64     `json:"tid"`
+	Type      TradeSide `json:"type"`
+	Amount    float64   `json:"amount,string"`
+	Price     float64   `json:"price,string"`
+	Timestamp int64     `json:"timestamp"`
+	Pair      Pair      `json:"omitempty"`
 }
 
 type DepthRecord struct {
@@ -81,7 +81,7 @@ func (dr DepthRecords) Less(i, j int) bool {
 }
 
 type Depth struct {
-	Pair      CurrencyPair
+	Pair      Pair
 	Timestamp int64
 	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
 	Date      string
@@ -134,7 +134,7 @@ type Order struct {
 	OrderTimestamp int64
 	OrderDate      string
 	Status         TradeStatus
-	Currency       CurrencyPair
+	Pair           Pair
 	Side           TradeSide
 	//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
 	OrderType PlaceType

@@ -38,11 +38,11 @@ func (*Spot) GetOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetUnFinishOrders(currency CurrencyPair) ([]Order, []byte, error) {
+func (*Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
+func (*Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
 
@@ -50,15 +50,15 @@ func (*Spot) GetAccount() (*Account, []byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetTicker(currency CurrencyPair) (*Ticker, []byte, error) {
+func (*Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetDepth(size int, currency CurrencyPair) (*Depth, []byte, error) {
+func (*Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	panic("implement me")
 }
 
-func (spot *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, []byte, error) {
+func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	if size > 300 {
 		return nil, nil, errors.New("Can not request more than 300. ")
 	}
@@ -70,7 +70,7 @@ func (spot *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 
 	uri := fmt.Sprintf(
 		"/products/%s/candles?",
-		currency.ToSymbol("-"),
+		pair.ToSymbol("-", true),
 	)
 
 	params := url.Values{}
@@ -110,7 +110,7 @@ func (spot *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 			Exchange:  COINBASE,
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(spot.config.Location).Format(GO_BIRTHDAY),
-			Pair:      currency,
+			Pair:      pair,
 			Open:      ToFloat64(item[3]),
 			High:      ToFloat64(item[2]),
 			Low:       ToFloat64(item[1]),
@@ -122,7 +122,7 @@ func (spot *Spot) GetKlineRecords(currency CurrencyPair, period, size, since int
 	return klines, resp, nil
 }
 
-func (*Spot) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
+func (*Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
 	panic("implement me")
 }
 

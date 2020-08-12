@@ -2,24 +2,24 @@ package goghostex
 
 type FutureRestAPI interface {
 	GetExchangeName() string
-	GetFutureEstimatedPrice(currencyPair CurrencyPair) (float64, []byte, error)
-	GetFutureTicker(currencyPair CurrencyPair, contractType string) (*FutureTicker, []byte, error)
-	GetFutureDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureDepth, []byte, error)
-	GetFutureStdDepth(currencyPair CurrencyPair, contractType string, size int) (*FutureStdDepth, []byte, error)
-	GetFutureLimit(pair CurrencyPair, contractType string) (float64, float64, error)
+	GetFutureEstimatedPrice(pair Pair) (float64, []byte, error)
+	GetFutureTicker(pair Pair, contractType string) (*FutureTicker, []byte, error)
+	GetFutureDepth(pair Pair, contractType string, size int) (*FutureDepth, []byte, error)
+	GetFutureStdDepth(pair Pair, contractType string, size int) (*FutureStdDepth, []byte, error)
+	GetFutureLimit(pair Pair, contractType string) (float64, float64, error)
 
-	GetFutureIndex(currencyPair CurrencyPair) (float64, []byte, error)
+	GetFutureIndex(pair Pair) (float64, []byte, error)
 	GetFutureAccount() (*FutureAccount, []byte, error)
 
 	/**
 	 * 获取K线数据
 	 */
-	GetFutureKlineRecords(contract_type string, currency CurrencyPair, period, size, since int) ([]FutureKline, []byte, error)
+	GetFutureKlineRecords(contractType string, pair Pair, period, size, since int) ([]FutureKline, []byte, error)
 
 	/**
 	 *
 	 * 期货下单
-	 * @param currencyPair   btc_usd:比特币    ltc_usd :莱特币
+	 * @param pair   btc_usd:比特币    ltc_usd :莱特币
 	 * @param contractType   合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 * @param price  价格
 	 * @param amount  委托数量
@@ -43,12 +43,12 @@ type FutureRestAPI interface {
 	 * @param contractType   合约类型: this_week:当周   next_week:下周   month:当月   quarter:季度
 	 * @return
 	 */
-	GetFuturePosition(currencyPair CurrencyPair, contractType string) ([]FuturePosition, []byte, error)
+	GetFuturePosition(pair Pair, contractType string) ([]FuturePosition, []byte, error)
 
 	/**
 	 *获取订单信息
 	 */
-	GetFutureOrders(orderIds []string, currencyPair CurrencyPair, contractType string) ([]FutureOrder, []byte, error)
+	GetFutureOrders(orderIds []string, pair Pair, contractType string) ([]FutureOrder, []byte, error)
 
 	/**
 	 *获取单个订单信息
@@ -58,7 +58,7 @@ type FutureRestAPI interface {
 	/**
 	 *获取未完成订单信息
 	 */
-	GetUnFinishFutureOrders(currencyPair CurrencyPair, contractType string) ([]FutureOrder, []byte, error)
+	GetUnFinishFutureOrders(pair Pair, contractType string) ([]FutureOrder, []byte, error)
 
 	/**
 	 *获取交易费
@@ -73,7 +73,7 @@ type FutureRestAPI interface {
 	/**
 	 *获取每张合约价值
 	 */
-	GetContractValue(currencyPair CurrencyPair) (float64, error)
+	GetContractValue(pair Pair) (float64, error)
 
 	/**
 	 *获取交割时间 星期(0,1,2,3,4,5,6)，小时，分，秒
@@ -83,7 +83,7 @@ type FutureRestAPI interface {
 	/**
 	 * 获取Trade数据
 	 */
-	GetTrades(contract_type string, currencyPair CurrencyPair, since int64) ([]Trade, error)
+	GetTrades(contractType string, pair Pair, since int64) ([]Trade, error)
 }
 
 type FutureWebsocketAPI interface {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -21,8 +22,14 @@ const (
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	config := &APIConfig{
-		Endpoint:   ENDPOINT,
-		HttpClient: &http.Client{},
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse("socks5://127.0.0.1:1090")
+				},
+			},
+		},
 		//ApiKey:        SPOT_API_KEY,
 		//ApiSecretKey:  SPOT_API_SECRETKEY,
 		//ApiPassphrase: SPOT_API_PASSPHRASE,
@@ -30,9 +37,8 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 	}
 
 	cb := New(config)
-
 	klines, _, err := cb.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USD},
+		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		300,
 		1546898760000,

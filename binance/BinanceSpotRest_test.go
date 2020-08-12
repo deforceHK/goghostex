@@ -45,7 +45,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// ticker unit test
 	if ticker, resp, err := bn.Spot.GetTicker(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -65,7 +65,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	// depth unit test
 	if depth, resp, err := bn.Spot.GetDepth(
 		20,
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -84,7 +84,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 		// make sure the later request get bigger sequence
 		depth1, _, _ := bn.Spot.GetDepth(
 			20,
-			CurrencyPair{BTC, USDT},
+			Pair{Basis: BTC, Counter: USDT},
 		)
 
 		if depth1.Sequence < depth.Sequence {
@@ -105,7 +105,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// klines unit test
 	if minKlines, resp, err := bn.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1MIN,
 		10,
 		int(time.Now().Add(-2*24*time.Hour).UnixNano()),
@@ -125,7 +125,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 	}
 
 	if dayKlines, resp, err := bn.Spot.GetKlineRecords(
-		CurrencyPair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1DAY,
 		10,
 		int(time.Now().Add(-11*24*time.Hour).UnixNano()),
@@ -148,7 +148,6 @@ func TestSpot_MarketAPI(t *testing.T) {
 		t.Log(err)
 		return
 	} else {
-
 		info := map[string]json.RawMessage{}
 		if err := json.Unmarshal(body, &info); err != nil {
 			panic(err)
@@ -205,7 +204,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	testPrice := 0.0
 	// ticker unit test
 	if ticker, _, err := bn.Spot.GetTicker(
-		CurrencyPair{BNB, BTC},
+		Pair{Basis: BNB, Counter: BTC},
 	); err != nil {
 		t.Error(err)
 		return
@@ -214,7 +213,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	normalOrder := Order{
-		Currency:  CurrencyPair{BNB, BTC},
+		Pair:      Pair{Basis: BNB, Counter: BTC},
 		Price:     testPrice,
 		Amount:    1,
 		Side:      SELL,
@@ -254,7 +253,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	if orders, resp, err := bn.Spot.GetUnFinishOrders(
-		CurrencyPair{BNB, BTC},
+		Pair{Basis: BNB, Counter: BTC},
 	); err != nil {
 		t.Error(err)
 		return
@@ -286,7 +285,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	fokOrder := Order{
-		Currency:  CurrencyPair{BNB, BTC},
+		Pair:      Pair{Basis: BNB, Counter: BTC},
 		Price:     testPrice,
 		Amount:    1,
 		Side:      SELL,
@@ -309,7 +308,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	iocOrder := Order{
-		Currency:  CurrencyPair{BNB, BTC},
+		Pair:      Pair{Basis: BNB, Counter: BTC},
 		Price:     testPrice,
 		Amount:    1,
 		Side:      SELL,

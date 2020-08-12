@@ -36,7 +36,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 	bn := New(config)
 	// ticker unit test
 	if ticker, resp, err := bn.Swap.GetTicker(
-		Pair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
 		return
@@ -55,7 +55,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 
 	// depth unit test
 	if depth, resp, err := bn.Swap.GetDepth(
-		Pair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		20,
 	); err != nil {
 		t.Error(err)
@@ -74,7 +74,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 
 		// make sure the later request get bigger sequence
 		depth1, _, _ := bn.Swap.GetDepth(
-			Pair{BTC, USDT},
+			Pair{Basis: BTC, Counter: USDT},
 			20,
 		)
 
@@ -94,7 +94,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if highest, lowest, err := bn.Swap.GetLimit(Pair{BTC, USDT}); err != nil {
+	if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -103,7 +103,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 	}
 
 	if klines, resp, err := bn.Swap.GetKline(
-		Pair{BTC, USDT},
+		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1DAY,
 		20,
 		1271149752000,
@@ -116,7 +116,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{BTC, USDT}); err != nil {
+	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -124,7 +124,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 		t.Log(timestamp)
 	}
 
-	if fees, _, err := bn.Swap.GetFundingFees(Pair{BTC, USDT}); err != nil {
+	if fees, _, err := bn.Swap.GetFundingFees(Pair{Basis: BTC, Counter: USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -207,7 +207,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	pair := Pair{BTC, USDT}
+	pair := Pair{Basis: BTC, Counter: USDT} 
 	ticker, _, err := bn.Swap.GetTicker(pair)
 	if err != nil {
 		t.Error(err)
