@@ -207,7 +207,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	pair := Pair{Basis: BTC, Counter: USDT} 
+	pair := Pair{Basis: BTC, Counter: USDT}
 	ticker, _, err := bn.Swap.GetTicker(pair)
 	if err != nil {
 		t.Error(err)

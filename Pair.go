@@ -4,6 +4,16 @@ import (
 	"strings"
 )
 
+var (
+	BTC_USD  = Pair{Basis: BTC, Counter: USD}
+	LTC_USD  = Pair{Basis: LTC, Counter: USD}
+	ETH_USD  = Pair{Basis: ETH, Counter: USD}
+	EOS_USD  = Pair{Basis: EOS, Counter: USD}
+
+	BTC_USDT = Pair{Basis: BTC, Counter: USDT}
+	ETH_USDT = Pair{Basis: ETH, Counter: USDT}
+)
+
 type Pair struct {
 	//The target currency, you want to buy or long
 	//目标货币，你想买或者做多的。
