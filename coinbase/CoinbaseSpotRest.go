@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	. "github.com/strengthening/goghostex"
@@ -50,8 +51,60 @@ func (*Spot) GetAccount() (*Account, []byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
-	panic("implement me")
+func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
+	t := struct {
+		Volume float64 `json:"volume,string"`
+		Buy float64 `json:"bid,string"`
+		Sell float64 `json:"ask,string"`
+	}{}
+
+	s := struct {
+		Last   float64 `json:"last,string"`
+		High float64 `json:"high,string"`
+		Low float64 `json:"low,string"`
+	}{}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	var tickerResp, statResp []byte
+	var tickerErr, statErr error
+	go func() {
+		defer wg.Done()
+		uri := fmt.Sprintf("/products/%s/ticker", pair.ToSymbol("-", true))
+		tickerResp, tickerErr = spot.DoRequest("GET", uri, "", &t)
+	}()
+
+	go func() {
+		defer wg.Done()
+		uri := fmt.Sprintf("/products/%s/stats", pair.ToSymbol("-", true))
+		statResp, statErr = spot.DoRequest("GET", uri, "", &s)
+	}()
+
+	wg.Wait()
+
+	if tickerErr!=nil{
+		return nil,nil, tickerErr
+	}
+	if statErr!=nil{
+		return nil,nil, statErr
+	}
+
+	now := time.Now()
+	timestamp := now.UnixNano() / int64(time.Millisecond)
+	datetime := now.In(spot.config.Location).Format(GO_BIRTHDAY)
+	ticker := &Ticker{
+		Pair:      pair,
+		High:      s.High,
+		Low:       s.Low,
+		Last:      s.Last,
+		Vol:       t.Volume,
+		Buy:       t.Buy,
+		Sell:      t.Sell,
+		Timestamp: timestamp,
+		Date:      datetime,
+	}
+	return ticker, tickerResp, nil
 }
 
 func (*Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {

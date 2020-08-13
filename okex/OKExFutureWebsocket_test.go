@@ -2,16 +2,15 @@ package okex
 
 import (
 	"testing"
-	"time"
 )
 
 func TestStart(t *testing.T) {
 
-	ws := OKexFutureWebsocket{
-		proxyUrl: "socks5://127.0.0.1:1090",
-	}
-
-	ws.Init()
+	//ws := OKexFutureWebsocket{
+	//	proxyUrl: "socks5://127.0.0.1:1090",
+	//}
+	//
+	//ws.Init()
 
 	//config := goghostex.APIConfig{
 	//	ApiSecretKey: "",
@@ -24,17 +23,17 @@ func TestStart(t *testing.T) {
 	//	return
 	//}
 
-	if err := ws.Subscribe(
-		`{"op": "subscribe", "args": ["futures/ticker:BTC-USD-190927", "futures/candle60s:BTC-USD-190927"]}`,
-	); err != nil {
-		t.Error(err)
-		return
-	}
-
-	ws.Start()
-
-	time.Sleep(60 * time.Second)
-
-	ws.Close()
+	//if err := ws.Subscribe(
+	//	`{"op": "subscribe", "args": ["futures/ticker:BTC-USD-190927", "futures/candle60s:BTC-USD-190927"]}`,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//}
+	//
+	//ws.Start()
+	//
+	//time.Sleep(60 * time.Second)
+	//
+	//ws.Close()
 
 }
