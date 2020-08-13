@@ -2,6 +2,7 @@ package coinbase
 
 import (
 	"encoding/json"
+
 	. "github.com/strengthening/goghostex"
 )
 

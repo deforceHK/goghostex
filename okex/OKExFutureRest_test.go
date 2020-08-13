@@ -249,7 +249,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		PlaceType:    NORMAL,
 		Type:         OPEN_SHORT,
 		LeverRate:    20,
-		Pair:     Pair{Basis: LTC, Counter: USD},
+		Pair:         Pair{Basis: LTC, Counter: USD},
 		ContractType: THIS_WEEK_CONTRACT,
 		MatchPrice:   0,
 	}
