@@ -42,7 +42,7 @@ func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
 
@@ -201,4 +201,8 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 	}
 
 	return klines, resp, nil
+}
+
+func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+	panic("implete me. ")
 }

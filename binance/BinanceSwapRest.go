@@ -52,6 +52,43 @@ type SwapContract struct {
 
 type SwapContracts map[string]SwapContract
 
+func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
+	uri := "/fapi/v1/exchangeInfo"
+	r := struct {
+		Symbols []struct {
+			Symbol            string `json:"symbol"`
+			BaseAsset         string `json:"baseAsset"`
+			QuotaAsset        string `json:"quotaAsset"`
+			PricePrecision    int    `json:"pricePrecision"`
+			QuantityPrecision int    `json:"quantityPrecision"`
+		} `json:"symbols"`
+	}{}
+	resp, err := swap.DoRequest(http.MethodGet, uri, "", r)
+	if err != nil {
+		return nil, resp, err
+	}
+	symbol := pair.ToSymbol("", true)
+	for _, s := range r.Symbols {
+		if s.Symbol != symbol {
+			continue
+		}
+		rule := SwapRule{
+			Rule: Rule{
+				Pair:             pair,
+				Base:             NewCurrency(s.BaseAsset, ""),
+				BasePrecision:    s.QuantityPrecision,
+				BaseMinSize:      1 / math.Pow10(s.QuantityPrecision),
+				Counter:          NewCurrency(s.QuotaAsset, ""),
+				CounterPrecision: s.PricePrecision,
+			},
+			ContractVal: 1,
+		}
+		return &rule, resp, nil
+	}
+
+	return nil, resp, errors.New("Can not find the pair in exchange. ")
+}
+
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 
 	wg := sync.WaitGroup{}

@@ -51,3 +51,7 @@ func (this *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) 
 func (this *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	panic("implement me")
 }
+
+func (this *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+	return nil, nil, nil
+}

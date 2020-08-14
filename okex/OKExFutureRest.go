@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
@@ -797,4 +798,42 @@ func (ok *Future) MarketCloseAllPosition(pair Pair, contract string, oType int) 
 	}
 
 	return true, resp, nil
+}
+
+func (ok *Future) GetExchangeRule(pair Pair) (*FutureRule, []byte, error) {
+	uri := "/api/futures/v3/instruments"
+	rules := make([]*struct {
+		BaseCurrency   string  `json:"base_currency"`
+		QuotaCurrency  string  `json:"quota_currency"`
+		TickSize       float64 `json:"tick_size,string"`
+		TradeIncrement float64 `json:"trade_increment"`
+		ContractVal    float64 `json:"contract_val,string"`
+	}, 0)
+	resp, err := ok.DoRequest(http.MethodGet, uri, "", &rules)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	base := pair.Basis.String()
+	counter := pair.Counter.String()
+	for _, r := range rules {
+		if base != r.BaseCurrency || counter != r.QuotaCurrency {
+			continue
+		}
+
+		rule := FutureRule{
+			Rule: Rule{
+				Pair:             pair,
+				Base:             NewCurrency(r.BaseCurrency, ""),
+				BasePrecision:    GetPrecision(r.TradeIncrement),
+				BaseMinSize:      r.TradeIncrement,
+				Counter:          NewCurrency(r.QuotaCurrency, ""),
+				CounterPrecision: GetPrecision(r.TickSize),
+			},
+			ContractVal: r.ContractVal,
+		}
+
+		return &rule, resp, nil
+	}
+	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }

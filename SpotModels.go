@@ -154,3 +154,13 @@ type APIConfig struct {
 	ClientId      string //for bitstamp.net , huobi.pro
 	Location      *time.Location
 }
+
+type Rule struct {
+	Pair    Pair
+	Base    Currency
+	Counter Currency
+
+	BaseMinSize      float64
+	BasePrecision    int
+	CounterPrecision int
+}

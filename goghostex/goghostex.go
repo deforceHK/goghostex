@@ -15,6 +15,11 @@ var cliApiKey = flag.String("api-key", "", "Input the api-key. ")
 var cliApiSecret = flag.String("api-secret", "", "Input the api-secret. ")
 var cliApiPassphrase = flag.String("api-passphrase", "", "Input the api-passphrase. ")
 
+var subCommand = map[string]string{
+	"ticker": "exchange ticker api",
+	"t2o":    "ticker to order time stat",
+	"info":   "the exchange rule. ",
+}
 
 func main() {
 	// 初始化变量 cliFlag
@@ -29,7 +34,8 @@ func main() {
 		firstParam = flag.Arg(0)
 	}
 
-	if paramCount == 0 || (firstParam != "ticker" && firstParam != "t2o") {
+	_, exist := subCommand[firstParam]
+	if paramCount == 0 || !exist {
 		flag.PrintDefaults()
 	} else if firstParam == "ticker" {
 
@@ -37,10 +43,10 @@ func main() {
 		fs.StringVar(cliExchange, "exchange", "coinbase", "Input the exchange name. ")
 		fs.StringVar(cliType, "type", "spot", "Input the type. Default is spot. ")
 		fs.StringVar(cliPair, "pair", "btc_usd", "Input the pair. Default is btc_usd. ")
-		fs.StringVar(cliProxy,"proxy","", "Input the proxy. ")
-		fs.StringVar(cliApiKey,"api-key","", "Input the api-key. ")
-		fs.StringVar(cliApiSecret,"api-secret","", "Input the api-secret. ")
-		fs.StringVar(cliApiPassphrase,"api-passphrase","", "Input the api-passphrase. ")
+		fs.StringVar(cliProxy, "proxy", "", "Input the proxy. ")
+		fs.StringVar(cliApiKey, "api-key", "", "Input the api-key. ")
+		fs.StringVar(cliApiSecret, "api-secret", "", "Input the api-secret. ")
+		fs.StringVar(cliApiPassphrase, "api-passphrase", "", "Input the api-passphrase. ")
 
 		_ = fs.Parse(flag.Args()[1:])
 		initClients(*cliProxy, *cliApiKey, *cliApiSecret, *cliApiPassphrase)
@@ -62,5 +68,23 @@ func main() {
 		}
 	} else if firstParam == "t2o" {
 
+	} else if firstParam == "info" {
+
+		fs := flag.NewFlagSet("ticker", flag.ExitOnError)
+		fs.StringVar(cliExchange, "exchange", "coinbase", "Input the exchange name. ")
+		fs.StringVar(cliType, "type", "spot", "Input the type. Default is spot. ")
+		fs.StringVar(cliPair, "pair", "btc_usd", "Input the pair. Default is btc_usd. ")
+		fs.StringVar(cliProxy, "proxy", "", "Input the proxy. ")
+
+		_ = fs.Parse(flag.Args()[1:])
+		initClients(*cliProxy, *cliApiKey, *cliApiSecret, *cliApiPassphrase)
+
+		pair := goghostex.NewPair(*cliPair, "_")
+		if rule, resp, err := spotClients[*cliExchange].GetExchangeRule(pair); err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(string(resp))
+			fmt.Println(rule)
+		}
 	}
 }

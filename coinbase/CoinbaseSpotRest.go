@@ -43,7 +43,7 @@ func (*Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	panic("implement me")
 }
 
-func (*Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (*Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
 
@@ -54,20 +54,20 @@ func (*Spot) GetAccount() (*Account, []byte, error) {
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	t := struct {
 		Volume float64 `json:"volume,string"`
-		Buy float64 `json:"bid,string"`
-		Sell float64 `json:"ask,string"`
+		Buy    float64 `json:"bid,string"`
+		Sell   float64 `json:"ask,string"`
 	}{}
 
 	s := struct {
-		Last   float64 `json:"last,string"`
+		Last float64 `json:"last,string"`
 		High float64 `json:"high,string"`
-		Low float64 `json:"low,string"`
+		Low  float64 `json:"low,string"`
 	}{}
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	var tickerResp, statResp []byte
+	var tickerResp []byte
 	var tickerErr, statErr error
 	go func() {
 		defer wg.Done()
@@ -78,16 +78,16 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	go func() {
 		defer wg.Done()
 		uri := fmt.Sprintf("/products/%s/stats", pair.ToSymbol("-", true))
-		statResp, statErr = spot.DoRequest("GET", uri, "", &s)
+		_, statErr = spot.DoRequest("GET", uri, "", &s)
 	}()
 
 	wg.Wait()
 
-	if tickerErr!=nil{
-		return nil,nil, tickerErr
+	if tickerErr != nil {
+		return nil, nil, tickerErr
 	}
-	if statErr!=nil{
-		return nil,nil, statErr
+	if statErr != nil {
+		return nil, nil, statErr
 	}
 
 	now := time.Now()
@@ -181,4 +181,34 @@ func (*Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
 
 func (*Spot) GetExchangeName() string {
 	return COINBASE
+}
+
+func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+
+	uri := fmt.Sprintf("/products/%s", pair.ToSymbol("-", true))
+	r := struct {
+		BaseCurrency  string  `json:"base_currency"`
+		BaseIncrement float64 `json:"base_increment,string"`
+		BaseMinSize   float64 `json:"base_min_size,string"`
+
+		QuoteCurrency  string  `json:"quote_currency"`
+		QuoteIncrement float64 `json:"quote_increments,string"`
+	}{}
+
+	resp, err := spot.DoRequest("GET", uri, "", &r)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	rule := Rule{
+		Pair:    pair,
+		Base:    NewCurrency(r.BaseCurrency, ""),
+		Counter: NewCurrency(r.QuoteCurrency, ""),
+
+		BaseMinSize:      r.BaseMinSize,
+		BasePrecision:    GetPrecision(r.BaseIncrement),
+		CounterPrecision: GetPrecision(r.QuoteIncrement),
+	}
+
+	return &rule, resp, nil
 }

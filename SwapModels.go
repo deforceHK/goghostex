@@ -214,3 +214,8 @@ type SwapAccountItem struct {
 	DateTime       string
 	Info           string
 }
+
+type SwapRule struct {
+	Rule        Rule    `json:",-"`           // 按照Rule里面的规则进行。
+	ContractVal float64 `json:"contract_val"` //合约一手价格
+}

@@ -1,6 +1,7 @@
 package okex
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -253,7 +254,7 @@ func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	return orders, resp, nil
 }
 
-func (this *Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("unsupported")
 }
 
@@ -441,4 +442,44 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 		return resp, err
 	}
 	return resp, nil
+}
+
+func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+	uri := "/api/spot/v3/instruments"
+	r := make([]struct {
+		InstrumentId  string  `json:"instrument_id"`
+		BaseCurrency  string  `json:"base_currency"`
+		QuoteCurrency string  `json:"quote_currency"`
+		MinSize       float64 `json:"min_size,string"`
+		TickSize      float64 `json:"tick_size,string"`
+		SizeIncrement float64 `json:"size_increment,string"`
+	}, 0)
+
+	resp, err := this.DoRequest("GET", uri, "", &r)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	symbol := pair.ToSymbol("-", true)
+	for _, p := range r {
+		if p.InstrumentId != symbol {
+			continue
+		}
+
+		if raw, err := json.Marshal(p); err != nil {
+			return nil, resp, err
+		} else {
+			rule := Rule{
+				Pair:             pair,
+				Base:             NewCurrency(p.BaseCurrency, ""),
+				Counter:          NewCurrency(p.QuoteCurrency, ""),
+				BaseMinSize:      p.MinSize,
+				BasePrecision:    GetPrecision(p.SizeIncrement),
+				CounterPrecision: GetPrecision(p.TickSize),
+			}
+			return &rule, raw, nil
+		}
+	}
+
+	return nil, resp, errors.New("Can not find the pair in remote. ")
 }
