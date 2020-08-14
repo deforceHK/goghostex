@@ -129,3 +129,16 @@ func FlateUnCompress(data []byte) ([]byte, error) {
 func UUID() string {
 	return strings.Replace(uuid.New().String(), "-", "", 32)
 }
+
+func GetPrecision(minSize float64) int {
+	if minSize < 0.0000000001 {
+		return 10
+	}
+
+	for i := 0; ; i++ {
+		if minSize >= 1 {
+			return i
+		}
+		minSize *= 10
+	}
+}

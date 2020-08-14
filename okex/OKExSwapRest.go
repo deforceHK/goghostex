@@ -79,3 +79,8 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 	panic("implement me")
 }
+
+func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
+	panic("implement me")
+	//return nil,nil,nil
+}

@@ -1,8 +1,10 @@
 package binance
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -180,7 +182,7 @@ func (binance *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 	return orders, resp, nil
 }
 
-func (binance *Spot) GetOrderHistorys(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (binance *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
 	panic("implement me")
 }
 
@@ -432,4 +434,59 @@ func (binance *Spot) placeOrder(order *Order) ([]byte, error) {
 	}
 	response.Merge(order, binance.config.Location)
 	return resp, nil
+}
+
+func (binance *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+	uri := "/api/v3/exchangeInfo"
+
+	pairsInfo := struct {
+		Symbols []map[string]json.RawMessage `json:"symbols"`
+	}{}
+	resp, err := binance.DoRequest(http.MethodGet, uri, "", &pairsInfo)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	symbol := pair.ToSymbol("", true)
+	for _, s := range pairsInfo.Symbols {
+		input, _ := json.Marshal(s)
+		r := struct {
+			Symbol     string                   `json:"symbol"`
+			BaseAsset  string                   `json:"baseAsset"`
+			QuotaAsset string                   `json:"quotaAsset"`
+			Filters    []map[string]interface{} `json:"filters"`
+		}{}
+
+		if err := json.Unmarshal(input, &r); err != nil {
+			return nil, input, err
+		} else {
+			if r.Symbol != symbol {
+				continue
+			}
+
+			basePrecision, counterPrecision, baseMinSize := int(0), int(0), float64(0)
+			for _, f := range r.Filters {
+				if f["filterType"] == "PRICE_FILTER" {
+					counterPrecision = GetPrecision(ToFloat64(f["tickSize"]))
+				}
+				if f["filterType"] == "LOT_SIZE" {
+					basePrecision = GetPrecision(ToFloat64(f["stepSize"]))
+					baseMinSize = ToFloat64(f["minQty"])
+				}
+			}
+
+			rule := Rule{
+				Pair:          pair,
+				Base:          NewCurrency(r.BaseAsset, ""),
+				BasePrecision: basePrecision,
+				BaseMinSize:   baseMinSize,
+
+				Counter:          NewCurrency(r.QuotaAsset, ""),
+				CounterPrecision: counterPrecision,
+			}
+			return &rule, input, nil
+		}
+	}
+
+	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }

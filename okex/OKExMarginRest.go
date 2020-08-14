@@ -414,3 +414,7 @@ func (ok *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
 func (ok *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
 	return ok.Spot.GetKlineRecords(pair, period, size, since)
 }
+
+func (ok *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+	return nil, nil, nil
+}
