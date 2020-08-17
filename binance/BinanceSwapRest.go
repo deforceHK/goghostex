@@ -55,37 +55,49 @@ type SwapContracts map[string]SwapContract
 func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
 	uri := "/fapi/v1/exchangeInfo"
 	r := struct {
-		Symbols []struct {
-			Symbol            string `json:"symbol"`
-			BaseAsset         string `json:"baseAsset"`
-			QuotaAsset        string `json:"quotaAsset"`
-			PricePrecision    int    `json:"pricePrecision"`
-			QuantityPrecision int    `json:"quantityPrecision"`
-		} `json:"symbols"`
+		Symbols []map[string]json.RawMessage `json:"symbols"`
 	}{}
-	resp, err := swap.DoRequest(http.MethodGet, uri, "", r)
+	resp, err := swap.DoRequest(http.MethodGet, uri, "", &r)
 	if err != nil {
 		return nil, resp, err
 	}
+
 	symbol := pair.ToSymbol("", true)
 	for _, s := range r.Symbols {
-		if s.Symbol != symbol {
+		input, _ := json.Marshal(s)
+		r := struct {
+			Symbol     string                   `json:"symbol"`
+			BaseAsset  string                   `json:"baseAsset"`
+			QuotaAsset string                   `json:"quotaAsset"`
+			Filters    []map[string]interface{} `json:"filters"`
+		}{}
+
+		_ = json.Unmarshal(input, &r)
+		if r.Symbol != symbol {
 			continue
 		}
-		rule := SwapRule{
-			Rule: Rule{
-				Pair:             pair,
-				Base:             NewCurrency(s.BaseAsset, ""),
-				BasePrecision:    s.QuantityPrecision,
-				BaseMinSize:      1 / math.Pow10(s.QuantityPrecision),
-				Counter:          NewCurrency(s.QuotaAsset, ""),
-				CounterPrecision: s.PricePrecision,
-			},
-			ContractVal: 1,
-		}
-		return &rule, resp, nil
-	}
 
+		basePrecision, counterPrecision, baseMinSize := int(0), int(0), float64(0)
+		for _, f := range r.Filters {
+			if f["filterType"] == "PRICE_FILTER" {
+				counterPrecision = GetPrecision(ToFloat64(f["tickSize"]))
+			}
+			if f["filterType"] == "LOT_SIZE" {
+				basePrecision = GetPrecision(ToFloat64(f["stepSize"]))
+				baseMinSize = ToFloat64(f["minQty"])
+			}
+		}
+		rule := Rule{
+			Pair:          pair,
+			Base:          NewCurrency(r.BaseAsset, ""),
+			BasePrecision: basePrecision,
+			BaseMinSize:   baseMinSize,
+
+			Counter:          NewCurrency(r.QuotaAsset, ""),
+			CounterPrecision: counterPrecision,
+		}
+		return &SwapRule{Rule: rule, ContractVal: 1}, input, nil
+	}
 	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }
 
