@@ -162,7 +162,7 @@ func (c *Command) coTicker() {
 		receiveDelays = append(receiveDelays, delay)
 		totalDelays += delay
 	}
-	fmt.Printf("%s %s @%s co-ticker: \n", *cliPair, *cliType, *cliExchange)
+	fmt.Printf("%s %s @%s co-ticker: \n", c.Pair, c.Type, c.Exchange)
 	fmt.Printf(
 		"Request %d times, received %d times, errored %d times, avg delay is %.2f ns(nanosecond). \n",
 		5, receiveNum, errorNum, float64(totalDelays)/5.0,
