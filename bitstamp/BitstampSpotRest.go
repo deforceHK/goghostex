@@ -38,15 +38,15 @@ func (this *Spot) GetOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
+func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
+func (this *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
@@ -54,7 +54,7 @@ func (this *Spot) GetExchangeName() string {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnfinishOrders(pair Pair) ([]Order, []byte, error) {
+func (this *Spot) GetUnfinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
@@ -138,7 +138,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 }
 
 // bitstamp kline api can only return the nearly hour data. Cause it's api design.
-func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	if period != KLINE_PERIOD_1MIN {
 		return nil, nil, errors.New("Can not support the period in bitstamp. ")
 	}
@@ -161,14 +161,14 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		return nil, nil, errors.New("Have not receive enough data. ")
 	}
 
-	klineRecord := make(map[int64]Kline, 0)
+	klineRecord := make(map[int64]*Kline, 0)
 	klineTimestamp := make([]int64, 0)
 	for _, order := range response {
 		minTimestamp := order.Date / 60 * 60 * 1000
 		kline, exist := klineRecord[minTimestamp]
 		if !exist {
 			t := time.Unix(minTimestamp/1000, 0)
-			kline = Kline{
+			kline = &Kline{
 				Timestamp: minTimestamp,
 				Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 				Pair:      pair,
@@ -195,12 +195,12 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		klineRecord[minTimestamp] = kline
 	}
 
-	klines := make([]Kline, 0)
+	klines := make([]*Kline, 0)
 	for i := 0; i < len(klineTimestamp)-1; i++ {
 		klines = append(klines, klineRecord[klineTimestamp[i]])
 	}
 
-	return klines, resp, nil
+	return GetAscKline(klines), resp, nil
 }
 
 func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {

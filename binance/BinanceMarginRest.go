@@ -32,7 +32,7 @@ func (this *Margin) GetMarginOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginUnFinishOrders(pair Pair) ([]Order, []byte, error) {
+func (this *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
@@ -48,7 +48,7 @@ func (this *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) 
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	panic("implement me")
 }
 

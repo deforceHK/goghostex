@@ -5,28 +5,24 @@ type FutureRestAPI interface {
 	// public api
 	GetExchangeName() string
 	GetExchangeRule(pair Pair) (*FutureRule, []byte, error)
-	GetFutureEstimatedPrice(pair Pair) (float64, []byte, error)
-	GetFutureTicker(pair Pair, contractType string) (*FutureTicker, []byte, error)
-	GetFutureDepth(pair Pair, contractType string, size int) (*FutureDepth, []byte, error)
-	GetFutureStdDepth(pair Pair, contractType string, size int) (*FutureStdDepth, []byte, error)
-	GetFutureLimit(pair Pair, contractType string) (float64, float64, error)
-	GetFutureIndex(pair Pair) (float64, []byte, error)
-	GetFutureKlineRecords(contractType string, pair Pair, period, size, since int) ([]FutureKline, []byte, error)
+	GetEstimatedPrice(pair Pair) (float64, []byte, error)
+	GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error)
+	GetDepth(pair Pair, contractType string, size int) (*FutureDepth, []byte, error)
+	GetLimit(pair Pair, contractType string) (float64, float64, error)
+	GetIndex(pair Pair) (float64, []byte, error)
+	GetKlineRecords(contractType string, pair Pair, period, size, since int) ([]*FutureKline, []byte, error)
 	GetContractValue(pair Pair) (float64, error)
-	/**
-	 *获取交割时间 星期(0,1,2,3,4,5,6)，小时，分，秒
-	 */
-	GetDeliveryTime() (int, int, int, int)
-	GetTrades(contractType string, pair Pair, since int64) ([]Trade, error)
+	GetDeliveryTime() (int, int, int, int) //获取交割时间 星期(0,1,2,3,4,5,6)，小时，分，秒
+	GetTrades(contractType string, pair Pair, since int64) ([]*Trade, error)
 
 	// private api
-	GetFutureAccount() (*FutureAccount, []byte, error)
-	PlaceFutureOrder(order *FutureOrder) ([]byte, error)
-	CancelFutureOrder(order *FutureOrder) ([]byte, error)
-	GetFuturePosition(pair Pair, contractType string) ([]FuturePosition, []byte, error)
-	GetFutureOrders(orderIds []string, pair Pair, contractType string) ([]FutureOrder, []byte, error)
-	GetFutureOrder(order *FutureOrder) ([]byte, error)
-	GetUnFinishFutureOrders(pair Pair, contractType string) ([]FutureOrder, []byte, error)
+	GetAccount() (*FutureAccount, []byte, error)
+	PlaceOrder(order *FutureOrder) ([]byte, error)
+	CancelOrder(order *FutureOrder) ([]byte, error)
+	GetPosition(pair Pair, contractType string) ([]*FuturePosition, []byte, error)
+	GetOrders(orderIds []string, pair Pair, contractType string) ([]*FutureOrder, []byte, error)
+	GetOrder(order *FutureOrder) ([]byte, error)
+	GetUnFinishOrders(pair Pair, contractType string) ([]*FutureOrder, []byte, error)
 	GetFee() (float64, error)
 }
 

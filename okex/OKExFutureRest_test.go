@@ -43,7 +43,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	if ticker, body, err := ok.Future.GetFutureTicker(
+	if ticker, body, err := ok.Future.GetTicker(
 		Pair{Basis: BTC, Counter: USD},
 		NEXT_QUARTER_CONTRACT,
 	); err != nil {
@@ -63,7 +63,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(body))
 	}
 
-	if depth, body, err := ok.Future.GetFutureDepth(
+	if depth, body, err := ok.Future.GetDepth(
 		NewPair("btc_usd", "_"),
 		NEXT_QUARTER_CONTRACT,
 		20,
@@ -83,7 +83,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log("Depth remote api response: ")
 		t.Log(string(body))
 
-		if depth1, _, err := ok.Future.GetFutureDepth(
+		if depth1, _, err := ok.Future.GetDepth(
 			Pair{Basis: BTC, Counter: USD},
 			NEXT_QUARTER_CONTRACT,
 			20,
@@ -108,7 +108,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if minKline, body, err := ok.Future.GetFutureKlineRecords(
+	if minKline, body, err := ok.Future.GetKlineRecords(
 		NEXT_QUARTER_CONTRACT,
 		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
@@ -138,7 +138,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if dayKline, body, err := ok.Future.GetFutureKlineRecords(
+	if dayKline, body, err := ok.Future.GetKlineRecords(
 		NEXT_QUARTER_CONTRACT,
 		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1DAY,
@@ -216,7 +216,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	if account, resp, err := ok.Future.GetFutureAccount(); err != nil {
+	if account, resp, err := ok.Future.GetAccount(); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -233,7 +233,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	ticker, _, err := ok.Future.GetFutureTicker(
+	ticker, _, err := ok.Future.GetTicker(
 		Pair{Basis: LTC, Counter: USD},
 		THIS_WEEK_CONTRACT,
 	)
@@ -255,7 +255,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	}
 	preCid := order.Cid
 
-	if resp, err := ok.Future.PlaceFutureOrder(&order); err != nil {
+	if resp, err := ok.Future.PlaceOrder(&order); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -281,7 +281,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
+	if resp, err := ok.Future.GetOrder(&order); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -298,7 +298,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 	}
 
-	if resp, err := ok.Future.CancelFutureOrder(&order); err != nil {
+	if resp, err := ok.Future.CancelOrder(&order); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -315,7 +315,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if resp, err := ok.Future.GetFutureOrder(&order); err != nil {
+		if resp, err := ok.Future.GetOrder(&order); err != nil {
 			t.Error(err)
 			return
 		} else {
@@ -371,7 +371,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 	//	}
 	//}
 	//
-	//if resp, err := ok.Future.GetFutureOrder(&onlyMakerOrder); err != nil {
+	//if resp, err := ok.Future.GetOrder(&onlyMakerOrder); err != nil {
 	//	t.Error(err)
 	//	return
 	//} else {

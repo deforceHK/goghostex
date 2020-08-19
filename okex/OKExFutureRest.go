@@ -3,7 +3,6 @@ package okex
 import (
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -147,7 +146,7 @@ func (ok *Future) GetRate() (float64, []byte, error) {
 	return response.Rate, resp, nil
 }
 
-func (ok *Future) GetFutureEstimatedPrice(pair Pair) (float64, []byte, error) {
+func (ok *Future) GetEstimatedPrice(pair Pair) (float64, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/estimated_price",
 		ok.getFutureContract(pair, QUARTER_CONTRACT).InstrumentID,
@@ -186,7 +185,7 @@ func (ok *Future) GetFutureContract(pair Pair, contractType string) FutureContra
 	return ok.getFutureContract(pair, contractType)
 }
 
-func (ok *Future) GetFutureTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
+func (ok *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
 	var uri = fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/ticker",
 		ok.GetInstrumentId(pair, contractType),
@@ -232,7 +231,7 @@ func (ok *Future) GetFutureTicker(pair Pair, contractType string) (*FutureTicker
 	return &ticker, resp, nil
 }
 
-func (ok *Future) GetFutureDepth(
+func (ok *Future) GetDepth(
 	pair Pair,
 	contractType string,
 	size int,
@@ -278,51 +277,7 @@ func (ok *Future) GetFutureDepth(
 	return &dep, resp, nil
 }
 
-func (ok *Future) GetFutureStdDepth(
-	pair Pair,
-	contractType string,
-	size int,
-) (*FutureStdDepth, []byte, error) {
-	fc := ok.GetFutureContract(pair, contractType)
-	urlPath := fmt.Sprintf("/api/futures/v3/instruments/%s/book?size=%d", fc.InstrumentID, size)
-	var response struct {
-		Bids      [][4]interface{} `json:"bids"`
-		Asks      [][4]interface{} `json:"asks"`
-		Timestamp string           `json:"timestamp"`
-	}
-	resp, err := ok.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-	date, _ := time.Parse(time.RFC3339, response.Timestamp)
-	if ok.config.Location != nil {
-		date = date.In(ok.config.Location)
-	}
-
-	var dep FutureStdDepth
-	dep.Pair = pair
-	dep.ContractType = contractType
-	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
-	dep.DueTimestamp = fc.DueTimestamp
-	dep.Sequence = dep.Timestamp
-	dep.Date = date.Format(GO_BIRTHDAY)
-	for _, itm := range response.Asks {
-		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
-		dep.AskList = append(dep.AskList, FutureStdDepthRecord{
-			Price:  stdPrice,
-			Amount: ToInt64(itm[1])})
-	}
-	for _, itm := range response.Bids {
-		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
-		dep.BidList = append(dep.BidList, FutureStdDepthRecord{
-			Price:  stdPrice,
-			Amount: ToInt64(itm[1])})
-	}
-
-	return &dep, resp, nil
-}
-
-func (ok *Future) GetFutureLimit(pair Pair, contractType string) (float64, float64, error) {
+func (ok *Future) GetLimit(pair Pair, contractType string) (float64, float64, error) {
 
 	fc := ok.GetFutureContract(pair, contractType)
 	urlPath := fmt.Sprintf("/api/futures/v3/instruments/%s/price_limit", fc.InstrumentID)
@@ -340,7 +295,7 @@ func (ok *Future) GetFutureLimit(pair Pair, contractType string) (float64, float
 	return response.Highest, response.Lowest, nil
 }
 
-func (ok *Future) GetFutureIndex(pair Pair) (float64, []byte, error) {
+func (ok *Future) GetIndex(pair Pair) (float64, []byte, error) {
 	//统一交易对，当周，次周，季度指数一样的
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/index",
@@ -363,7 +318,7 @@ type CrossedAccountInfo struct {
 	Equity     float64 `json:"equity,string"`
 }
 
-func (ok *Future) GetFutureAccount() (*FutureAccount, []byte, error) {
+func (ok *Future) GetAccount() (*FutureAccount, []byte, error) {
 	urlPath := "/api/futures/v3/accounts"
 	var response struct {
 		Info map[string]map[string]interface{}
@@ -410,7 +365,7 @@ func (ok *Future) normalizePrice(price float64, pair Pair) string {
 }
 
 //matchPrice:是否以对手价下单(0:不是 1:是)，默认为0;当取值为1时,price字段无效，当以对手价下单，order_type只能选择0:普通委托
-func (ok *Future) PlaceFutureOrder(order *FutureOrder) ([]byte, error) {
+func (ok *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	if order == nil {
 		return nil, errors.New("ord param is nil")
 	}
@@ -488,7 +443,7 @@ func (ok *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
 	return
 }
 
-func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
+func (ok *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s/%s",
 		ok.GetInstrumentId(order.Pair, order.ContractType),
@@ -505,7 +460,7 @@ func (ok *Future) GetFutureOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
+func (ok *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/cancel_order/%s/%s",
 		ok.GetInstrumentId(order.Pair, order.ContractType),
@@ -524,10 +479,10 @@ func (ok *Future) CancelFutureOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Future) GetFuturePosition(
+func (ok *Future) GetPosition(
 	pair Pair,
 	contractType string,
-) ([]FuturePosition, []byte, error) {
+) ([]*FuturePosition, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/%s/position",
 		ok.GetInstrumentId(pair, contractType),
@@ -565,7 +520,7 @@ func (ok *Future) GetFuturePosition(
 		return nil, nil, err
 	}
 
-	var postions []FuturePosition
+	var postions []*FuturePosition
 
 	if !response.Result {
 		return nil, nil, errors.New("unknown error")
@@ -576,7 +531,7 @@ func (ok *Future) GetFuturePosition(
 	}
 
 	for _, pos := range response.Holding {
-		postions = append(postions, FuturePosition{
+		postions = append(postions, &FuturePosition{
 			Symbol:         pair,
 			ContractType:   contractType,
 			ContractId:     ToInt64(pos.InstrumentId[8:]),
@@ -599,11 +554,11 @@ func (ok *Future) GetFuturePosition(
 	return postions, resp, nil
 }
 
-func (ok *Future) GetFutureOrders(
+func (ok *Future) GetOrders(
 	orderIds []string,
 	pair Pair,
 	contractType string,
-) ([]FutureOrder, []byte, error) {
+) ([]*FutureOrder, []byte, error) {
 	panic("")
 }
 
@@ -625,10 +580,10 @@ type futureOrderResponse struct {
 	Timestamp    time.Time `json:"timestamp,string"`
 }
 
-func (ok *Future) GetUnFinishFutureOrders(
+func (ok *Future) GetUnFinishOrders(
 	pair Pair,
 	contractType string,
-) ([]FutureOrder, []byte, error) {
+) ([]*FutureOrder, []byte, error) {
 	urlPath := fmt.Sprintf(
 		"/api/futures/v3/orders/%s?state=6&limit=100",
 		ok.GetInstrumentId(pair, contractType),
@@ -645,14 +600,14 @@ func (ok *Future) GetUnFinishFutureOrders(
 		return nil, nil, errors.New("error")
 	}
 
-	var ords []FutureOrder
+	var orders []*FutureOrder
 	for _, itm := range response.OrderInfo {
 		ord := FutureOrder{}
 		ok.adaptOrder(itm, &ord)
-		ords = append(ords, ord)
+		orders = append(orders, &ord)
 	}
 
-	return ords, resp, nil
+	return orders, resp, nil
 }
 
 func (ok *Future) GetFee() (float64, error) { panic("") }
@@ -669,13 +624,13 @@ func (ok *Future) GetDeliveryTime() (int, int, int, int) {
 /**
  * since : 单位秒,开始时间
 **/
-func (ok *Future) GetFutureKlineRecords(
+func (ok *Future) GetKlineRecords(
 	contractType string,
 	pair Pair,
 	period,
 	size,
 	since int,
-) ([]FutureKline, []byte, error) {
+) ([]*FutureKline, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/futures/v3/instruments/%s/candles?",
 		ok.GetInstrumentId(pair, contractType),
@@ -707,10 +662,10 @@ func (ok *Future) GetFutureKlineRecords(
 	}
 
 	contract := ok.getFutureContract(pair, contractType)
-	var klines []FutureKline
+	var klines []*FutureKline
 	for _, itm := range response {
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(itm[0]))
-		klines = append(klines, FutureKline{
+		klines = append(klines, &FutureKline{
 			Kline: Kline{
 				Timestamp: t.UnixNano() / int64(time.Millisecond),
 				Date:      t.In(ok.config.Location).Format(GO_BIRTHDAY),
@@ -728,10 +683,10 @@ func (ok *Future) GetFutureKlineRecords(
 		})
 	}
 
-	return klines, resp, nil
+	return GetAscFutureKline(klines), resp, nil
 }
 
-func (ok *Future) GetTrades(contractType string, pair Pair, since int64) ([]Trade, error) {
+func (ok *Future) GetTrades(contractType string, pair Pair, since int64) ([]*Trade, error) {
 	panic("")
 }
 
