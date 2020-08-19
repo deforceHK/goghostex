@@ -72,7 +72,6 @@ func (depth *SwapDepth) Verify() error {
 }
 
 type SwapKline struct {
-	//Kline `json:",-"` // 按照kline中的字段进行解析。
 	Pair      Pair    `json:"symbol"`
 	Exchange  string  `json:"exchange"`
 	Timestamp int64   `json:"timestamp"`
