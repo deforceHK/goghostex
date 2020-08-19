@@ -3,7 +3,6 @@ package okex
 import (
 	"errors"
 	"fmt"
-	//"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -277,50 +276,6 @@ func (ok *Future) GetDepth(
 
 	return &dep, resp, nil
 }
-
-//func (ok *Future) GetStdDepth(
-//	pair Pair,
-//	contractType string,
-//	size int,
-//) (*FutureStdDepth, []byte, error) {
-//	fc := ok.GetFutureContract(pair, contractType)
-//	urlPath := fmt.Sprintf("/api/futures/v3/instruments/%s/book?size=%d", fc.InstrumentID, size)
-//	var response struct {
-//		Bids      [][4]interface{} `json:"bids"`
-//		Asks      [][4]interface{} `json:"asks"`
-//		Timestamp string           `json:"timestamp"`
-//	}
-//	resp, err := ok.DoRequest("GET", urlPath, "", &response)
-//	if err != nil {
-//		return nil, nil, err
-//	}
-//	date, _ := time.Parse(time.RFC3339, response.Timestamp)
-//	if ok.config.Location != nil {
-//		date = date.In(ok.config.Location)
-//	}
-//
-//	var dep FutureStdDepth
-//	dep.Pair = pair
-//	dep.ContractType = contractType
-//	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
-//	dep.DueTimestamp = fc.DueTimestamp
-//	dep.Sequence = dep.Timestamp
-//	dep.Date = date.Format(GO_BIRTHDAY)
-//	for _, itm := range response.Asks {
-//		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
-//		dep.AskList = append(dep.AskList, FutureStdDepthRecord{
-//			Price:  stdPrice,
-//			Amount: ToInt64(itm[1])})
-//	}
-//	for _, itm := range response.Bids {
-//		stdPrice := int64(math.Floor(ToFloat64(itm[0])*100000000 + 0.5))
-//		dep.BidList = append(dep.BidList, FutureStdDepthRecord{
-//			Price:  stdPrice,
-//			Amount: ToInt64(itm[1])})
-//	}
-//
-//	return &dep, resp, nil
-//}
 
 func (ok *Future) GetLimit(pair Pair, contractType string) (float64, float64, error) {
 

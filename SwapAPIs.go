@@ -6,7 +6,6 @@ type SwapRestAPI interface {
 	GetExchangeRule(pair Pair) (*SwapRule, []byte, error)
 	GetTicker(pair Pair) (*SwapTicker, []byte, error)
 	GetDepth(pair Pair, size int) (*SwapDepth, []byte, error)
-	//GetStdDepth(pair Pair, size int) (*SwapStdDepth, []byte, error)
 	GetLimit(pair Pair) (float64, float64, error)
 	GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error)
 	GetOpenAmount(pair Pair) (float64, int64, []byte, error)
