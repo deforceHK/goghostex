@@ -3,7 +3,6 @@ package goghostex
 import "errors"
 
 type SwapTicker struct {
-	//Ticker        `json:",-"` // 按照kline中的字段进行解析。
 	Pair      Pair    `json:"-"`
 	Last      float64 `json:"last"`
 	Buy       float64 `json:"buy"`

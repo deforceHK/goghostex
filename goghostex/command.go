@@ -18,9 +18,9 @@ var okexClient *okex.OKEx
 var coinbaseClient *coinbase.Coinbase
 var binanceClient *binance.Binance
 
-var spotClients = map[string]SpotAPI{}
+var spotClients = map[string]SpotRestAPI{}
 var swapClients = map[string]SwapRestAPI{}
-var marginClients = map[string]MarginAPI{}
+var marginClients = map[string]MarginRestAPI{}
 var futureClients = map[string]FutureRestAPI{}
 
 func initClients(proxy, apiKey, apiSecretKey, apiPassPhrase string) {

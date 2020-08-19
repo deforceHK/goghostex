@@ -1,7 +1,7 @@
 package goghostex
 
 // api interface
-type SpotAPI interface {
+type SpotRestAPI interface {
 
 	// public api
 	GetExchangeName() string

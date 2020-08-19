@@ -1,7 +1,7 @@
 package goghostex
 
 // api interface
-type MarginAPI interface {
+type MarginRestAPI interface {
 	Loan(record *LoanRecord) ([]byte, error)
 	GetOneLoan(record *LoanRecord) ([]byte, error)
 	Repay(record *LoanRecord) ([]byte, error)
