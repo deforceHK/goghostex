@@ -142,3 +142,54 @@ func GetPrecision(minSize float64) int {
 		minSize *= 10
 	}
 }
+
+func GetAscKline(klines []*Kline) []*Kline {
+	if len(klines) <= 1 {
+		return klines
+	}
+
+	// asc seq
+	if klines[0].Timestamp < klines[1].Timestamp {
+		return klines
+	}
+
+	ascKlines := make([]*Kline, 0)
+	for i := len(klines) - 1; i >= 0; i-- {
+		ascKlines = append(ascKlines, klines[i])
+	}
+	return ascKlines
+}
+
+func GetAscFutureKline(klines []*FutureKline) []*FutureKline {
+	if len(klines) <= 1 {
+		return klines
+	}
+
+	// asc seq
+	if klines[0].Timestamp < klines[1].Timestamp {
+		return klines
+	}
+
+	ascKlines := make([]*FutureKline, 0)
+	for i := len(klines) - 1; i >= 0; i-- {
+		ascKlines = append(ascKlines, klines[i])
+	}
+	return ascKlines
+}
+
+func GetAscSwapKline(klines []*SwapKline) []*SwapKline {
+	if len(klines) <= 1 {
+		return klines
+	}
+
+	// asc seq
+	if klines[0].Timestamp < klines[1].Timestamp {
+		return klines
+	}
+
+	ascKlines := make([]*SwapKline, 0)
+	for i := len(klines) - 1; i >= 0; i-- {
+		ascKlines = append(ascKlines, klines[i])
+	}
+	return ascKlines
+}

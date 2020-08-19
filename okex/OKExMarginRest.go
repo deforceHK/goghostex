@@ -316,7 +316,7 @@ func (ok *Margin) adaptOrder(order *Order, response *OrderResponse) error {
 	}
 }
 
-func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]Order, []byte, error) {
+func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/margin/v3/orders_pending?instrument_id=%s",
 		pair.ToSymbol("-", true),
@@ -332,13 +332,13 @@ func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 		return nil, nil, err
 	}
 
-	var orders []Order
+	var orders []*Order
 	for _, itm := range response {
 		order := Order{Pair: pair}
 		if err := ok.adaptOrder(&order, &itm); err != nil {
 			return nil, nil, err
 		}
-		orders = append(orders, order)
+		orders = append(orders, &order)
 	}
 
 	return orders, resp, nil
@@ -411,7 +411,7 @@ func (ok *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
 	return ok.Spot.GetDepth(size, pair)
 }
 
-func (ok *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (ok *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	return ok.Spot.GetKlineRecords(pair, period, size, since)
 }
 

@@ -226,7 +226,7 @@ func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
+func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/orders_pending?instrument_id=%s",
 		pair.ToSymbol("-", true),
@@ -242,19 +242,19 @@ func (this *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 		return nil, nil, err
 	}
 
-	var orders []Order
+	var orders []*Order
 	for _, itm := range response {
 		order := Order{Pair: pair}
 		if err := this.adaptOrder(&order, &itm); err != nil {
 			return nil, nil, err
 		}
-		orders = append(orders, order)
+		orders = append(orders, &order)
 	}
 
 	return orders, resp, nil
 }
 
-func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("unsupported")
 }
 
@@ -334,7 +334,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	return dep, resp, nil
 }
 
-func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/candles?",
 		pair.ToSymbol("-", true),
@@ -372,10 +372,10 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		return nil, nil, err
 	}
 
-	var klines []Kline
+	var klines []*Kline
 	for _, item := range response {
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(item[0]))
-		klines = append(klines, Kline{
+		klines = append(klines, &Kline{
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
 			Exchange:  OKEX,
@@ -388,11 +388,11 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		)
 	}
 
-	return klines, resp, nil
+	return GetAscKline(klines), resp, nil
 }
 
 //非个人，整个交易所的交易记录
-func (this *Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
+func (this *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("unsupported")
 }
 

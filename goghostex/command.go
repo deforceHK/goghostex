@@ -182,7 +182,7 @@ func (c *Command) getTicker() (*Ticker, []byte, int64, error) {
 	switch c.Type {
 	case "future":
 		startTS := time.Now().UnixNano()
-		t, resp, err := futureClients[c.Exchange].GetFutureTicker(p, c.ContractType)
+		t, resp, err := futureClients[c.Exchange].GetTicker(p, c.ContractType)
 		if err != nil {
 			return nil, nil, 0, err
 		}

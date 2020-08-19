@@ -203,54 +203,6 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	return depth, resp, err
 }
 
-func (swap *Swap) GetStdDepth(pair Pair, size int) (*SwapStdDepth, []byte, error) {
-
-	if size > 1000 {
-		size = 1000
-	} else if size < 5 {
-		size = 5
-	}
-
-	response := struct {
-		Code         int64           `json:"code,-"`
-		Message      string          `json:"message,-"`
-		Asks         [][]interface{} `json:"asks"` // The binance return asks Ascending ordered
-		Bids         [][]interface{} `json:"bids"` // The binance return bids Descending ordered
-		LastUpdateId int64           `json:"lastUpdateId"`
-	}{}
-
-	resp, err := swap.DoRequest(
-		"GET",
-		fmt.Sprintf(SWAP_DEPTH_URI, pair.ToSymbol("", true), size),
-		"",
-		&response,
-	)
-
-	depth := &SwapStdDepth{}
-	depth.Pair = pair
-	now := time.Now()
-	depth.Timestamp = now.UnixNano() / int64(time.Millisecond)
-	depth.Date = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	depth.Sequence = response.LastUpdateId
-
-	for _, bid := range response.Bids {
-		price := int64(math.Floor(ToFloat64(bid[0])*100000000 + 0.5))
-		amount := ToFloat64(bid[1])
-		dsi := DepthStdItem{Price: price, Amount: amount}
-		depth.BidList = append(depth.BidList, dsi)
-	}
-
-	for _, ask := range response.Asks {
-		price := int64(math.Floor(ToFloat64(ask[0])*100000000 + 0.5))
-		amount := ToFloat64(ask[1])
-		dsi := DepthStdItem{Price: price, Amount: amount}
-		depth.AskList = append(depth.AskList, dsi)
-	}
-
-	return depth, resp, err
-
-}
-
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	response := struct {
 		MarkPrice float64 `json:"markPrice,string"`
@@ -325,7 +277,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 		swapKlines = append(swapKlines, r)
 	}
 
-	return swapKlines, resp, nil
+	return GetAscSwapKline(swapKlines), resp, nil
 }
 
 func (swap *Swap) GetOpenAmount(pair Pair) (float64, int64, []byte, error) {

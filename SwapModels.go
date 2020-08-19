@@ -71,62 +71,6 @@ func (depth *SwapDepth) Verify() error {
 	return nil
 }
 
-type DepthStdItem struct {
-	Price  int64
-	Amount float64
-}
-
-type DepthStdItems []DepthStdItem
-
-func (dsi DepthStdItems) Len() int {
-	return len(dsi)
-}
-
-func (dsi DepthStdItems) Swap(i, j int) {
-	dsi[i], dsi[j] = dsi[j], dsi[i]
-}
-
-func (dsi DepthStdItems) Less(i, j int) bool {
-	return dsi[i].Price < dsi[j].Price
-}
-
-type SwapStdDepth struct {
-	Pair      Pair
-	Timestamp int64
-	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
-	Date      string
-	AskList   DepthStdItems // Ascending order
-	BidList   DepthStdItems // Descending order
-}
-
-// Verify the depth data is right
-func (depth *SwapStdDepth) Verify() error {
-	AskCount := len(depth.AskList)
-	BidCount := len(depth.BidList)
-
-	if BidCount < 10 || AskCount < 10 {
-		return errors.New("The ask_list or bid_list not enough! ")
-	}
-
-	for i := 1; i < AskCount; i++ {
-		pre := depth.AskList[i-1]
-		last := depth.AskList[i]
-		if pre.Price >= last.Price {
-			return errors.New("The ask_list is not ascending ordered! ")
-		}
-	}
-
-	for i := 1; i < BidCount; i++ {
-		pre := depth.BidList[i-1]
-		last := depth.BidList[i]
-		if pre.Price <= last.Price {
-			return errors.New("The bid_list is not descending ordered! ")
-		}
-	}
-
-	return nil
-}
-
 type SwapKline struct {
 	//Kline `json:",-"` // 按照kline中的字段进行解析。
 	Pair      Pair    `json:"symbol"`

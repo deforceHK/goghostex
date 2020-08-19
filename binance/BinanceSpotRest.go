@@ -157,7 +157,7 @@ func (binance *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-func (binance *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
+func (binance *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 
 	params := url.Values{}
 	params.Set("symbol", pair.ToSymbol("", true))
@@ -172,17 +172,17 @@ func (binance *Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
 		return nil, nil, err
 	}
 
-	orders := make([]Order, 0)
+	orders := make([]*Order, 0)
 	for _, remoteOrder := range remoteOrders {
 		order := Order{}
 		remoteOrder.Merge(&order, binance.config.Location)
-		orders = append(orders, order)
+		orders = append(orders, &order)
 	}
 
 	return orders, resp, nil
 }
 
-func (binance *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
+func (binance *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("implement me")
 }
 
@@ -309,7 +309,7 @@ func (binance *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	return depth, resp, err
 }
 
-func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
 	if len(startTimeFmt) > 13 {
 		startTimeFmt = startTimeFmt[0:13]
@@ -333,7 +333,7 @@ func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Klin
 		return nil, nil, err
 	}
 
-	var klineRecords []Kline
+	var klineRecords []*Kline
 	for _, record := range klines {
 		r := Kline{Pair: pair}
 		for i, e := range record {
@@ -356,13 +356,13 @@ func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Klin
 				r.Vol = ToFloat64(e)
 			}
 		}
-		klineRecords = append(klineRecords, r)
+		klineRecords = append(klineRecords, &r)
 	}
 
-	return klineRecords, resp, nil
+	return GetAscKline(klineRecords), resp, nil
 }
 
-func (binance *Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
+func (binance *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
