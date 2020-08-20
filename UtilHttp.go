@@ -27,7 +27,8 @@ func NewHttpRequest(
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Set(
 			"User-Agent",
-			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36")
+			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36",
+		)
 	}
 	if requstHeaders != nil {
 		for k, v := range requstHeaders {

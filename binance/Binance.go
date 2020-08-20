@@ -101,6 +101,10 @@ func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interfa
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if this.config.LastTimestamp < nowTimestamp {
+			this.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }

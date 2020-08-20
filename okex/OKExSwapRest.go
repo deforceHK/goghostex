@@ -32,7 +32,7 @@ func (swap *Swap) GetFundingFees(pair Pair) ([][]interface{}, []byte, error) {
 	panic("implement me")
 }
 
-func (swap *Swap) GetFee() (float64, error) {
+func (swap *Swap) GetFundingFee(pair Pair) (float64, error) {
 	panic("implement me")
 }
 
@@ -79,4 +79,8 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
 	panic("implement me")
 	//return nil,nil,nil
+}
+
+func (swap *Swap) KeepAlive() {
+	panic("implement me")
 }

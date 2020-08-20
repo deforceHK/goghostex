@@ -146,6 +146,10 @@ func (ok *OKEx) DoRequest(
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > ok.config.LastTimestamp {
+			ok.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }

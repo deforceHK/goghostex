@@ -63,7 +63,7 @@ type OrderResponse struct {
 	Timestamp      string  `json:"timestamp"`
 }
 
-func (this *Spot) GetAccount() (*Account, []byte, error) {
+func (spot *Spot) GetAccount() (*Account, []byte, error) {
 	uri := "/api/spot/v3/accounts"
 	var response []struct {
 		Currency  string
@@ -74,7 +74,7 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 		Holds     float64 `json:"holds,string"`
 	}
 
-	resp, err := this.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -98,50 +98,50 @@ func (this *Spot) GetAccount() (*Account, []byte, error) {
 	return account, resp, nil
 }
 
-func (this *Spot) LimitBuy(order *Order) ([]byte, error) {
+func (spot *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
 		return nil, errors.New("The order side is not buy. ")
 	}
-	return this.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (this *Spot) LimitSell(order *Order) ([]byte, error) {
+func (spot *Spot) LimitSell(order *Order) ([]byte, error) {
 	if order.Side != SELL {
 		return nil, errors.New("The order side is not sell. ")
 	}
-	return this.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (this *Spot) MarketBuy(order *Order) ([]byte, error) {
+func (spot *Spot) MarketBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY_MARKET {
 		return nil, errors.New("The order side is not buy market. ")
 	}
-	return this.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (this *Spot) MarketSell(order *Order) ([]byte, error) {
+func (spot *Spot) MarketSell(order *Order) ([]byte, error) {
 	if order.Side != SELL_MARKET {
 		return nil, errors.New("The order side is not sell market. ")
 	}
-	return this.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
 //orderId can set client oid or orderId
-func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
+func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
 	urlPath := "/api/spot/v3/cancel_orders/" + order.OrderId
 	param := struct {
 		InstrumentId string `json:"instrument_id"`
 	}{
 		order.Pair.ToSymbol("-", true),
 	}
-	reqBody, _, _ := this.BuildRequestBody(param)
+	reqBody, _, _ := spot.BuildRequestBody(param)
 	var response struct {
 		ClientOid string `json:"client_oid"`
 		OrderId   string `json:"order_id"`
 		Result    bool   `json:"result"`
 	}
 
-	resp, err := this.DoRequest(
+	resp, err := spot.DoRequest(
 		"POST",
 		urlPath,
 		reqBody,
@@ -156,7 +156,7 @@ func (this *Spot) CancelOrder(order *Order) ([]byte, error) {
 	return resp, NewError(400, "cancel fail, unknown error")
 }
 
-func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
+func (spot *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 
 	order.Cid = response.ClientOid
 	order.OrderId = response.OrderId
@@ -164,7 +164,7 @@ func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 	order.Amount = response.Size
 	order.AvgPrice = ToFloat64(response.PriceAvg)
 	order.DealAmount = ToFloat64(response.FilledSize)
-	order.Status = this.adaptOrderState(response.State)
+	order.Status = spot.adaptOrderState(response.State)
 
 	switch response.Side {
 	case "buy":
@@ -200,16 +200,16 @@ func (this *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 		return err
 	} else {
 		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
-		order.OrderDate = date.In(this.config.Location).Format(GO_BIRTHDAY)
+		order.OrderDate = date.In(spot.config.Location).Format(GO_BIRTHDAY)
 		return nil
 	}
 }
 
 //orderId can set client oid or orderId
-func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
+func (spot *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Pair.ToSymbol("-", true)
 	var response OrderResponse
-	resp, err := this.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -220,19 +220,19 @@ func (this *Spot) GetOneOrder(order *Order) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := this.adaptOrder(order, &response); err != nil {
+	if err := spot.adaptOrder(order, &response); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
-func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/orders_pending?instrument_id=%s",
 		pair.ToSymbol("-", true),
 	)
 	var response []OrderResponse
-	resp, err := this.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -245,7 +245,7 @@ func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	var orders []*Order
 	for _, itm := range response {
 		order := Order{Pair: pair}
-		if err := this.adaptOrder(&order, &itm); err != nil {
+		if err := spot.adaptOrder(&order, &itm); err != nil {
 			return nil, nil, err
 		}
 		orders = append(orders, &order)
@@ -254,11 +254,11 @@ func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	return orders, resp, nil
 }
 
-func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
+func (spot *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("unsupported")
 }
 
-func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
+func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/ticker",
 		pair.ToSymbol("-", true),
@@ -273,7 +273,7 @@ func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		BaseVolume24h float64 `json:"base_volume_24h,string"`
 		Timestamp     string  `json:"timestamp"`
 	}
-	resp, err := this.DoRequest("GET", uri, "", &response)
+	resp, err := spot.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -288,11 +288,11 @@ func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		Buy:       response.BestBid,
 		Vol:       response.BaseVolume24h,
 		Timestamp: date.UnixNano() / int64(time.Millisecond),
-		Date:      date.In(this.config.Location).Format(GO_BIRTHDAY),
+		Date:      date.In(spot.config.Location).Format(GO_BIRTHDAY),
 	}, resp, nil
 }
 
-func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/book?size=%d",
 		pair.ToSymbol("-", true),
@@ -305,7 +305,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 		Timestamp string          `json:"timestamp"`
 	}
 
-	resp, err := this.DoRequest("GET", uri, "", &response)
+	resp, err := spot.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -314,7 +314,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	dep.Pair = pair
 	date, _ := time.Parse(time.RFC3339, response.Timestamp)
 	dep.Timestamp = date.UnixNano() / int64(time.Millisecond)
-	dep.Date = date.In(this.config.Location).Format(GO_BIRTHDAY)
+	dep.Date = date.In(spot.config.Location).Format(GO_BIRTHDAY)
 	dep.Sequence = dep.Timestamp
 
 	for _, itm := range response.Asks {
@@ -334,7 +334,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	return dep, resp, nil
 }
 
-func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
+func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/candles?",
 		pair.ToSymbol("-", true),
@@ -362,7 +362,7 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 	params.Add("granularity", fmt.Sprintf("%d", granularity))
 
 	var response [][]interface{}
-	resp, err := this.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		uri+params.Encode(),
 		"",
@@ -377,7 +377,7 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 		t, _ := time.Parse(time.RFC3339, fmt.Sprint(item[0]))
 		klines = append(klines, &Kline{
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
-			Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
+			Date:      t.In(spot.config.Location).Format(GO_BIRTHDAY),
 			Exchange:  OKEX,
 			Pair:      pair,
 			Open:      ToFloat64(item[1]),
@@ -392,11 +392,11 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 }
 
 //非个人，整个交易所的交易记录
-func (this *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
+func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("unsupported")
 }
 
-func (this *Spot) placeOrder(order *Order) ([]byte, error) {
+func (spot *Spot) placeOrder(order *Order) ([]byte, error) {
 	uri := "/api/spot/v3/orders"
 	param := PlaceOrderParam{
 		InstrumentId: order.Pair.ToSymbol("-", true),
@@ -428,8 +428,8 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 		param.Price = order.Price
 	}
 
-	jsonStr, _, _ := this.BuildRequestBody(param)
-	resp, err := this.DoRequest(
+	jsonStr, _, _ := spot.BuildRequestBody(param)
+	resp, err := spot.DoRequest(
 		"POST",
 		uri,
 		jsonStr,
@@ -444,7 +444,7 @@ func (this *Spot) placeOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	uri := "/api/spot/v3/instruments"
 	r := make([]struct {
 		InstrumentId  string  `json:"instrument_id"`
@@ -455,7 +455,7 @@ func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 		SizeIncrement float64 `json:"size_increment,string"`
 	}, 0)
 
-	resp, err := this.DoRequest("GET", uri, "", &r)
+	resp, err := spot.DoRequest("GET", uri, "", &r)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -482,4 +482,12 @@ func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	}
 
 	return nil, resp, errors.New("Can not find the pair in remote. ")
+}
+
+func (spot *Spot) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = spot.GetTicker(Pair{BTC, USDT})
 }

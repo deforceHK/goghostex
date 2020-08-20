@@ -212,3 +212,11 @@ func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 
 	return &rule, resp, nil
 }
+
+func (spot *Spot) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = spot.GetExchangeRule(Pair{BTC, USD})
+}

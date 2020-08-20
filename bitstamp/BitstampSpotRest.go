@@ -14,55 +14,55 @@ type Spot struct {
 	*Bitstamp
 }
 
-func (this *Spot) LimitBuy(*Order) ([]byte, error) {
+func (spot *Spot) LimitBuy(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) LimitSell(*Order) ([]byte, error) {
+func (spot *Spot) LimitSell(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) MarketBuy(*Order) ([]byte, error) {
+func (spot *Spot) MarketBuy(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) MarketSell(*Order) ([]byte, error) {
+func (spot *Spot) MarketSell(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) CancelOrder(*Order) ([]byte, error) {
+func (spot *Spot) CancelOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetOneOrder(*Order) ([]byte, error) {
+func (spot *Spot) GetOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
+func (spot *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
+func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetExchangeName() string {
+func (spot *Spot) GetExchangeName() string {
 	panic("implement me")
 }
 
-func (this *Spot) GetUnfinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (spot *Spot) GetUnfinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetAccount() (*Account, []byte, error) {
+func (spot *Spot) GetAccount() (*Account, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
+func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 
 	uri := "/api/v2/ticker/" + pair.ToSymbol("", false)
 	response := struct {
@@ -75,7 +75,7 @@ func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		Timestamp float64 `json:"timestamp,string"`
 	}{}
 
-	resp, err := this.DoRequest("GET", uri, "", &response)
+	resp, err := spot.DoRequest("GET", uri, "", &response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,11 +92,11 @@ func (this *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		Date: time.Unix(
 			int64(response.Timestamp),
 			0,
-		).In(this.config.Location).Format(GO_BIRTHDAY),
+		).In(spot.config.Location).Format(GO_BIRTHDAY),
 	}, resp, nil
 }
 
-func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	uri := "/api/v2/order_book/" + pair.ToSymbol("", false)
 	response := struct {
 		Bids      [][]interface{} `json:"bids"`
@@ -106,7 +106,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 		Timestamp int64           `json:"timestamp,string"`
 	}{}
 
-	resp, err := this.DoRequest("GET", uri, "", &response) //&response)
+	resp, err := spot.DoRequest("GET", uri, "", &response) //&response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -117,7 +117,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	dep.Date = time.Unix(
 		int64(response.Timestamp)/1000,
 		0,
-	).In(this.config.Location).Format(GO_BIRTHDAY)
+	).In(spot.config.Location).Format(GO_BIRTHDAY)
 
 	for _, itm := range response.Asks {
 		dep.AskList = append(dep.AskList, DepthRecord{
@@ -138,7 +138,7 @@ func (this *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 }
 
 // bitstamp kline api can only return the nearly hour data. Cause it's api design.
-func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
+func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	if period != KLINE_PERIOD_1MIN {
 		return nil, nil, errors.New("Can not support the period in bitstamp. ")
 	}
@@ -153,7 +153,7 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 		Amount float64 `json:"amount,string"`
 	}, 0)
 
-	resp, err := this.DoRequest("GET", uri, "", &response) //&response)
+	resp, err := spot.DoRequest("GET", uri, "", &response) //&response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -170,7 +170,7 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 			t := time.Unix(minTimestamp/1000, 0)
 			kline = &Kline{
 				Timestamp: minTimestamp,
-				Date:      t.In(this.config.Location).Format(GO_BIRTHDAY),
+				Date:      t.In(spot.config.Location).Format(GO_BIRTHDAY),
 				Pair:      pair,
 				Exchange:  BITSTAMP,
 				Open:      order.Price,
@@ -203,6 +203,14 @@ func (this *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 	return GetAscKline(klines), resp, nil
 }
 
-func (this *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	panic("implete me. ")
+}
+
+func (spot *Spot) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = spot.GetTicker(Pair{BTC, USD})
 }

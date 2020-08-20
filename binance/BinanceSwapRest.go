@@ -303,8 +303,28 @@ func (swap *Swap) GetOpenAmount(pair Pair) (float64, int64, []byte, error) {
 	return responses[len(responses)-1].Amount, responses[len(responses)-1].Timestamp, resp, nil
 }
 
-func (swap *Swap) GetFee() (float64, error) {
-	panic("implement me")
+func (swap *Swap) GetFundingFee(pair Pair) (float64, error) {
+	param := url.Values{}
+	param.Set("symbol", pair.ToSymbol("", true))
+
+	info := struct {
+		Symbol          string  `json:"symbol"`
+		MarkPrice       float64 `json:"markPrice,string"`
+		IndexPrice      float64 `json:"indexPrice,string"`
+		LastFundingRate float64 `json:"lastFundingRate,string"`
+		NextFundingTime int64   `json:"nextFundingTime"`
+	}{}
+
+	if _, err := swap.DoRequest(
+		http.MethodGet,
+		"/fapi/v1/premiumIndex?"+param.Encode(),
+		"",
+		&info,
+	); err != nil {
+		return 0, err
+	} else {
+		return info.LastFundingRate, nil
+	}
 }
 
 func (swap *Swap) GetFundingFees(pair Pair) ([][]interface{}, []byte, error) {
@@ -1005,8 +1025,21 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if swap.config.LastTimestamp < nowTimestamp {
+			swap.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
+}
+
+func (swap *Swap) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	// last timestamp in 5s, no need to keep alive
+	if (nowTimestamp - swap.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _ = swap.GetFundingFee(Pair{BTC, USD})
 }
 
 func (swap *Swap) getContract(pair Pair) SwapContract {

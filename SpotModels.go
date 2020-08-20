@@ -147,6 +147,7 @@ type Order struct {
  **/
 type APIConfig struct {
 	HttpClient    *http.Client
+	LastTimestamp int64
 	Endpoint      string
 	ApiKey        string
 	ApiSecretKey  string

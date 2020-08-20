@@ -2,6 +2,7 @@ package bitstamp
 
 import (
 	"encoding/json"
+	"time"
 
 	. "github.com/strengthening/goghostex"
 )
@@ -22,16 +23,20 @@ func New(config *APIConfig) *Bitstamp {
 	return bitstamp
 }
 
-func (this *Bitstamp) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+func (bitstamp *Bitstamp) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	resp, err := NewHttpRequest(
-		this.config.HttpClient,
-		httpMethod, this.config.Endpoint+uri, reqBody,
+		bitstamp.config.HttpClient,
+		httpMethod, bitstamp.config.Endpoint+uri, reqBody,
 		nil,
 	)
 
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if bitstamp.config.LastTimestamp < nowTimestamp {
+			bitstamp.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }
