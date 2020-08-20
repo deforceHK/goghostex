@@ -1039,7 +1039,7 @@ func (swap *Swap) KeepAlive() {
 	if (nowTimestamp - swap.config.LastTimestamp) < 5*1000 {
 		return
 	}
-	_, _ = swap.GetFundingFee(Pair{BTC, USD})
+	_, _ = swap.GetFundingFee(Pair{Basis: BTC, Counter: USDT})
 }
 
 func (swap *Swap) getContract(pair Pair) SwapContract {

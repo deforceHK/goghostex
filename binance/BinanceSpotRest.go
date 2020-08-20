@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nntaoli-project/GoEx/binance"
 	"net/http"
 	"net/url"
 	"strings"
@@ -238,7 +237,7 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		Message   string `json:"message,-"`
 	}{}
 
-	if resp, err := binance.DoRequest(
+	if resp, err := spot.DoRequest(
 		"GET",
 		tickerUri,
 		"",
@@ -497,5 +496,5 @@ func (spot *Spot) KeepAlive() {
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
 		return
 	}
-	_, _, _ = spot.GetTicker(Pair{BNB, BTC})
+	_, _, _ = spot.GetTicker(Pair{Basis: BNB, Counter: BTC})
 }

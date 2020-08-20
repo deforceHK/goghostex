@@ -424,5 +424,5 @@ func (margin *Margin) KeepAlive() {
 	if (nowTimestamp - margin.config.LastTimestamp) < 5*1000 {
 		return
 	}
-	_, _, _ = margin.Spot.GetTicker(Pair{BTC, USDT})
+	_, _, _ = margin.Spot.GetTicker(Pair{Basis: BTC, Counter: USDT})
 }

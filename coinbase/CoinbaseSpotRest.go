@@ -218,5 +218,5 @@ func (spot *Spot) KeepAlive() {
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
 		return
 	}
-	_, _, _ = spot.GetExchangeRule(Pair{BTC, USD})
+	_, _, _ = spot.GetExchangeRule(Pair{Basis: BTC, Counter: USD})
 }
