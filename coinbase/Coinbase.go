@@ -2,6 +2,7 @@ package coinbase
 
 import (
 	"encoding/json"
+	"time"
 
 	. "github.com/strengthening/goghostex"
 )
@@ -61,6 +62,10 @@ func (coinbase *Coinbase) DoRequest(
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > coinbase.config.LastTimestamp {
+			coinbase.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }

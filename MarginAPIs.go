@@ -17,4 +17,7 @@ type MarginRestAPI interface {
 	GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error)
 	GetExchangeName() string
 	GetExchangeRule(pair Pair) (*Rule, []byte, error)
+
+	// util api
+	KeepAlive()
 }

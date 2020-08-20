@@ -8,50 +8,54 @@ type Margin struct {
 	*Binance
 }
 
-func (this *Margin) Loan(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) Loan(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetOneLoan(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) GetOneLoan(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) Repay(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) Repay(record *LoanRecord) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) PlaceMarginOrder(*Order) ([]byte, error) {
+func (margin *Margin) PlaceMarginOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) CancelMarginOrder(*Order) ([]byte, error) {
+func (margin *Margin) CancelMarginOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginOneOrder(*Order) ([]byte, error) {
+func (margin *Margin) GetMarginOneOrder(*Order) ([]byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (margin *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
+func (margin *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
+func (margin *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (margin *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
+func (margin *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	panic("implement me")
 }
 
-func (this *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+func (margin *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	return nil, nil, nil
+}
+
+func (margin *Margin) KeepAlive() {
+
 }

@@ -36,70 +36,70 @@ type remoteOrder struct {
 	Side string `json:"side"`
 }
 
-func (binance *remoteOrder) Merge(order *Order, location *time.Location) {
-	if binance.TransactTime != 0 || binance.Time != 0 {
-		ts := binance.Time
-		if binance.TransactTime > binance.Time {
-			ts = binance.TransactTime
+func (spot *remoteOrder) Merge(order *Order, location *time.Location) {
+	if spot.TransactTime != 0 || spot.Time != 0 {
+		ts := spot.Time
+		if spot.TransactTime > spot.Time {
+			ts = spot.TransactTime
 		}
 		transactTime := time.Unix(int64(ts)/1000, int64(ts)%1000)
 		order.OrderDate = transactTime.In(location).Format(GO_BIRTHDAY)
-		order.OrderTimestamp = binance.TransactTime
+		order.OrderTimestamp = spot.TransactTime
 	}
 
-	status, exist := _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[binance.Status]
+	status, exist := _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[spot.Status]
 	if !exist {
 		status = ORDER_FAIL
 	}
 
-	if binance.Type == "LIMIT" && binance.Side == "SELL" {
+	if spot.Type == "LIMIT" && spot.Side == "SELL" {
 		order.Side = BUY
-	} else if binance.Type == "LIMIT" && binance.Side == "BUY" {
+	} else if spot.Type == "LIMIT" && spot.Side == "BUY" {
 		order.Side = SELL
-	} else if binance.Type == "MARKET" && binance.Side == "SELL" {
+	} else if spot.Type == "MARKET" && spot.Side == "SELL" {
 		order.Side = SELL_MARKET
 	} else {
 		order.Side = BUY_MARKET
 	}
 
 	order.Status = status
-	order.OrderId = fmt.Sprintf("%d", binance.OrderId)
-	order.Cid = binance.ClientOrderId
-	order.Price = binance.Price
-	order.Amount = binance.OrigQty
-	order.AvgPrice = binance.CummulativeQuoteQty
-	order.DealAmount = binance.ExecutedQty
+	order.OrderId = fmt.Sprintf("%d", spot.OrderId)
+	order.Cid = spot.ClientOrderId
+	order.Price = spot.Price
+	order.Amount = spot.OrigQty
+	order.AvgPrice = spot.CummulativeQuoteQty
+	order.DealAmount = spot.ExecutedQty
 }
 
-func (binance *Spot) LimitBuy(order *Order) ([]byte, error) {
+func (spot *Spot) LimitBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY {
 		return nil, errors.New("The order side is not BUY or order type is not LIMIT. ")
 	}
-	return binance.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (binance *Spot) LimitSell(order *Order) ([]byte, error) {
+func (spot *Spot) LimitSell(order *Order) ([]byte, error) {
 	if order.Side != SELL {
 		return nil, errors.New("The order side is not SELL or order type is not LIMIT. ")
 	}
-	return binance.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (binance *Spot) MarketBuy(order *Order) ([]byte, error) {
+func (spot *Spot) MarketBuy(order *Order) ([]byte, error) {
 	if order.Side != BUY_MARKET {
 		return nil, errors.New("the order side is not BUY_MARKET")
 	}
-	return binance.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (binance *Spot) MarketSell(order *Order) ([]byte, error) {
+func (spot *Spot) MarketSell(order *Order) ([]byte, error) {
 	if order.Side != SELL_MARKET {
 		return nil, errors.New("the order side is not SELL_MARKET")
 	}
-	return binance.placeOrder(order)
+	return spot.placeOrder(order)
 }
 
-func (binance *Spot) CancelOrder(order *Order) ([]byte, error) {
+func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
 	if order.OrderId == "" {
 		return nil, errors.New("You must get the order_id. ")
 	}
@@ -108,12 +108,12 @@ func (binance *Spot) CancelOrder(order *Order) ([]byte, error) {
 	params := url.Values{}
 	params.Set("symbol", order.Pair.ToSymbol("", true))
 	params.Set("orderId", order.OrderId)
-	if err := binance.buildParamsSigned(&params); err != nil {
+	if err := spot.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
 	response := remoteOrder{}
-	resp, err := binance.DoRequest(
+	resp, err := spot.DoRequest(
 		"DELETE",
 		uri,
 		params.Encode(),
@@ -123,11 +123,11 @@ func (binance *Spot) CancelOrder(order *Order) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	response.Merge(order, binance.config.Location)
+	response.Merge(order, spot.config.Location)
 	return resp, nil
 }
 
-func (binance *Spot) GetOneOrder(order *Order) ([]byte, error) {
+func (spot *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	if order.OrderId == "" {
 		return nil, errors.New("You must get the order_id. ")
 	}
@@ -135,13 +135,13 @@ func (binance *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	params := url.Values{}
 	params.Set("symbol", order.Pair.ToSymbol("", true))
 	params.Set("orderId", order.OrderId)
-	if err := binance.buildParamsSigned(&params); err != nil {
+	if err := spot.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
 	uri := API_V3 + ORDER_URI + params.Encode()
 	response := remoteOrder{}
-	resp, err := binance.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -153,21 +153,21 @@ func (binance *Spot) GetOneOrder(order *Order) ([]byte, error) {
 	if response.OrderId <= 0 {
 		return nil, errors.New(string(resp))
 	}
-	response.Merge(order, binance.config.Location)
+	response.Merge(order, spot.config.Location)
 	return resp, nil
 }
 
-func (binance *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 
 	params := url.Values{}
 	params.Set("symbol", pair.ToSymbol("", true))
-	if err := binance.buildParamsSigned(&params); err != nil {
+	if err := spot.buildParamsSigned(&params); err != nil {
 		return nil, nil, err
 	}
 
 	uri := API_V3 + UNFINISHED_ORDERS_INFO + params.Encode()
 	remoteOrders := make([]*remoteOrder, 0)
-	resp, err := binance.DoRequest("GET", uri, "", &remoteOrders)
+	resp, err := spot.DoRequest("GET", uri, "", &remoteOrders)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -175,21 +175,21 @@ func (binance *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	orders := make([]*Order, 0)
 	for _, remoteOrder := range remoteOrders {
 		order := Order{}
-		remoteOrder.Merge(&order, binance.config.Location)
+		remoteOrder.Merge(&order, spot.config.Location)
 		orders = append(orders, &order)
 	}
 
 	return orders, resp, nil
 }
 
-func (binance *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
+func (spot *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
 	panic("implement me")
 }
 
-func (binance *Spot) GetAccount() (*Account, []byte, error) {
+func (spot *Spot) GetAccount() (*Account, []byte, error) {
 
 	params := url.Values{}
-	if err := binance.buildParamsSigned(&params); err != nil {
+	if err := spot.buildParamsSigned(&params); err != nil {
 		return nil, nil, err
 	}
 
@@ -202,7 +202,7 @@ func (binance *Spot) GetAccount() (*Account, []byte, error) {
 		}
 	}{}
 
-	if resp, err := binance.DoRequest("GET", uri, "", &response); err != nil {
+	if resp, err := spot.DoRequest("GET", uri, "", &response); err != nil {
 		return nil, nil, err
 	} else {
 		account := &Account{
@@ -222,7 +222,7 @@ func (binance *Spot) GetAccount() (*Account, []byte, error) {
 	}
 }
 
-func (binance *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
+func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, pair.ToSymbol("", true))
 	response := struct {
 		Last   string `json:"lastPrice"`
@@ -237,7 +237,7 @@ func (binance *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		Message   string `json:"message,-"`
 	}{}
 
-	if resp, err := binance.DoRequest(
+	if resp, err := spot.DoRequest(
 		"GET",
 		tickerUri,
 		"",
@@ -251,7 +251,7 @@ func (binance *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 		ticker.Date = time.Unix(
 			response.Timestamp/1000,
 			0,
-		).In(binance.config.Location).Format(GO_BIRTHDAY)
+		).In(spot.config.Location).Format(GO_BIRTHDAY)
 		ticker.Last = ToFloat64(response.Last)
 		ticker.Buy = ToFloat64(response.Buy)
 		ticker.Sell = ToFloat64(response.Sell)
@@ -262,7 +262,7 @@ func (binance *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	}
 }
 
-func (binance *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	if size > 1000 {
 		size = 1000
 	} else if size < 5 {
@@ -278,7 +278,7 @@ func (binance *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	}{}
 
 	apiUri := fmt.Sprintf(API_V1+DEPTH_URI, pair.ToSymbol("", true), size)
-	resp, err := binance.DoRequest(
+	resp, err := spot.DoRequest(
 		"GET",
 		apiUri,
 		"",
@@ -289,7 +289,7 @@ func (binance *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	depth.Pair = pair
 	now := time.Now()
 	depth.Timestamp = now.UnixNano() / int64(time.Millisecond)
-	depth.Date = now.In(binance.config.Location).Format(GO_BIRTHDAY)
+	depth.Date = now.In(spot.config.Location).Format(GO_BIRTHDAY)
 	depth.Sequence = response.LastUpdateId
 
 	for _, bid := range response.Bids {
@@ -309,7 +309,7 @@ func (binance *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
 	return depth, resp, err
 }
 
-func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
+func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
 	if len(startTimeFmt) > 13 {
 		startTimeFmt = startTimeFmt[0:13]
@@ -328,7 +328,7 @@ func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kli
 
 	uri := API_V1 + KLINE_URI + "?" + params.Encode()
 	klines := make([][]interface{}, 0)
-	resp, err := binance.DoRequest("GET", uri, "", &klines)
+	resp, err := spot.DoRequest("GET", uri, "", &klines)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -343,7 +343,7 @@ func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kli
 				r.Date = time.Unix(
 					int64(r.Timestamp)/1000,
 					0,
-				).In(binance.config.Location).Format(GO_BIRTHDAY)
+				).In(spot.config.Location).Format(GO_BIRTHDAY)
 			case 1:
 				r.Open = ToFloat64(e)
 			case 2:
@@ -362,11 +362,11 @@ func (binance *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kli
 	return GetAscKline(klineRecords), resp, nil
 }
 
-func (binance *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
+func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
-func (binance *Spot) placeOrder(order *Order) ([]byte, error) {
+func (spot *Spot) placeOrder(order *Order) ([]byte, error) {
 	uri := API_V3 + ORDER_URI
 	if order.Cid == "" {
 		order.Cid = UUID()
@@ -414,12 +414,12 @@ func (binance *Spot) placeOrder(order *Order) ([]byte, error) {
 		params.Set("price", fmt.Sprintf("%f", order.Price))
 	}
 
-	if err := binance.buildParamsSigned(&params); err != nil {
+	if err := spot.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
 	response := remoteOrder{}
-	resp, err := binance.DoRequest(
+	resp, err := spot.DoRequest(
 		"POST",
 		uri,
 		params.Encode(),
@@ -432,17 +432,17 @@ func (binance *Spot) placeOrder(order *Order) ([]byte, error) {
 	if response.OrderId <= 0 {
 		return nil, errors.New(string(resp))
 	}
-	response.Merge(order, binance.config.Location)
+	response.Merge(order, spot.config.Location)
 	return resp, nil
 }
 
-func (binance *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	uri := "/api/v3/exchangeInfo"
 
 	pairsInfo := struct {
 		Symbols []map[string]json.RawMessage `json:"symbols"`
 	}{}
-	resp, err := binance.DoRequest(http.MethodGet, uri, "", &pairsInfo)
+	resp, err := spot.DoRequest(http.MethodGet, uri, "", &pairsInfo)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -489,4 +489,12 @@ func (binance *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	}
 
 	return nil, resp, errors.New("Can not find the pair in exchange. ")
+}
+
+func (spot *Spot) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = spot.GetTicker(Pair{Basis: BNB, Counter: BTC})
 }

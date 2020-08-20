@@ -10,7 +10,7 @@ type SwapRestAPI interface {
 	GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error)
 	GetOpenAmount(pair Pair) (float64, int64, []byte, error)
 	GetFundingFees(pair Pair) ([][]interface{}, []byte, error)
-	GetFee() (float64, error)
+	GetFundingFee(pair Pair) (float64, error)
 
 	// private api
 	GetAccount() (*SwapAccount, []byte, error)
@@ -23,4 +23,7 @@ type SwapRestAPI interface {
 	AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
 	ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error)
 	GetAccountFlow() ([]*SwapAccountItem, []byte, error)
+
+	// util api
+	KeepAlive()
 }

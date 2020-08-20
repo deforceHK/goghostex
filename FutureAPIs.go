@@ -24,6 +24,9 @@ type FutureRestAPI interface {
 	GetOrder(order *FutureOrder) ([]byte, error)
 	GetUnFinishOrders(pair Pair, contractType string) ([]*FutureOrder, []byte, error)
 	GetFee() (float64, error)
+
+	// util api
+	KeepAlive()
 }
 
 type FutureWebsocketAPI interface {

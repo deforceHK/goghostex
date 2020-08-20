@@ -21,4 +21,7 @@ type SpotRestAPI interface {
 	GetUnFinishOrders(pair Pair) ([]*Order, []byte, error)
 	GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error)
 	GetAccount() (*Account, []byte, error)
+
+	// util api
+	KeepAlive()
 }

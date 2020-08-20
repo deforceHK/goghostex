@@ -15,7 +15,7 @@ type Margin struct {
 	*OKEx
 }
 
-func (ok *Margin) Loan(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) Loan(record *LoanRecord) ([]byte, error) {
 	var param = struct {
 		InstrumentId string `json:"instrument_id"`
 		Currency     string `json:"currency"`
@@ -26,7 +26,7 @@ func (ok *Margin) Loan(record *LoanRecord) ([]byte, error) {
 		Amount:       FloatToString(record.Amount, 8),
 	}
 
-	reqBody, _, _ := ok.BuildRequestBody(param)
+	reqBody, _, _ := margin.BuildRequestBody(param)
 	var response struct {
 		BorrowId     string `json:"borrow_id"`
 		ClientOid    string `json:"client_oid"`
@@ -34,7 +34,7 @@ func (ok *Margin) Loan(record *LoanRecord) ([]byte, error) {
 		ErrorCode    string `json:"code"`
 		ErrorMessage string `json:"message"`
 	}
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"POST",
 		"/api/margin/v3/accounts/borrow",
 		reqBody,
@@ -52,19 +52,19 @@ func (ok *Margin) Loan(record *LoanRecord) ([]byte, error) {
 	record.AmountLoaned = record.Amount
 	now := time.Now()
 	record.LoanTimestamp = now.UnixNano() / int64(time.Millisecond)
-	record.LoanDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
+	record.LoanDate = now.In(margin.config.Location).Format(GO_BIRTHDAY)
 	return resp, nil
 }
 
-func (ok *Margin) GetOneLoan(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) GetOneLoan(record *LoanRecord) ([]byte, error) {
 	if record.LoanId == "" {
 		return nil, errors.New("The loan_id can not be empty! ")
 	}
 	// retry 5 times max.
-	return ok.getOneLoan(record, 0, 0)
+	return margin.getOneLoan(record, 0, 0)
 }
 
-func (ok *Margin) getOneLoan(record *LoanRecord, from int64, retry int) ([]byte, error) {
+func (margin *Margin) getOneLoan(record *LoanRecord, from int64, retry int) ([]byte, error) {
 	if retry > 5 {
 		return nil, errors.New("retry too many times to find the loan record")
 	}
@@ -89,7 +89,7 @@ func (ok *Margin) getOneLoan(record *LoanRecord, from int64, retry int) ([]byte,
 		CreatedAt      string  `json:"created_at"`
 	}, 0)
 
-	if resp, err := ok.DoRequest(
+	if resp, err := margin.DoRequest(
 		"GET",
 		uri+params.Encode(),
 		"",
@@ -108,10 +108,10 @@ func (ok *Margin) getOneLoan(record *LoanRecord, from int64, retry int) ([]byte,
 			if remoteRecord.BorrowId == record.LoanId {
 				record.AmountInterest = remoteRecord.Interest
 				t, _ := time.Parse(time.RFC3339, remoteRecord.ForceRepayTime)
-				record.RepayDeadlineDate = t.In(ok.config.Location).Format(GO_BIRTHDAY)
+				record.RepayDeadlineDate = t.In(margin.config.Location).Format(GO_BIRTHDAY)
 				t, _ = time.Parse(time.RFC3339, remoteRecord.CreatedAt)
 				record.LoanTimestamp = t.UnixNano() / int64(time.Millisecond)
-				record.LoanDate = t.In(ok.config.Location).Format(GO_BIRTHDAY)
+				record.LoanDate = t.In(margin.config.Location).Format(GO_BIRTHDAY)
 				record.Amount = remoteRecord.Amount
 				record.AmountLoaned = remoteRecord.Amount
 				return resp, nil
@@ -125,11 +125,11 @@ func (ok *Margin) getOneLoan(record *LoanRecord, from int64, retry int) ([]byte,
 				}
 			}
 		}
-		return ok.getOneLoan(record, minLoanId, retry+1)
+		return margin.getOneLoan(record, minLoanId, retry+1)
 	}
 }
 
-func (ok *Margin) Repay(record *LoanRecord) ([]byte, error) {
+func (margin *Margin) Repay(record *LoanRecord) ([]byte, error) {
 
 	urlPath := "/api/margin/v3/accounts/repayment"
 	param := struct {
@@ -144,14 +144,14 @@ func (ok *Margin) Repay(record *LoanRecord) ([]byte, error) {
 		FloatToString(record.AmountLoaned+record.AmountInterest, 8),
 	}
 
-	reqBody, _, _ := ok.BuildRequestBody(param)
+	reqBody, _, _ := margin.BuildRequestBody(param)
 	var response struct {
 		RepaymentId string `json:"repayment_id"`
 		Result      bool   `json:"result"`
 		Code        string `json:"code"`
 		Message     string `json:"message"`
 	}
-	resp, err := ok.DoRequest("POST", urlPath, reqBody, &response)
+	resp, err := margin.DoRequest("POST", urlPath, reqBody, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -163,12 +163,12 @@ func (ok *Margin) Repay(record *LoanRecord) ([]byte, error) {
 	now := time.Now()
 	record.Status = LOAN_REPAY
 	record.RepayId = response.RepaymentId
-	record.RepayDate = now.In(ok.config.Location).Format(GO_BIRTHDAY)
+	record.RepayDate = now.In(margin.config.Location).Format(GO_BIRTHDAY)
 	record.RepayTimestamp = now.UnixNano() / int64(time.Millisecond)
 	return resp, nil
 }
 
-func (ok *Margin) PlaceMarginOrder(order *Order) ([]byte, error) {
+func (margin *Margin) PlaceMarginOrder(order *Order) ([]byte, error) {
 
 	param := PlaceOrderParam{
 		InstrumentId:  order.Pair.ToSymbol("-", true),
@@ -201,8 +201,8 @@ func (ok *Margin) PlaceMarginOrder(order *Order) ([]byte, error) {
 	}
 
 	response := remoteOrder{}
-	jsonStr, _, _ := ok.BuildRequestBody(param)
-	resp, err := ok.DoRequest(
+	jsonStr, _, _ := margin.BuildRequestBody(param)
+	resp, err := margin.DoRequest(
 		"POST",
 		"/api/margin/v3/orders",
 		jsonStr,
@@ -217,7 +217,7 @@ func (ok *Margin) PlaceMarginOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Margin) CancelMarginOrder(order *Order) ([]byte, error) {
+func (margin *Margin) CancelMarginOrder(order *Order) ([]byte, error) {
 
 	uri := "/api/margin/v3/cancel_orders/" + order.OrderId
 	param := struct {
@@ -225,14 +225,14 @@ func (ok *Margin) CancelMarginOrder(order *Order) ([]byte, error) {
 	}{
 		order.Pair.ToSymbol("-", true),
 	}
-	reqBody, _, _ := ok.BuildRequestBody(param)
+	reqBody, _, _ := margin.BuildRequestBody(param)
 	var response struct {
 		ClientOid string `json:"client_oid"`
 		OrderId   string `json:"order_id"`
 		Result    bool   `json:"result"`
 	}
 
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"POST",
 		uri,
 		reqBody,
@@ -247,10 +247,10 @@ func (ok *Margin) CancelMarginOrder(order *Order) ([]byte, error) {
 	return resp, NewError(400, "cancel fail, unknown error")
 }
 
-func (ok *Margin) GetMarginOneOrder(order *Order) ([]byte, error) {
+func (margin *Margin) GetMarginOneOrder(order *Order) ([]byte, error) {
 	uri := "/api/margin/v3/orders/" + order.OrderId + "?instrument_id=" + order.Pair.ToSymbol("-", true)
 	var response OrderResponse
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -261,13 +261,13 @@ func (ok *Margin) GetMarginOneOrder(order *Order) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := ok.adaptOrder(order, &response); err != nil {
+	if err := margin.adaptOrder(order, &response); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
-func (ok *Margin) adaptOrder(order *Order, response *OrderResponse) error {
+func (margin *Margin) adaptOrder(order *Order, response *OrderResponse) error {
 
 	order.Cid = response.ClientOid
 	order.OrderId = response.OrderId
@@ -275,7 +275,7 @@ func (ok *Margin) adaptOrder(order *Order, response *OrderResponse) error {
 	order.Amount = response.Size
 	order.AvgPrice = ToFloat64(response.PriceAvg)
 	order.DealAmount = ToFloat64(response.FilledSize)
-	order.Status = ok.adaptOrderState(response.State)
+	order.Status = margin.adaptOrderState(response.State)
 
 	switch response.Side {
 	case "buy":
@@ -311,18 +311,18 @@ func (ok *Margin) adaptOrder(order *Order, response *OrderResponse) error {
 		return err
 	} else {
 		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
-		order.OrderDate = date.In(ok.config.Location).Format(GO_BIRTHDAY)
+		order.OrderDate = date.In(margin.config.Location).Format(GO_BIRTHDAY)
 		return nil
 	}
 }
 
-func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+func (margin *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/margin/v3/orders_pending?instrument_id=%s",
 		pair.ToSymbol("-", true),
 	)
 	var response []OrderResponse
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -335,7 +335,7 @@ func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	var orders []*Order
 	for _, itm := range response {
 		order := Order{Pair: pair}
-		if err := ok.adaptOrder(&order, &itm); err != nil {
+		if err := margin.adaptOrder(&order, &itm); err != nil {
 			return nil, nil, err
 		}
 		orders = append(orders, &order)
@@ -344,11 +344,11 @@ func (ok *Margin) GetMarginUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 	return orders, resp, nil
 }
 
-func (ok *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
+func (margin *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
 
 	uri := fmt.Sprintf("/api/margin/v3/accounts/%s", pair.ToSymbol("-", true))
 	var response map[string]interface{}
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -383,14 +383,14 @@ func (ok *Margin) GetMarginAccount(pair Pair) (*MarginAccount, []byte, error) {
 	return &acc, resp, nil
 }
 
-func (ok *Margin) GetMarginInfo(pair Pair) ([]byte, error) {
+func (margin *Margin) GetMarginInfo(pair Pair) ([]byte, error) {
 	uri := fmt.Sprintf(
 		"/api/margin/v3/accounts/%s/availability",
 		pair.ToSymbol("-", true),
 	)
 	var response []map[string]interface{}
 
-	resp, err := ok.DoRequest(
+	resp, err := margin.DoRequest(
 		"GET",
 		uri,
 		"",
@@ -403,18 +403,26 @@ func (ok *Margin) GetMarginInfo(pair Pair) ([]byte, error) {
 	return resp, nil
 }
 
-func (ok *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
-	return ok.Spot.GetTicker(pair)
+func (margin *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
+	return margin.Spot.GetTicker(pair)
 }
 
-func (ok *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
-	return ok.Spot.GetDepth(size, pair)
+func (margin *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
+	return margin.Spot.GetDepth(size, pair)
 }
 
-func (ok *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
-	return ok.Spot.GetKlineRecords(pair, period, size, since)
+func (margin *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
+	return margin.Spot.GetKlineRecords(pair, period, size, since)
 }
 
-func (ok *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
+func (margin *Margin) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	return nil, nil, nil
+}
+
+func (margin *Margin) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - margin.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = margin.Spot.GetTicker(Pair{Basis: BTC, Counter: USDT})
 }
