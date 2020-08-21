@@ -64,8 +64,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// depth unit test
 	if depth, resp, err := bn.Spot.GetDepth(
-		20,
 		Pair{Basis: BTC, Counter: USDT},
+		20,
 	); err != nil {
 		t.Error(err)
 		return
@@ -83,8 +83,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 		// make sure the later request get bigger sequence
 		depth1, _, _ := bn.Spot.GetDepth(
-			20,
 			Pair{Basis: BTC, Counter: USDT},
+			20,
 		)
 
 		if depth1.Sequence < depth.Sequence {

@@ -266,14 +266,14 @@ func (future *Future) GetDepth(
 	dep.Sequence = dep.Timestamp
 	dep.Date = date.Format(GO_BIRTHDAY)
 	for _, itm := range response.Asks {
-		dep.AskList = append(dep.AskList, FutureDepthRecord{
+		dep.AskList = append(dep.AskList, DepthRecord{
 			Price:  ToFloat64(itm[0]),
-			Amount: ToInt64(itm[1])})
+			Amount: ToFloat64(itm[1])})
 	}
 	for _, itm := range response.Bids {
-		dep.BidList = append(dep.BidList, FutureDepthRecord{
+		dep.BidList = append(dep.BidList, DepthRecord{
 			Price:  ToFloat64(itm[0]),
-			Amount: ToInt64(itm[1])})
+			Amount: ToFloat64(itm[1])})
 	}
 
 	return &dep, resp, nil

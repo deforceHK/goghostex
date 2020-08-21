@@ -51,24 +51,24 @@ type FutureTicker struct {
 	ContractName string `json:"contract_name"`
 }
 
-type FutureDepthRecords []FutureDepthRecord
-
-type FutureDepthRecord struct {
-	Price  float64
-	Amount int64
-}
-
-func (dr FutureDepthRecords) Len() int {
-	return len(dr)
-}
-
-func (dr FutureDepthRecords) Swap(i, j int) {
-	dr[i], dr[j] = dr[j], dr[i]
-}
-
-func (dr FutureDepthRecords) Less(i, j int) bool {
-	return dr[i].Price < dr[j].Price
-}
+//type FutureDepthRecords []FutureDepthRecord
+//
+//type FutureDepthRecord struct {
+//	Price  float64
+//	Amount int64
+//}
+//
+//func (dr FutureDepthRecords) Len() int {
+//	return len(dr)
+//}
+//
+//func (dr FutureDepthRecords) Swap(i, j int) {
+//	dr[i], dr[j] = dr[j], dr[i]
+//}
+//
+//func (dr FutureDepthRecords) Less(i, j int) bool {
+//	return dr[i].Price < dr[j].Price
+//}
 
 type FutureDepth struct {
 	ContractType string // for future
@@ -79,8 +79,8 @@ type FutureDepth struct {
 	// The increasing sequence, cause the http return sequence is not sure.
 	Sequence int64
 	Date     string
-	AskList  FutureDepthRecords // Ascending order
-	BidList  FutureDepthRecords // Descending order
+	AskList  DepthRecords // Ascending order
+	BidList  DepthRecords // Descending order
 }
 
 // Do not trust the data from exchange, just verify it.

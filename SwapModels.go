@@ -14,32 +14,13 @@ type SwapTicker struct {
 	Date      string  `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
-type DepthItem struct {
-	Price  float64
-	Amount float64
-}
-
-type DepthItems []DepthItem
-
-func (dr DepthItems) Len() int {
-	return len(dr)
-}
-
-func (dr DepthItems) Swap(i, j int) {
-	dr[i], dr[j] = dr[j], dr[i]
-}
-
-func (dr DepthItems) Less(i, j int) bool {
-	return dr[i].Price < dr[j].Price
-}
-
 type SwapDepth struct {
 	Pair      Pair
 	Timestamp int64
 	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
 	Date      string
-	AskList   DepthItems // Ascending order
-	BidList   DepthItems // Descending order
+	AskList   DepthRecords // Ascending order
+	BidList   DepthRecords // Descending order
 }
 
 // Verify the depth data is right

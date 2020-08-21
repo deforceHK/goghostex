@@ -96,7 +96,7 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	}, resp, nil
 }
 
-func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(pair Pair, size int) (*Depth, []byte, error) {
 	uri := "/api/v2/order_book/" + pair.ToSymbol("", false)
 	response := struct {
 		Bids      [][]interface{} `json:"bids"`
