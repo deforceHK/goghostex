@@ -58,7 +58,7 @@ func TestSpot_GetDepth(t *testing.T) {
 	}
 
 	b := New(config)
-	_, resp, err := b.Spot.GetDepth(10, Pair{Basis: BTC, Counter: USD})
+	_, resp, err := b.Spot.GetDepth(Pair{Basis: BTC, Counter: USD}, 10)
 	if err != nil {
 		t.Error(err)
 		return

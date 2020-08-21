@@ -408,7 +408,7 @@ func (margin *Margin) GetMarginTicker(pair Pair) (*Ticker, []byte, error) {
 }
 
 func (margin *Margin) GetMarginDepth(size int, pair Pair) (*Depth, []byte, error) {
-	return margin.Spot.GetDepth(size, pair)
+	return margin.Spot.GetDepth(pair, size)
 }
 
 func (margin *Margin) GetMarginKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {

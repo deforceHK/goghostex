@@ -107,7 +107,7 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	return ticker, tickerResp, nil
 }
 
-func (*Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (*Spot) GetDepth(pair Pair, size int) (*Depth, []byte, error) {
 	panic("implement me")
 }
 

@@ -292,7 +292,7 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	}, resp, nil
 }
 
-func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(pair Pair, size int) (*Depth, []byte, error) {
 	uri := fmt.Sprintf(
 		"/api/spot/v3/instruments/%s/book?size=%d",
 		pair.ToSymbol("-", true),

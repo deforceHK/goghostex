@@ -189,14 +189,14 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	for _, bid := range response.Bids {
 		price := ToFloat64(bid[0])
 		amount := ToFloat64(bid[1])
-		depthItem := DepthItem{Price: price, Amount: amount}
+		depthItem := DepthRecord{Price: price, Amount: amount}
 		depth.BidList = append(depth.BidList, depthItem)
 	}
 
 	for _, ask := range response.Asks {
 		price := ToFloat64(ask[0])
 		amount := ToFloat64(ask[1])
-		depthItem := DepthItem{Price: price, Amount: amount}
+		depthItem := DepthRecord{Price: price, Amount: amount}
 		depth.AskList = append(depth.AskList, depthItem)
 	}
 

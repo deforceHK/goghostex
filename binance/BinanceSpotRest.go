@@ -262,7 +262,7 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	}
 }
 
-func (spot *Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (spot *Spot) GetDepth(pair Pair, size int) (*Depth, []byte, error) {
 	if size > 1000 {
 		size = 1000
 	} else if size < 5 {
