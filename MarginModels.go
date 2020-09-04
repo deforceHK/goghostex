@@ -15,7 +15,7 @@ const (
 
 type MarginAccount struct {
 	Pair       Pair
-	SubAccount map[Currency]MarginSubAccount
+	SubAccount map[string]MarginSubAccount
 
 	LiquidationPrice float64 //预计爆仓价格
 	RiskRate         float64
@@ -24,19 +24,21 @@ type MarginAccount struct {
 
 type MarginSubAccount struct {
 	Currency Currency
-	// 总额
-	BalanceTotal float64
+	// Amount = AmountNet + AmountLoaned = AmountAvail + AmountFrozen
+	Amount float64
 	// 可用额度
-	BalanceAvail float64
+	AmountAvail float64
 	// 冻结额度
-	BalanceFrozen float64
+	AmountFrozen float64
+	// 净值额度
+	AmountNet float64
 	// 已借贷额度
-	Loaned float64
+	AmountLoaned float64
 	// 当前借贷费用
 	LoaningFee float64
 }
 
-type LoanRecord struct {
+type Loan struct {
 	Pair              Pair       // The loan currency pair
 	Currency          Currency   // Currency
 	Amount            float64    // Loan amount

@@ -194,7 +194,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		return
 	} else {
 		for currency, subAccount := range account.SubAccounts {
-			if currency == BNB && subAccount.Amount < 1 {
+			if currency == BNB.Symbol && subAccount.Amount < 1 {
 				t.Error("You don not has 1 BNB to order. ")
 				return
 			}
@@ -220,7 +220,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: NORMAL,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&normalOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -236,7 +236,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if resp, err := bn.Spot.GetOneOrder(&normalOrder); err != nil {
+		if resp, err := bn.Spot.GetOrder(&normalOrder); err != nil {
 			t.Error(err)
 			return
 		} else if i == 0 {
@@ -292,7 +292,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: FOK,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&fokOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&fokOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -315,7 +315,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: IOC,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&iocOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&iocOrder); err != nil {
 		t.Error(err)
 		return
 	} else {

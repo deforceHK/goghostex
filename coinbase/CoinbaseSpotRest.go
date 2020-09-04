@@ -15,42 +15,7 @@ type Spot struct {
 	*Coinbase
 }
 
-func (*Spot) LimitBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) LimitSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) MarketBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) MarketSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) CancelOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetOneOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetAccount() (*Account, []byte, error) {
-	panic("implement me")
-}
-
+// public api
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	t := struct {
 		Volume float64 `json:"volume,string"`
@@ -213,6 +178,32 @@ func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	return &rule, resp, nil
 }
 
+// private api
+func (*Spot) PlaceOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) CancelOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetOrders(pair Pair) ([]*Order, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetAccount() (*Account, []byte, error) {
+	panic("implement me")
+}
+
+// util api
 func (spot *Spot) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {

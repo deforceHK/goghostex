@@ -12,15 +12,12 @@ type SpotRestAPI interface {
 	GetTrades(pair Pair, since int64) ([]*Trade, error)
 
 	// private api
-	LimitBuy(*Order) ([]byte, error)
-	LimitSell(*Order) ([]byte, error)
-	MarketBuy(*Order) ([]byte, error)
-	MarketSell(*Order) ([]byte, error)
-	CancelOrder(*Order) ([]byte, error)
-	GetOneOrder(*Order) ([]byte, error)
-	GetUnFinishOrders(pair Pair) ([]*Order, []byte, error)
-	GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error)
 	GetAccount() (*Account, []byte, error)
+	PlaceOrder(order *Order) ([]byte, error)
+	CancelOrder(order *Order) ([]byte, error)
+	GetOrder(order *Order) ([]byte, error)
+	GetOrders(pair Pair) ([]*Order, error) // dealed orders
+	GetUnFinishOrders(pair Pair) ([]*Order, []byte, error)
 
 	// util api
 	KeepAlive()

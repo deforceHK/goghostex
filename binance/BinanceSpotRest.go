@@ -36,192 +36,7 @@ type remoteOrder struct {
 	Side string `json:"side"`
 }
 
-func (spot *remoteOrder) Merge(order *Order, location *time.Location) {
-	if spot.TransactTime != 0 || spot.Time != 0 {
-		ts := spot.Time
-		if spot.TransactTime > spot.Time {
-			ts = spot.TransactTime
-		}
-		transactTime := time.Unix(int64(ts)/1000, int64(ts)%1000)
-		order.OrderDate = transactTime.In(location).Format(GO_BIRTHDAY)
-		order.OrderTimestamp = spot.TransactTime
-	}
-
-	status, exist := _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[spot.Status]
-	if !exist {
-		status = ORDER_FAIL
-	}
-
-	if spot.Type == "LIMIT" && spot.Side == "SELL" {
-		order.Side = BUY
-	} else if spot.Type == "LIMIT" && spot.Side == "BUY" {
-		order.Side = SELL
-	} else if spot.Type == "MARKET" && spot.Side == "SELL" {
-		order.Side = SELL_MARKET
-	} else {
-		order.Side = BUY_MARKET
-	}
-
-	order.Status = status
-	order.OrderId = fmt.Sprintf("%d", spot.OrderId)
-	order.Cid = spot.ClientOrderId
-	order.Price = spot.Price
-	order.Amount = spot.OrigQty
-	order.AvgPrice = spot.CummulativeQuoteQty
-	order.DealAmount = spot.ExecutedQty
-}
-
-func (spot *Spot) LimitBuy(order *Order) ([]byte, error) {
-	if order.Side != BUY {
-		return nil, errors.New("The order side is not BUY or order type is not LIMIT. ")
-	}
-	return spot.placeOrder(order)
-}
-
-func (spot *Spot) LimitSell(order *Order) ([]byte, error) {
-	if order.Side != SELL {
-		return nil, errors.New("The order side is not SELL or order type is not LIMIT. ")
-	}
-	return spot.placeOrder(order)
-}
-
-func (spot *Spot) MarketBuy(order *Order) ([]byte, error) {
-	if order.Side != BUY_MARKET {
-		return nil, errors.New("the order side is not BUY_MARKET")
-	}
-	return spot.placeOrder(order)
-}
-
-func (spot *Spot) MarketSell(order *Order) ([]byte, error) {
-	if order.Side != SELL_MARKET {
-		return nil, errors.New("the order side is not SELL_MARKET")
-	}
-	return spot.placeOrder(order)
-}
-
-func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
-	if order.OrderId == "" {
-		return nil, errors.New("You must get the order_id. ")
-	}
-
-	uri := API_V3 + ORDER_URI
-	params := url.Values{}
-	params.Set("symbol", order.Pair.ToSymbol("", true))
-	params.Set("orderId", order.OrderId)
-	if err := spot.buildParamsSigned(&params); err != nil {
-		return nil, err
-	}
-
-	response := remoteOrder{}
-	resp, err := spot.DoRequest(
-		"DELETE",
-		uri,
-		params.Encode(),
-		&response,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-	response.Merge(order, spot.config.Location)
-	return resp, nil
-}
-
-func (spot *Spot) GetOneOrder(order *Order) ([]byte, error) {
-	if order.OrderId == "" {
-		return nil, errors.New("You must get the order_id. ")
-	}
-
-	params := url.Values{}
-	params.Set("symbol", order.Pair.ToSymbol("", true))
-	params.Set("orderId", order.OrderId)
-	if err := spot.buildParamsSigned(&params); err != nil {
-		return nil, err
-	}
-
-	uri := API_V3 + ORDER_URI + params.Encode()
-	response := remoteOrder{}
-	resp, err := spot.DoRequest(
-		"GET",
-		uri,
-		"",
-		&response,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if response.OrderId <= 0 {
-		return nil, errors.New(string(resp))
-	}
-	response.Merge(order, spot.config.Location)
-	return resp, nil
-}
-
-func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
-
-	params := url.Values{}
-	params.Set("symbol", pair.ToSymbol("", true))
-	if err := spot.buildParamsSigned(&params); err != nil {
-		return nil, nil, err
-	}
-
-	uri := API_V3 + UNFINISHED_ORDERS_INFO + params.Encode()
-	remoteOrders := make([]*remoteOrder, 0)
-	resp, err := spot.DoRequest("GET", uri, "", &remoteOrders)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	orders := make([]*Order, 0)
-	for _, remoteOrder := range remoteOrders {
-		order := Order{}
-		remoteOrder.Merge(&order, spot.config.Location)
-		orders = append(orders, &order)
-	}
-
-	return orders, resp, nil
-}
-
-func (spot *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetAccount() (*Account, []byte, error) {
-
-	params := url.Values{}
-	if err := spot.buildParamsSigned(&params); err != nil {
-		return nil, nil, err
-	}
-
-	uri := API_V3 + ACCOUNT_URI + params.Encode()
-	response := struct {
-		Balances []*struct {
-			Asset  string  `json:"asset"`
-			Free   float64 `json:"free,string"`
-			Locked float64 `json:"locked,string"`
-		}
-	}{}
-
-	if resp, err := spot.DoRequest("GET", uri, "", &response); err != nil {
-		return nil, nil, err
-	} else {
-		account := &Account{
-			Exchange:    BINANCE,
-			SubAccounts: make(map[Currency]SubAccount, 0),
-		}
-
-		for _, itm := range response.Balances {
-			currency := NewCurrency(itm.Asset, "")
-			account.SubAccounts[currency] = SubAccount{
-				Currency:     currency,
-				ForzenAmount: itm.Locked,
-				Amount:       itm.Free,
-			}
-		}
-		return account, resp, nil
-	}
-}
-
+// public api
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, pair.ToSymbol("", true))
 	response := struct {
@@ -366,7 +181,43 @@ func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
-func (spot *Spot) placeOrder(order *Order) ([]byte, error) {
+// private api
+func (spot *Spot) GetAccount() (*Account, []byte, error) {
+	params := url.Values{}
+	if err := spot.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	uri := API_V3 + ACCOUNT_URI + params.Encode()
+	response := struct {
+		Balances []*struct {
+			Asset  string  `json:"asset"`
+			Free   float64 `json:"free,string"`
+			Locked float64 `json:"locked,string"`
+		}
+	}{}
+
+	if resp, err := spot.DoRequest("GET", uri, "", &response); err != nil {
+		return nil, nil, err
+	} else {
+		account := &Account{
+			Exchange:    BINANCE,
+			SubAccounts: make(map[string]SubAccount, 0),
+		}
+
+		for _, itm := range response.Balances {
+			currency := NewCurrency(itm.Asset, "")
+			account.SubAccounts[strings.ToUpper(itm.Asset)] = SubAccount{
+				Currency:     currency,
+				AmountFrozen: itm.Locked,
+				Amount:       itm.Free,
+			}
+		}
+		return account, resp, nil
+	}
+}
+
+func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
 	uri := API_V3 + ORDER_URI
 	if order.Cid == "" {
 		order.Cid = UUID()
@@ -432,8 +283,133 @@ func (spot *Spot) placeOrder(order *Order) ([]byte, error) {
 	if response.OrderId <= 0 {
 		return nil, errors.New(string(resp))
 	}
-	response.Merge(order, spot.config.Location)
+	response.merge(order, spot.config.Location)
 	return resp, nil
+}
+func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
+	if order.OrderId == "" {
+		return nil, errors.New("You must get the order_id. ")
+	}
+
+	uri := API_V3 + ORDER_URI
+	params := url.Values{}
+	params.Set("symbol", order.Pair.ToSymbol("", true))
+	params.Set("orderId", order.OrderId)
+	if err := spot.buildParamsSigned(&params); err != nil {
+		return nil, err
+	}
+
+	response := remoteOrder{}
+	resp, err := spot.DoRequest(
+		"DELETE",
+		uri,
+		params.Encode(),
+		&response,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+	response.merge(order, spot.config.Location)
+	return resp, nil
+}
+
+func (spot *Spot) GetOrder(order *Order) ([]byte, error) {
+	if order.OrderId == "" {
+		return nil, errors.New("You must get the order_id. ")
+	}
+
+	params := url.Values{}
+	params.Set("symbol", order.Pair.ToSymbol("", true))
+	params.Set("orderId", order.OrderId)
+	if err := spot.buildParamsSigned(&params); err != nil {
+		return nil, err
+	}
+
+	uri := API_V3 + ORDER_URI + params.Encode()
+	response := remoteOrder{}
+	resp, err := spot.DoRequest(
+		"GET",
+		uri,
+		"",
+		&response,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if response.OrderId <= 0 {
+		return nil, errors.New(string(resp))
+	}
+	response.merge(order, spot.config.Location)
+	return resp, nil
+}
+
+func (spot *Spot) GetOrders(pair Pair) ([]*Order, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+	params := url.Values{}
+	params.Set("symbol", pair.ToSymbol("", true))
+	if err := spot.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	uri := API_V3 + UNFINISHED_ORDERS_INFO
+	remoteOrders := make([]*remoteOrder, 0)
+	resp, err := spot.DoRequest(
+		http.MethodGet,
+		uri,
+		params.Encode(),
+		&remoteOrders,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	orders := make([]*Order, 0)
+	for _, remoteOrder := range remoteOrders {
+		order := Order{}
+		remoteOrder.merge(&order, spot.config.Location)
+		orders = append(orders, &order)
+	}
+
+	return orders, resp, nil
+}
+
+func (spot *remoteOrder) merge(order *Order, location *time.Location) {
+	if spot.TransactTime != 0 || spot.Time != 0 {
+		ts := spot.Time
+		if spot.TransactTime > spot.Time {
+			ts = spot.TransactTime
+		}
+		transactTime := time.Unix(int64(ts)/1000, int64(ts)%1000)
+		order.OrderDate = transactTime.In(location).Format(GO_BIRTHDAY)
+		order.OrderTimestamp = spot.TransactTime
+	}
+
+	status, exist := _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[spot.Status]
+	if !exist {
+		status = ORDER_FAIL
+	}
+
+	if spot.Type == "LIMIT" && spot.Side == "SELL" {
+		order.Side = BUY
+	} else if spot.Type == "LIMIT" && spot.Side == "BUY" {
+		order.Side = SELL
+	} else if spot.Type == "MARKET" && spot.Side == "SELL" {
+		order.Side = SELL_MARKET
+	} else {
+		order.Side = BUY_MARKET
+	}
+
+	order.Status = status
+	order.OrderId = fmt.Sprintf("%d", spot.OrderId)
+	order.Cid = spot.ClientOrderId
+	order.Price = spot.Price
+	order.Amount = spot.OrigQty
+	order.AvgPrice = spot.CummulativeQuoteQty
+	order.DealAmount = spot.ExecutedQty
 }
 
 func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
@@ -491,6 +467,7 @@ func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }
 
+//util api
 func (spot *Spot) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {

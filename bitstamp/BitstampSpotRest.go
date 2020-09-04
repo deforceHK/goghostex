@@ -14,54 +14,7 @@ type Spot struct {
 	*Bitstamp
 }
 
-func (spot *Spot) LimitBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) LimitSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) MarketBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) MarketSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) CancelOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetOneOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]*Order, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetExchangeName() string {
-	panic("implement me")
-}
-
-func (spot *Spot) GetUnfinishOrders(pair Pair) ([]*Order, []byte, error) {
-	panic("implement me")
-}
-
-func (spot *Spot) GetAccount() (*Account, []byte, error) {
-	panic("implement me")
-}
-
+// public api
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 
 	uri := "/api/v2/ticker/" + pair.ToSymbol("", false)
@@ -203,10 +156,44 @@ func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 	return GetAscKline(klines), resp, nil
 }
 
+// private api
+func (spot *Spot) GetAccount() (*Account, []byte, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) PlaceOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) CancelOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) GetOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) GetOrders(pair Pair) ([]*Order, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+	panic("implement me")
+}
+
+func (spot *Spot) GetExchangeName() string {
+	panic("implement me")
+}
+
 func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	panic("implete me. ")
 }
 
+func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
+	panic("implement me")
+}
+
+//util api
 func (spot *Spot) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
