@@ -136,9 +136,8 @@ func (ok *OKEx) DoRequest(
 	url := ok.config.Endpoint + uri
 	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
 	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
-		CONTENT_TYPE: APPLICATION_JSON_UTF8,
-		ACCEPT:       APPLICATION_JSON,
-		//COOKIE:               LOCALE + "en_US",
+		CONTENT_TYPE:         APPLICATION_JSON_UTF8,
+		ACCEPT:               APPLICATION_JSON,
 		OK_ACCESS_KEY:        ok.config.ApiKey,
 		OK_ACCESS_PASSPHRASE: ok.config.ApiPassphrase,
 		OK_ACCESS_SIGN:       sign,
@@ -196,7 +195,6 @@ func (ok *OKEx) BuildRequestBody(params interface{}) (string, *bytes.Reader, err
 func (ok *OKEx) doParamSign(httpMethod, uri, requestBody string) (string, string) {
 	timestamp := ok.IsoTime()
 	preText := fmt.Sprintf("%s%s%s%s", timestamp, strings.ToUpper(httpMethod), uri, requestBody)
-	//log.Println("preHash", preText)
 	sign, _ := GetParamHmacSHA256Base64Sign(ok.config.ApiSecretKey, preText)
 	return sign, timestamp
 }

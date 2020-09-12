@@ -1,7 +1,7 @@
 package gate
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,9 +22,8 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 				},
 			},
 		},
-		//ApiKey:        SPOT_API_KEY,
-		//ApiSecretKey:  SPOT_API_SECRETKEY,
-		//ApiPassphrase: SPOT_API_PASSPHRASE,
+		ApiKey:        "",
+		ApiSecretKey:  "",
 		Location: time.Now().Location(),
 	}
 
@@ -56,19 +55,51 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 	//	return
 	//} else {
 	//	fmt.Print(depth)
+	//	fmt.Print(string(resp))
+	//}
+
+	//if klines, resp, err := gateCli.Swap.GetKline(
+	//	Pair{Currency{"AMPL", ""}, USDT},
+	//	KLINE_PERIOD_1MIN,
+	//	50,
+	//	0,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	body, _ := json.Marshal(klines)
+	//	fmt.Print(string(body))
+	//	fmt.Print(string(resp))
+	//}
+
+	//if fees, resp, err := gateCli.Swap.GetFundingFees(
+	//	Pair{Currency{"AMPL", ""}, USDT},
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	body, _ := json.Marshal(fees)
+	//	fmt.Print(string(body))
+	//	fmt.Print(string(resp))
+	//}
+
+	//if fees, err := gateCli.Swap.GetFundingFee(
+	//	Pair{Currency{"AMPL", ""}, USDT},
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	body, _ := json.Marshal(fees)
+	//	fmt.Print(string(body))
 	//	//fmt.Print(string(resp))
 	//}
 
-	if klines, _, err := gateCli.Swap.GetKline(
-		Pair{Currency{"AMPL", ""}, USDT},
-		KLINE_PERIOD_1MIN,
-		10,
-		0,
-	); err != nil {
+	if _, resp, err := gateCli.Swap.GetAccount(); err != nil {
 		t.Error(err)
 		return
 	} else {
-		body, _ := json.Marshal(klines)
-		fmt.Print(string(body))
+		//body, _ := json.Marshal(fees)
+		fmt.Print(string(resp))
+		//fmt.Print(string(resp))
 	}
 }
