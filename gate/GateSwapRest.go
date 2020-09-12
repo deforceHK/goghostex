@@ -286,14 +286,14 @@ func (swap *Swap) GetFundingFee(pair Pair) (float64, error) {
 
 func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 	uri := "/api/v4/futures/usdt/accounts"
-	rawResp :=  struct {
-		Total float64 `json:"total,string"`
-		UnrealisedPnl float64 `json:"unrealised_pnl,string"`
-		Available float64 `json:"available,string"`
-		OrderMargin float64 `json:"order_margin,string"`
+	rawResp := struct {
+		Total          float64 `json:"total,string"`
+		UnrealisedPnl  float64 `json:"unrealised_pnl,string"`
+		Available      float64 `json:"available,string"`
+		OrderMargin    float64 `json:"order_margin,string"`
 		PositionMargin float64 `json:"position_margin,string"`
-		Point float64 `json:"point,string"`
-		Currency string `json:"currency"`
+		Point          float64 `json:"point,string"`
+		Currency       string  `json:"currency"`
 	}{}
 
 	if resp, err := swap.DoSignRequest(
@@ -305,11 +305,46 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 	); err != nil {
 		return nil, resp, err
 	} else {
-		return nil, resp, nil
+		totalMargin := rawResp.OrderMargin + rawResp.PositionMargin
+		swapAccount := SwapAccount{
+			Exchange:       GATE,
+			Currency:       USDT,
+			Margin:         totalMargin,
+			MarginPosition: rawResp.PositionMargin,
+			MarginOpen:     rawResp.OrderMargin,
+			MarginRate:     totalMargin / rawResp.Total,
+			BalanceTotal:   rawResp.Total,
+			BalanceAvail:   rawResp.Available,
+			BalanceNet:     rawResp.Total + rawResp.UnrealisedPnl,
+			ProfitReal:     0,
+			ProfitUnreal:   rawResp.UnrealisedPnl,
+		}
+		return &swapAccount, resp, nil
 	}
 }
 
+type RemoteSwapOrder struct {
+}
+
+func (swap *Swap) getRemoteOrder() {
+
+}
+
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
+	uri := "/api/v4/futures/usdt/orders"
+
+	body := struct {
+		Contract string `json:"contract"`
+		Size     int64  `json:"size"`
+	}{}
+
+	resp, err := swap.DoSignRequest(
+		http.MethodPost,
+		uri,
+		"",
+		"",
+		nil,
+	)
 
 	panic("implement me")
 }

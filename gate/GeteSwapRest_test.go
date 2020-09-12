@@ -1,7 +1,6 @@
 package gate
 
 import (
-	//"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,9 +21,9 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        "",
-		ApiSecretKey:  "",
-		Location: time.Now().Location(),
+		ApiKey:       "",
+		ApiSecretKey: "",
+		Location:     time.Now().Location(),
 	}
 
 	gateCli := New(config)
