@@ -33,6 +33,118 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1DAY:  "1d",
 }
 
+var GATE_PLACE_TYPE_CONVERTER = map[PlaceType]string{
+	NORMAL:     "gtc",
+	IOC:        "ioc",
+	ONLY_MAKER: "poc",
+}
+
+var GATE_PLACE_TYPE_REVERTER = map[string]PlaceType{
+	"gtc": NORMAL,
+	"ioc": IOC,
+	"poc": ONLY_MAKER,
+}
+
+type SwapOrderGate struct {
+	Id           int64   `json:"id,omitempty"`
+	User         int64   `json:"user,omitempty"`
+	Contract     string  `json:"contract"`
+	CreateTime   int64   `json:"create_time,omitempty"`
+	Size         int64   `json:"size"`
+	Left         int64   `json:"left,omitempty"`
+	Price        float64 `json:"price,string"`
+	FillPrice    float64 `json:"fill_price,string"`
+	Status       string  `json:"status,omitempty"`
+	Close        bool    `json:"close"`
+	ReduceOnly   bool    `json:"reduce_only"`
+	IsReduceOnly bool    `json:"is_reduce_only,omitempty"`
+	Tif          string  `json:"tif"`
+	Text         string  `json:"text"`
+	FinishTime   int64   `json:"finish_time"`
+	FinishAt     string  `json:"finish_at"`
+}
+
+func (sog *SwapOrderGate) Merge(order *SwapOrder) {
+	placeType, exist := GATE_PLACE_TYPE_CONVERTER[order.PlaceType]
+	if !exist {
+		panic("not support the place type in gate. ")
+	}
+
+	sog.Contract = order.Pair.ToSymbol("_", true)
+	sog.Size = int64(order.Price*order.Amount) / 1
+	sog.Price = order.Price
+	sog.Tif = placeType
+	if order.Type == LIQUIDATE_LONG || order.Type == LIQUIDATE_SHORT {
+		sog.ReduceOnly = true
+	}
+	if order.Type == LIQUIDATE_LONG || order.Type == OPEN_SHORT {
+		sog.Size = -sog.Size
+	}
+}
+
+func (sog *SwapOrderGate) New(loc *time.Location) *SwapOrder {
+	placeTimestamp := sog.CreateTime * 1000
+	placeDatetime := time.Unix(sog.CreateTime, 0).In(loc).Format(GO_BIRTHDAY)
+
+	finishTimestamp := sog.FinishTime * 1000
+	finishDatetime := time.Unix(sog.FinishTime, 0).In(loc).Format(GO_BIRTHDAY)
+
+	status := ORDER_UNFINISH
+	if sog.Status == "finished" {
+		if sog.Left == 0 {
+			status = ORDER_FINISH
+		} else {
+			status = ORDER_CANCEL
+		}
+	}
+
+	orderType := OPEN_LONG
+	positiveSize, positiveLeft := sog.Size, sog.Left
+	if sog.Size < 0 {
+		positiveSize = -sog.Size
+	}
+	if sog.Left < 0 {
+		positiveLeft = -sog.Left
+	}
+
+	if sog.IsReduceOnly && sog.Size > 0 {
+		orderType = LIQUIDATE_SHORT
+	} else if sog.IsReduceOnly && sog.Size < 0 {
+		orderType = LIQUIDATE_LONG
+	} else if !sog.IsReduceOnly && sog.Size > 0 {
+		orderType = OPEN_LONG
+	} else if !sog.IsReduceOnly && sog.Size < 0 {
+		orderType = OPEN_SHORT
+	}
+
+	sOrder := SwapOrder{
+		Cid:     sog.Text,
+		OrderId: fmt.Sprintf("%d", sog.Id),
+
+		Amount:     float64(positiveSize),
+		DealAmount: float64(positiveSize - positiveLeft),
+		Price:      sog.Price,
+		AvgPrice:   sog.FillPrice,
+
+		PlaceTimestamp: placeTimestamp,
+		PlaceDatetime:  placeDatetime,
+
+		DealTimestamp: finishTimestamp,
+		DealDatetime:  finishDatetime,
+		Status:        status,
+		PlaceType:     GATE_PLACE_TYPE_REVERTER[sog.Tif],
+
+		Type:       orderType,
+		MarginType: "",
+		LeverRate:  0,
+		Fee:        0,
+		Pair:       NewPair(sog.Contract, "_"),
+		Exchange:   GATE,
+	}
+
+	return &sOrder
+}
+
 type Gate struct {
 	config *APIConfig
 	Spot   *Spot
@@ -126,7 +238,7 @@ func (gate *Gate) DoSignRequest(
 	)
 
 	if err != nil {
-		return nil, err
+		return resp, err
 	} else {
 		nowTimestamp := time.Now().Unix() * 1000
 		if nowTimestamp > gate.config.LastTimestamp {

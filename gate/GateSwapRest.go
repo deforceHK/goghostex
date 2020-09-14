@@ -1,6 +1,7 @@
 package gate
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -323,46 +324,189 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 	}
 }
 
-type RemoteSwapOrder struct {
-}
-
-func (swap *Swap) getRemoteOrder() {
-
-}
-
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
-	uri := "/api/v4/futures/usdt/orders"
+	uri := "/api/v4/futures/%s/orders"
+	symbol := order.Pair.ToSymbol("_", true)
+	settle := strings.ToLower(order.Pair.Basis.Symbol)
+	if strings.Index(symbol, "_USDT") > 0 {
+		settle = strings.ToLower(order.Pair.Counter.Symbol)
+	}
 
-	body := struct {
-		Contract string `json:"contract"`
-		Size     int64  `json:"size"`
+	sog := &SwapOrderGate{}
+	sog.Merge(order)
+	reqBody, err := json.Marshal(sog)
+	if err != nil {
+		return nil, err
+	}
+	response := struct {
+		CreateTime int64 `json:"create_time"`
+		Id         int64 `json:"id"`
 	}{}
 
 	resp, err := swap.DoSignRequest(
 		http.MethodPost,
-		uri,
+		fmt.Sprintf(uri, settle),
 		"",
-		"",
-		nil,
+		string(reqBody),
+		&response,
 	)
-
-	panic("implement me")
+	placeDate := time.Unix(response.CreateTime, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+	order.OrderId = fmt.Sprintf("%d", response.Id)
+	order.PlaceTimestamp = response.CreateTime * 1000
+	order.PlaceDatetime = placeDate
+	return resp, nil
 }
 
 func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
-	panic("implement me")
+	uri := "/api/v4/futures/%s/orders/%s"
+	symbol := order.Pair.ToSymbol("_", true)
+	settle := strings.ToLower(order.Pair.Basis.Symbol)
+	if strings.Index(symbol, "_USDT") > 0 {
+		settle = strings.ToLower(order.Pair.Counter.Symbol)
+	}
+
+	response := struct {
+		FinishTime int64   `json:"finish_time"`
+		FinishAs   string  `json:"finish_as"`
+		Status     string  `json:"status"`
+		FillPrice  float64 `json:"fill_price,string"`
+		Left       int64   `json:"left"`
+		Size       int64   `json:"size"`
+	}{}
+
+	resp, err := swap.DoSignRequest(
+		http.MethodDelete,
+		fmt.Sprintf(uri, settle, order.OrderId),
+		"",
+		"",
+		&response,
+	)
+	if err != nil {
+		return resp, err
+	}
+
+	order.DealAmount = float64(response.Size - response.Left)
+	if response.Status == "finished" {
+		order.Status = ORDER_CANCEL
+		order.AvgPrice = response.FillPrice
+		placeDate := time.Unix(response.FinishTime, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.FinishTime * 1000
+		order.DealDatetime = placeDate
+	}
+
+	return resp, nil
 }
 
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
-	panic("implement me")
+	uri := "/api/v4/futures/%s/orders/%s"
+	symbol := order.Pair.ToSymbol("_", true)
+	settle := strings.ToLower(order.Pair.Basis.Symbol)
+	if strings.Index(symbol, "_USDT") > 0 {
+		settle = strings.ToLower(order.Pair.Counter.Symbol)
+	}
+
+	response := struct {
+		Id        int64   `json:"id"`
+		Left      int64   `json:"left"`
+		Size      int64   `json:"size"`
+		Price     float64 `json:"price,string"`
+		FillPrice float64 `json:"fill_price,string"`
+
+		FinishTime int64  `json:"finish_time"`
+		FinishAs   string `json:"finish_as"`
+		Status     string `json:"status"`
+	}{}
+	resp, err := swap.DoSignRequest(
+		http.MethodGet,
+		fmt.Sprintf(uri, settle, order.OrderId),
+		"",
+		"",
+		&response,
+	)
+	if err != nil {
+		return resp, err
+	}
+
+	order.DealAmount = float64(response.Size - response.Left)
+	if response.Status == "finished" {
+		order.Status = ORDER_FINISH
+		order.AvgPrice = response.FillPrice
+		placeDate := time.Unix(response.FinishTime, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.FinishTime * 1000
+		order.DealDatetime = placeDate
+	} else if response.Status == "open" {
+		order.Status = ORDER_UNFINISH
+		if response.Left < response.Size {
+			order.Status = ORDER_PART_FINISH
+			order.AvgPrice = response.FillPrice
+		}
+	}
+	return resp, nil
 }
 
 func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
-	panic("implement me")
+
+	uri := "/api/v4/futures/%s/orders"
+	symbol := pair.ToSymbol("_", true)
+	settle := strings.ToLower(pair.Basis.Symbol)
+	if strings.Index(symbol, "_USDT") > 0 {
+		settle = strings.ToLower(pair.Counter.Symbol)
+	}
+
+	params := url.Values{}
+	params.Add("contract", pair.ToSymbol("_", true))
+	params.Add("status", "finished")
+
+	response := make([]*SwapOrderGate, 0)
+	resp, err := swap.DoSignRequest(
+		http.MethodGet,
+		fmt.Sprintf(uri, settle),
+		params.Encode(),
+		"",
+		&response,
+	)
+	orders := make([]*SwapOrder, 0)
+	if err != nil {
+		return orders, resp, err
+	}
+
+	for _, o := range response {
+		so := o.New(swap.config.Location)
+		orders = append(orders, so)
+	}
+	return orders, resp, nil
 }
 
 func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {
-	panic("implement me")
+	uri := "/api/v4/futures/%s/orders"
+	symbol := pair.ToSymbol("_", true)
+	settle := strings.ToLower(pair.Basis.Symbol)
+	if strings.Index(symbol, "_USDT") > 0 {
+		settle = strings.ToLower(pair.Counter.Symbol)
+	}
+
+	params := url.Values{}
+	params.Add("contract", pair.ToSymbol("_", true))
+	params.Add("status", "open")
+
+	response := make([]*SwapOrderGate, 0)
+	resp, err := swap.DoSignRequest(
+		http.MethodGet,
+		fmt.Sprintf(uri, settle),
+		params.Encode(),
+		"",
+		&response,
+	)
+	orders := make([]*SwapOrder, 0)
+	if err != nil {
+		return orders, resp, err
+	}
+
+	for _, o := range response {
+		so := o.New(swap.config.Location)
+		orders = append(orders, so)
+	}
+	return orders, resp, nil
 }
 
 func (swap *Swap) GetPosition(pair Pair, openType FutureType) (*SwapPosition, []byte, error) {

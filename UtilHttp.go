@@ -48,7 +48,13 @@ func NewHttpRequest(
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	successCode := map[int]string{
+		200: "成功",
+		201: "创建",
+		202: "已接受",
+	}
+
+	if _, exist := successCode[resp.StatusCode]; !exist {
 		return nil, errors.New(fmt.Sprintf(
 			"HttpStatusCode: %d, HttpMethod: %s, Response: %s, Request: %s, Url: %s",
 			resp.StatusCode,

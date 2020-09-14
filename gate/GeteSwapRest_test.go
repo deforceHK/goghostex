@@ -1,6 +1,7 @@
 package gate
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,8 +22,8 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:       "",
-		ApiSecretKey: "",
+		ApiKey:       "a13de43cd6e67172a7da0c92dd00e558",
+		ApiSecretKey: "8da0cbbd04b4f9987cb54e732381591392604350042f664a18c57cffbcf5d34f",
 		Location:     time.Now().Location(),
 	}
 
@@ -101,4 +102,68 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 		fmt.Print(string(resp))
 		//fmt.Print(string(resp))
 	}
+}
+
+func TestSwap_TradeAPI(t *testing.T) {
+	config := &APIConfig{
+		Endpoint: "",
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse("socks5://127.0.0.1:1090")
+				},
+			},
+		},
+		ApiKey:       "",
+		ApiSecretKey: "",
+		Location:     time.Now().Location(),
+	}
+
+	gateCli := New(config)
+	pair := BTC_USDT
+	rule, _, err := gateCli.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	order := &SwapOrder{
+		Price:     rule.Last * 1.1,
+		Amount:    0.001,
+		PlaceType: NORMAL,
+		Type:      OPEN_LONG,
+		Pair:      pair,
+		Exchange:  GATE,
+	}
+
+	if resp, err := gateCli.Swap.PlaceOrder(order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		fmt.Println("~~~~~~~~~~~~")
+		fmt.Println(string(resp))
+		fmt.Println(order)
+	}
+
+	if resp, err := gateCli.Swap.GetOrder(order); err != nil {
+		t.Error(err)
+		return
+	} else {
+		fmt.Println("~~~~~~~~~~~~")
+		fmt.Println(string(resp))
+		fmt.Println(order)
+
+		orderRaw, _ := json.Marshal(order)
+		fmt.Println(string(orderRaw))
+	}
+
+	//time.Sleep(5*time.Second)
+	//if resp, err := gateCli.Swap.GetOrder(order); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	fmt.Println("~~~~~~~~~~~~")
+	//	fmt.Println(string(resp))
+	//	fmt.Println(err)
+	//}
 }
