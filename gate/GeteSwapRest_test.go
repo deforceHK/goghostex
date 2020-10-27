@@ -22,8 +22,8 @@ func TestSwap_GetExchangeRule(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:       "a13de43cd6e67172a7da0c92dd00e558",
-		ApiSecretKey: "8da0cbbd04b4f9987cb54e732381591392604350042f664a18c57cffbcf5d34f",
+		ApiKey:       "",
+		ApiSecretKey: "",
 		Location:     time.Now().Location(),
 	}
 
