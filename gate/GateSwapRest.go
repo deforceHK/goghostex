@@ -526,5 +526,5 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 }
 
 func (swap *Swap) KeepAlive() {
-	_, _ = swap.GetFundingFee(Pair{BTC, USDT})
+	_, _ = swap.GetFundingFee(Pair{Basis: BTC, Counter: USDT})
 }

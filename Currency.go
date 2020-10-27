@@ -57,27 +57,22 @@ var (
 	DASH = Currency{"DASH", ""}
 	ADA  = Currency{"ADA", ""}
 
-	OKB = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation"}
-	HT  = Currency{"HT", "HuoBi Token"}
-	BNB = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance."}
+	UNI   = Currency{"UNI", ""}
+	SUSHI = Currency{"SUSHI", ""}
+	AAVE  = Currency{"AAVE", ""}
+	COMP  = Currency{"COMP", ""}
+	YFI   = Currency{"YFI", ""}
+	YFII  = Currency{"YFII", ""}
+
+	OKB = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation. "}
+	HT  = Currency{"HT", "HuoBi Token. "}
+	BNB = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance. "}
+
+	SHIT = Currency{"SHIT", "SHIT, There are some many shit coin in the market, we make the currency for dev."}
 )
 
-func (c Currency) AdaptBchToBcc() Currency {
-	if c.Symbol == "BCH" || c.Symbol == "bch" {
-		return BCC
-	}
-	return c
-}
-
-func (c Currency) AdaptBccToBch() Currency {
-	if c.Symbol == "BCC" || c.Symbol == "bcc" {
-		return BCH
-	}
-	return c
-}
-
 var currencyRelation = map[string]Currency{
-	//fiat currency
+	// fiat currency
 	"usd": USD,
 	"USD": USD,
 	"eur": EUR,
@@ -89,7 +84,7 @@ var currencyRelation = map[string]Currency{
 	"krw": KRW,
 	"KRW": KRW,
 
-	//stable coin
+	// stable coin
 	"usdt": USDT,
 	"USDT": USDT,
 	"usdc": USDC,
@@ -101,7 +96,7 @@ var currencyRelation = map[string]Currency{
 	"busd": BUSD,
 	"BUSD": BUSD,
 
-	//crypto currency
+	// crypto currency
 	"btc":  BTC,
 	"BTC":  BTC,
 	"xbt":  XBT,
@@ -121,13 +116,31 @@ var currencyRelation = map[string]Currency{
 	"link": LINK,
 	"LINK": LINK,
 
-	//exchange coin
+	// defi coin
+	"uni":   UNI,
+	"UNI":   UNI,
+	"sushi": SUSHI,
+	"SUSHI": SUSHI,
+	"aave":  AAVE,
+	"AAVE":  AAVE,
+	"comp":  COMP,
+	"COMP":  COMP,
+	"YFI":   YFI,
+	"yfi":   YFI,
+	"YFII":  YFII,
+	"yfii":  YFII,
+
+	// exchange coin
 	"okb": OKB,
 	"OKB": OKB,
 	"ht":  HT,
 	"HT":  HT,
 	"bnb": BNB,
 	"BNB": BNB,
+
+	// shit coin
+	"shit": SHIT,
+	"SHIT": SHIT,
 }
 
 func NewCurrency(symbol, desc string) Currency {
