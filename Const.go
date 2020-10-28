@@ -134,3 +134,10 @@ const (
 	CROSS    = "cross"
 	ISOLATED = "isolated"
 )
+
+const (
+	TRADE_TYPE_FUTURE = "future"
+	TRADE_TYPE_SPOT = "spot"
+	TRADE_TYPE_SWAP = "swap"
+	TRADE_TYPE_MARGIN = "margin"
+)
