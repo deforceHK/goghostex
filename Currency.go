@@ -25,6 +25,8 @@ var (
 	CNY = Currency{"CNY", ""}
 	KRW = Currency{"KRW", ""}
 	JPY = Currency{"JPY", ""}
+	SGD = Currency{"SGD", ""}
+	HKD = Currency{"HKD", ""}
 
 	USDT = Currency{"USDT", ""}
 	USDC = Currency{"USDC", "https://www.centre.io/"}
@@ -34,7 +36,6 @@ var (
 
 	BTC  = Currency{"BTC", "https://bitcoin.org/"}
 	XBT  = Currency{"XBT", ""}
-	BCC  = Currency{"BCC", ""}
 	BCH  = Currency{"BCH", ""}
 	LTC  = Currency{"LTC", ""}
 	ETH  = Currency{"ETH", ""}
@@ -47,15 +48,13 @@ var (
 	ZEC  = Currency{"ZEC", ""}
 	DCR  = Currency{"DCR", ""}
 	XRP  = Currency{"XRP", ""}
-	BTG  = Currency{"BTG", ""}
-	BCD  = Currency{"BCD", ""}
 	NEO  = Currency{"NEO", ""}
-	HSR  = Currency{"HSR", ""}
 	BSV  = Currency{"BSV", ""}
 	LINK = Currency{"LINK", ""}
 	XTZ  = Currency{"XTZ", ""}
 	DASH = Currency{"DASH", ""}
 	ADA  = Currency{"ADA", ""}
+	DOT  = Currency{"dot", ""}
 
 	UNI   = Currency{"UNI", ""}
 	SUSHI = Currency{"SUSHI", ""}
@@ -83,6 +82,10 @@ var currencyRelation = map[string]Currency{
 	"JPY": JPY,
 	"krw": KRW,
 	"KRW": KRW,
+	"hkd": HKD,
+	"HKD": HKD,
+	"sgd": SGD,
+	"SGD": SGD,
 
 	// stable coin
 	"usdt": USDT,
@@ -107,6 +110,8 @@ var currencyRelation = map[string]Currency{
 	"EOS":  EOS,
 	"bch":  BCH,
 	"BCH":  BCH,
+	"bsv":  BSV,
+	"BSV":  BSV,
 	"ltc":  LTC,
 	"LTC":  LTC,
 	"ans":  ANS,
@@ -115,6 +120,10 @@ var currencyRelation = map[string]Currency{
 	"NEO":  NEO,
 	"link": LINK,
 	"LINK": LINK,
+	"dot":  DOT,
+	"DOT":  DOT,
+	"ada":  ADA,
+	"ADA":  ADA,
 
 	// defi coin
 	"uni":   UNI,
