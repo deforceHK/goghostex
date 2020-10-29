@@ -54,7 +54,8 @@ var (
 	XTZ  = Currency{"XTZ", ""}
 	DASH = Currency{"DASH", ""}
 	ADA  = Currency{"ADA", ""}
-	DOT  = Currency{"dot", ""}
+	DOT  = Currency{"DOT", ""}
+	FIL  = Currency{"FIL", ""}
 
 	UNI   = Currency{"UNI", ""}
 	SUSHI = Currency{"SUSHI", ""}
@@ -124,6 +125,8 @@ var currencyRelation = map[string]Currency{
 	"DOT":  DOT,
 	"ada":  ADA,
 	"ADA":  ADA,
+	"fil":  FIL,
+	"FIL":  FIL,
 
 	// defi coin
 	"uni":   UNI,
