@@ -81,7 +81,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Error(err)
 		return
 	} else {
-		stdTrades,_ := json.Marshal(trades)
+		stdTrades, _ := json.Marshal(trades)
 		t.Log(string(stdTrades))
 	}
 

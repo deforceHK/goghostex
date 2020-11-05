@@ -165,6 +165,9 @@ func (future *Future) GetDepth(pair Pair, contractType string, size int) (*Futur
 }
 
 func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64, error) {
+	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
+		contractType = QUARTER_CONTRACT
+	}
 
 	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
@@ -204,6 +207,10 @@ func (future *Future) GetKlineRecords(
 	pair Pair,
 	period, size, since int,
 ) ([]*FutureKline, []byte, error) {
+	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
+		contractType = QUARTER_CONTRACT
+	}
+
 	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
@@ -261,6 +268,10 @@ func (future *Future) GetKlineRecords(
 }
 
 func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byte, error) {
+	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
+		contractType = QUARTER_CONTRACT
+	}
+
 	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
