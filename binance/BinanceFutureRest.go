@@ -552,7 +552,6 @@ func (future *Future) GetPosition(pair Pair, contractType string) ([]*FuturePosi
 		return nil, nil, err
 	}
 
-	fmt.Println(string(resp))
 	for _, item := range response {
 		if item.Symbol == contract.ContractName {
 			//todo to be define
