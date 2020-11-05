@@ -16,6 +16,12 @@ const (
 	FUTURE_PROXY_URL     = "socks5://127.0.0.1:1090"
 )
 
+/**
+* unit test cmd
+* go test -v ./binance/... -count=1 -run=TestFuture_MarketAPI
+*
+**/
+
 func TestFuture_MarketAPI(t *testing.T) {
 
 	config := &APIConfig{
@@ -86,6 +92,14 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 }
+
+/**
+*
+* unit test cmd
+* make sure you have enough bnb in account, then go to the shell.
+* go test -v ./binance/... -count=1 -run=TestFuture_TradeAPI
+*
+**/
 
 func TestFuture_TradeAPI(t *testing.T) {
 
