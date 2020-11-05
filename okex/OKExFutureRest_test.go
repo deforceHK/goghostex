@@ -168,12 +168,16 @@ func TestFuture_MarketAPI(t *testing.T) {
 		}
 	}
 
-	Contracts := ok.Future.GetFutureContract(
+	Contracts, err := ok.Future.GetContract(
 		Pair{Basis: BTC, Counter: USD},
 		NEXT_QUARTER_CONTRACT,
 	)
-	t.Log(Contracts)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
+	t.Log(Contracts)
 	if marketPrice, body, err := ok.Future.GetFutureMarkPrice(
 		Pair{Basis: BTC, Counter: USD},
 		THIS_WEEK_CONTRACT,

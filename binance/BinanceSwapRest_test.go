@@ -174,7 +174,7 @@ func TestSwap_Account(t *testing.T) {
 
 // must set both
 // place the order ---> get the order info ---> cancel the order -> get the order info
-func TestFuture_TradeAPI(t *testing.T) {
+func TestSwap_TradeAPI(t *testing.T) {
 
 	config := &APIConfig{
 		Endpoint: ENDPOINT,

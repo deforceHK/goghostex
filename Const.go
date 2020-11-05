@@ -7,7 +7,7 @@ const (
 type TradeSide int64
 
 const (
-	BUY = 1 + iota
+	BUY TradeSide = 1 + iota
 	SELL
 	BUY_MARKET
 	SELL_MARKET
@@ -93,8 +93,7 @@ const (
 	OKEX     = "okex"
 	BITFINEX = "bitfinex"
 	BINANCE  = "binance"
-	BITMEX   = "bitmex.com"
-	HBDM     = "hbdm.com"
+	BITMEX   = "bitmex"
 	COINBASE = "coinbase"
 	BITSTAMP = "bitstamp"
 	GATE     = "gate"
@@ -140,4 +139,9 @@ const (
 	TRADE_TYPE_SPOT   = "spot"
 	TRADE_TYPE_SWAP   = "swap"
 	TRADE_TYPE_MARGIN = "margin"
+)
+
+const (
+	SETTLE_MODE_BASIS   int64 = 1
+	SETTLE_MODE_COUNTER int64 = 2
 )

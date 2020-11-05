@@ -20,7 +20,7 @@ const (
 
 	SWAP_TICKER_URI = "/fapi/v1/ticker/24hr"
 	SWAP_DEPTH_URI  = "/fapi/v1/depth?symbol=%s&limit=%d"
-	SWAP_KLINE_URI  = "/fapi/v1/klines"
+	SWAP_KLINE_URI  = "/fapi/v1/klines?"
 
 	SWAP_INCOME_URI       = "/fapi/v1/income?"
 	SWAP_ACCOUNT_URI      = "/fapi/v1/account?"
@@ -36,6 +36,7 @@ type Swap struct {
 	swapContracts SwapContracts
 	uTime         time.Time
 	bnbAvgPrice   float64 // 抵扣交易费用的 bnb 平均持仓成本
+	LastTimestamp int64
 }
 
 type SwapContract struct {
@@ -205,12 +206,12 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	response := struct {
-		MarkPrice float64 `json:"markPrice,string"`
+		Price float64 `json:"price,string"`
 	}{}
 
 	_, err := swap.DoRequest(
-		"GET",
-		fmt.Sprintf("/fapi/v1/premiumIndex?symbol=%s", pair.ToSymbol("", true)),
+		http.MethodGet,
+		fmt.Sprintf("/fapi/v1/ticker/price?symbol=%s", pair.ToSymbol("", true)),
 		"",
 		&response,
 	)
@@ -222,10 +223,10 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	contract := swap.getContract(pair)
 	floatTemplate := "%." + fmt.Sprintf("%d", contract.PricePrecision) + "f"
 
-	highest := response.MarkPrice * contract.PriceMaxScale
+	highest := response.Price * contract.PriceMaxScale
 	highest, _ = strconv.ParseFloat(fmt.Sprintf(floatTemplate, highest), 64)
 
-	lowest := response.MarkPrice * contract.PriceMinScale
+	lowest := response.Price * contract.PriceMinScale
 	lowest, _ = strconv.ParseFloat(fmt.Sprintf(floatTemplate, lowest), 64)
 
 	return highest, lowest, nil
@@ -252,7 +253,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 	params.Set("endTime", endTimeFmt)
 	params.Set("limit", fmt.Sprintf("%d", size))
 
-	uri := SWAP_KLINE_URI + "?" + params.Encode()
+	uri := SWAP_KLINE_URI + params.Encode()
 	klines := make([][]interface{}, 0)
 	resp, err := swap.DoRequest(http.MethodGet, uri, "", &klines)
 	if err != nil {
@@ -392,13 +393,13 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	side, positionSide, placeType := "", "", ""
 	exist := false
 	if side, exist = sideRelation[order.Type]; !exist {
-		panic("future type not found. ")
+		return nil, errors.New("swap type not found. ")
 	}
 	if positionSide, exist = positionSideRelation[order.Type]; !exist {
-		panic("future type not found. ")
+		return nil, errors.New("swap type not found. ")
 	}
 	if placeType, exist = placeTypeRelation[order.PlaceType]; !exist {
-		panic("place type not found. ")
+		return nil, errors.New("place type not found. ")
 	}
 
 	param := url.Values{}
@@ -1026,8 +1027,8 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 		return nil, err
 	} else {
 		nowTimestamp := time.Now().Unix() * 1000
-		if swap.config.LastTimestamp < nowTimestamp {
-			swap.config.LastTimestamp = nowTimestamp
+		if swap.LastTimestamp < nowTimestamp {
+			swap.LastTimestamp = nowTimestamp
 		}
 		return resp, json.Unmarshal(resp, &response)
 	}
@@ -1036,7 +1037,7 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 func (swap *Swap) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	// last timestamp in 5s, no need to keep alive
-	if (nowTimestamp - swap.config.LastTimestamp) < 5*1000 {
+	if (nowTimestamp - swap.LastTimestamp) < 5*1000 {
 		return
 	}
 	_, _ = swap.GetFundingFee(Pair{Basis: BTC, Counter: USDT})
@@ -1136,11 +1137,11 @@ func (swap *Swap) getFutureType(side, sidePosition string) FutureType {
 // standard the price
 func (swap *Swap) normalPrice(price float64, pair Pair) string {
 	contract := swap.getContract(pair)
-	return FloatToString(price, int(contract.PricePrecision))
+	return FloatToString(price, contract.PricePrecision)
 }
 
 // standard the amount
 func (swap *Swap) normalAmount(amount float64, pair Pair) string {
 	contract := swap.getContract(pair)
-	return FloatToString(amount, int(contract.AmountPrecision))
+	return FloatToString(amount, contract.AmountPrecision)
 }
