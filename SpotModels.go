@@ -57,7 +57,7 @@ type Trade struct {
 	Amount    float64   `json:"amount,string"`
 	Price     float64   `json:"price,string"`
 	Timestamp int64     `json:"timestamp"`
-	Pair      Pair      `json:"omitempty"`
+	Pair      Pair      `json:"-"`
 }
 
 type DepthRecord struct {

@@ -3,6 +3,7 @@ package binance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -34,6 +35,13 @@ var _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER = map[string]TradeStatus{
 	"EXPIRED":          ORDER_FAIL,
 }
 
+var _INTERNAL_PLACE_TYPE_REVERSE_CONVERTER = map[string]PlaceType{
+	"GTC": NORMAL,
+	"GTX": ONLY_MAKER,
+	"FOK": FOK,
+	"IOC": IOC,
+}
+
 var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1MIN:   "1m",
 	KLINE_PERIOD_3MIN:   "3m",
@@ -55,13 +63,17 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 func New(config *APIConfig) *Binance {
 	binance := &Binance{config: config}
 	binance.Spot = &Spot{Binance: binance}
+	binance.Margin = &Margin{
+		Binance: binance,
+	}
 	binance.Swap = &Swap{
 		Binance:       binance,
 		Locker:        new(sync.Mutex),
 		swapContracts: SwapContracts{},
 	}
-	binance.Margin = &Margin{
+	binance.Future = &Future{
 		Binance: binance,
+		Locker:  new(sync.Mutex),
 	}
 	return binance
 }
@@ -69,8 +81,9 @@ func New(config *APIConfig) *Binance {
 type Binance struct {
 	config *APIConfig
 	Spot   *Spot
-	Swap   *Swap
 	Margin *Margin
+	Swap   *Swap
+	Future *Future
 }
 
 func (this *Binance) GetExchangeName() string {
@@ -112,7 +125,7 @@ func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interfa
 func (this *Binance) ExchangeInfo() ([]byte, error) {
 
 	body, err := this.DoRequest(
-		"GET",
+		http.MethodGet,
 		API_V3+"exchangeInfo",
 		"",
 		nil,
