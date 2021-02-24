@@ -66,7 +66,7 @@ type okexFutureContract struct {
 	BaseCurrency        string  `json:"base_currency"`          // 交易货币，如：BTC-USD中的BTC ,BTC-USDT中的BTC
 	QuoteCurrency       string  `json:"quote_currency"`         // 计价货币币种，如：BTC-USD中的USD ,BTC-USDT中的USDT
 	SettlementCurrency  string  `json:"settlement_currency"`    // 盈亏结算和保证金币种，如：BTC
-	TickSize            float64 `json:"tick_size"`              //下单价格精度
+	TickSize            float64 `json:"tick_size,string"`              //下单价格精度
 	TradeIncrement      float64 `json:"trade_increment,string"` //数量精度
 	ContractVal         int64   `json:"contract_val,string"`    //the contract vol in usd
 	ContractValCurrency string  `json:"contract_val_currency"`  //合约面值计价币种 如 usd，btc，ltc，etc xrp eos
