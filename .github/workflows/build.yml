@@ -79,4 +79,3 @@ jobs:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: strengthening/docker
           event-type: gobuild
-#          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
