@@ -74,7 +74,7 @@ func getHttpClient(proxyUrl string) *http.Client {
 				return url.Parse(proxyUrl)
 			},
 		},
-		Timeout: 15 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 }
 
