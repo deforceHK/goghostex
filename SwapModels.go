@@ -52,7 +52,7 @@ func (depth *SwapDepth) Verify() error {
 }
 
 type SwapKline struct {
-	Pair      Pair    `json:"symbol"`
+	Pair      Pair    `json:"-"`
 	Exchange  string  `json:"exchange"`
 	Timestamp int64   `json:"timestamp"`
 	Date      string  `json:"date"`

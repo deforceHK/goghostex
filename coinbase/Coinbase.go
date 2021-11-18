@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	ACCEPT       = "Accept"
-	CONTENT_TYPE = "Content-Type"
+	ACCEPT        = "Accept"
+	CONTENT_TYPE  = "Content-Type"
 	CACHE_CONTROL = "Cache-control"
 
 	APPLICATION_JSON      = "application/json"
@@ -55,8 +55,8 @@ func (coinbase *Coinbase) DoRequest(
 		url,
 		reqBody,
 		map[string]string{
-			CONTENT_TYPE: APPLICATION_JSON_UTF8,
-			ACCEPT:       APPLICATION_JSON,
+			CONTENT_TYPE:  APPLICATION_JSON_UTF8,
+			ACCEPT:        APPLICATION_JSON,
 			CACHE_CONTROL: "no-store", // test to not use cached for coinbase
 		},
 	)
