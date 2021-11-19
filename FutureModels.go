@@ -178,9 +178,9 @@ type FutureContract struct {
 	DueTimestamp  int64  `json:"due_timestamp"`
 	DueDate       string `json:"due_date"`
 
-	UnitAmount      int64 `json:"unit_amount"`
-	PricePrecision  int64 `json:"price_precision"`
-	AmountPrecision int64 `json:"amount_precision"`
+	UnitAmount      float64 `json:"unit_amount"`
+	PricePrecision  int64   `json:"price_precision"`
+	AmountPrecision int64   `json:"amount_precision"`
 
 	MaxScalePriceLimit float64 `json:"max_scale_price_limit"`
 	MinScalePriceLimit float64 `json:"min_scale_price_limit"`

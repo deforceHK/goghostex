@@ -153,6 +153,29 @@ func (ok *OKEx) DoRequest(
 	}
 }
 
+func (ok *OKEx) DoRequestV5Market(
+	httpMethod,
+	uri,
+	reqBody string,
+	response interface{},
+) ([]byte, error) {
+	url := ok.config.Endpoint + uri
+	//sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
+	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
+		CONTENT_TYPE: APPLICATION_JSON_UTF8,
+		ACCEPT:       APPLICATION_JSON,
+	})
+	if err != nil {
+		return nil, err
+	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > ok.config.LastTimestamp {
+			ok.config.LastTimestamp = nowTimestamp
+		}
+		return resp, json.Unmarshal(resp, &response)
+	}
+}
+
 func (ok *OKEx) adaptOrderState(state int) TradeStatus {
 	switch state {
 	case -2:
@@ -323,24 +346,4 @@ func (ok *OKEx) DoRequestV5(
 		return resp, json.Unmarshal(resp, &response)
 	}
 
-}
-
-func (ok *OKEx) DoRequestMarketV5(
-	httpMethod,
-	uri,
-	reqBody string,
-	response interface{},
-) ([]byte, error) {
-
-	url := "https://www.okex.com" + uri
-	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, nil)
-	if err != nil {
-		return nil, err
-	} else {
-		nowTimestamp := time.Now().Unix() * 1000
-		if nowTimestamp > ok.config.LastTimestamp {
-			ok.config.LastTimestamp = nowTimestamp
-		}
-		return resp, json.Unmarshal(resp, &response)
-	}
 }
