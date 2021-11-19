@@ -865,7 +865,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
 			DueDate:       dueTime.Format(GO_BIRTHDAY),
 
-			UnitAmount:      item.ContractSize,
+			UnitAmount:      ToFloat64(item.ContractSize),
 			PricePrecision:  item.PricePrecision,
 			AmountPrecision: item.QuantityPrecision,
 
