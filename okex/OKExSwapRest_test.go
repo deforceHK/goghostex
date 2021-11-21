@@ -87,11 +87,11 @@ func TestSwap_TradeAPI(t *testing.T) {
 	config := &APIConfig{
 		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
-			//Transport: &http.Transport{
-			//	Proxy: func(req *http.Request) (*url.URL, error) {
-			//		return url.Parse(PROXY_URL)
-			//	},
-			//},
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
@@ -150,6 +150,7 @@ func TestSwap_TradeAPI(t *testing.T) {
 	}
 
 	if resp, err := ok.Swap.GetOrder(&orderShort); err != nil {
+		t.Log(string(resp))
 		t.Error(err)
 		return
 	} else {

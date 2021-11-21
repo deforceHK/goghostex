@@ -315,26 +315,36 @@ func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 	panic("implement me")
 }
 
+var _INERNAL_V5_FUTURE_ORDER_STATUE_CONVERTER = map[string]TradeStatus{
+	"canceled":         ORDER_CANCEL,
+	"live":             ORDER_UNFINISH,
+	"partially_filled": ORDER_PART_FINISH,
+	"filled":           ORDER_FINISH,
+}
+
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 
 	var params = url.Values{}
-	params.Set("instId", order.Pair.ToSymbol("-", true) + "-SWAP")
+	params.Set("instId", order.Pair.ToSymbol("-", true)+"-SWAP")
 	params.Set("ordId", order.OrderId)
-
 
 	var response = struct {
 		Code string `json:"code"`
 		Msg  string `json:"msg"`
 		Data []struct {
-			ClOrdId string `json:"clOrdId"`
-			OrdId   string `json:"ordId"`
-			Px   float64 `json:"px,string"`
-			Sz    float64 `json:"sz,string"`
-			AvgPx float64 `json:"avgPx"`
-			
+			ClOrdId string  `json:"clOrdId"`
+			OrdId   string  `json:"ordId"`
+			Px      float64 `json:"px,string"`
+			Sz      float64 `json:"sz,string"`
+			AvgPx     string `json:"avgPx"`
+			AccFillSz float64 `json:"accFillSz,string"`
+			State string  `json:"state"`
+			Lever float64 `json:"lever,string"`
+			UTime int64   `json:"uTime,string"`
+			CTime int64   `json:"cTime,string"`
 		} `json:"data"`
 	}{}
-	var uri = "/api/v5/trade/order"
+	var uri = "/api/v5/trade/order?"
 
 	resp, err := swap.DoRequest(
 		http.MethodGet,
@@ -346,14 +356,33 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	if err != nil {
 		return resp, err
 	}
-	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
-		return resp, errors.New(response.Data[0].SMsg)
-	}
 	if response.Code != "0" {
 		return resp, errors.New(response.Msg)
 	}
+	if len(response.Data) == 0 || response.Data[0].State == "live" {
+		return resp, nil
+	}
 
-	return nil,err
+	if status, exist := _INERNAL_V5_FUTURE_ORDER_STATUE_CONVERTER[response.Data[0].State]; exist {
+		order.Status = status
+	}
+	order.Price = response.Data[0].Px
+	order.Amount = response.Data[0].Sz
+
+	order.AvgPrice = ToFloat64(response.Data[0].AvgPx)
+	order.DealAmount = response.Data[0].AccFillSz
+	order.LeverRate = ToInt64(response.Data[0].Lever)
+
+	order.DealTimestamp = response.Data[0].UTime
+	order.DealDatetime = time.Unix(
+		order.DealTimestamp/1000, 0,
+	).In(swap.config.Location).Format(GO_BIRTHDAY)
+
+	order.PlaceTimestamp = response.Data[0].CTime
+	order.PlaceDatetime = time.Unix(
+		order.PlaceTimestamp/1000, 0,
+	).In(swap.config.Location).Format(GO_BIRTHDAY)
+	return nil, err
 
 }
 
