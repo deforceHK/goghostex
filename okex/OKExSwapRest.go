@@ -168,22 +168,6 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 
 }
 
-var _INERNAL_V5_CANDLE_PERIOD_CONVERTER = map[int]string{
-	KLINE_PERIOD_1MIN:  "1m",
-	KLINE_PERIOD_3MIN:  "3m",
-	KLINE_PERIOD_5MIN:  "5m",
-	KLINE_PERIOD_15MIN: "15m",
-	KLINE_PERIOD_30MIN: "30m",
-	KLINE_PERIOD_60MIN: "1H",
-	KLINE_PERIOD_1H:    "1H",
-	KLINE_PERIOD_2H:    "2H",
-	KLINE_PERIOD_4H:    "4H",
-	KLINE_PERIOD_6H:    "6H",
-	KLINE_PERIOD_12H:   "12H",
-	KLINE_PERIOD_1DAY:  "1D",
-	KLINE_PERIOD_1WEEK: "1W",
-}
-
 func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error) {
 
 	if size > 100 {
@@ -254,8 +238,73 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 	panic("implement me")
 }
 
+var _INERNAL_V5_FUTURE_TYPE_CONVERTER = map[FutureType][]string{
+	OPEN_LONG:       {"buy", "long"},
+	OPEN_SHORT:      {"sell", "short"},
+	LIQUIDATE_LONG:  {"sell", "long"},
+	LIQUIDATE_SHORT: {"buy", "short"},
+}
+
+var _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER = map[PlaceType]string{
+	NORMAL:     "limit",
+	ONLY_MAKER: "post_only",
+	FOK:        "fok",
+	IOC:        "ioc",
+}
+
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
-	panic("implement me")
+	var request = struct {
+		InstId  string `json:"instId"`
+		TdMode  string `json:"tdMode"`
+		Side    string `json:"side"`
+		PosSide string `json:"posSide,omitempty"`
+		OrdType string `json:"ordType"`
+		Sz      string `json:"sz"`
+		Px      string `json:"px"`
+		ClOrdId string `json:"clOrdId,omitempty"`
+	}{}
+
+	request.InstId = order.Pair.ToSymbol("-", true) + "-SWAP"
+	request.TdMode = "cross" // todo 目前写死全仓，后续调整成可逐仓
+	sideInfo, _ := _INERNAL_V5_FUTURE_TYPE_CONVERTER[order.Type]
+	request.Side = sideInfo[0]
+	request.PosSide = sideInfo[1]
+	placeInfo, _ := _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER[order.PlaceType]
+	request.OrdType = placeInfo
+	request.Sz = strconv.FormatFloat(order.Amount, 'f', -1, 64)
+	request.Px = strconv.FormatFloat(order.Price, 'f', -1, 64)
+	request.ClOrdId = order.Cid
+
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId string `json:"clOrdId"`
+			OrdId   string `json:"ordId"`
+			SCode   string `json:"sCode"`
+			SMsg    string `json:"sMsg"`
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/trade/order"
+	reqBody, _, _ := swap.BuildRequestBody(request)
+	resp, err := swap.DoRequest(
+		http.MethodPost,
+		uri,
+		reqBody,
+		&response,
+	)
+
+	if err != nil {
+		return resp, err
+	}
+	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
+		return resp, errors.New(response.Data[0].SMsg)
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
+	}
+	order.OrderId = response.Data[0].OrdId
+	return resp, nil
 }
 
 func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
@@ -267,7 +316,45 @@ func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 }
 
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
-	panic("implement me")
+
+	var params = url.Values{}
+	params.Set("instId", order.Pair.ToSymbol("-", true) + "-SWAP")
+	params.Set("ordId", order.OrderId)
+
+
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId string `json:"clOrdId"`
+			OrdId   string `json:"ordId"`
+			Px   float64 `json:"px,string"`
+			Sz    float64 `json:"sz,string"`
+			AvgPx float64 `json:"avgPx"`
+			
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/trade/order"
+
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+
+	if err != nil {
+		return resp, err
+	}
+	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
+		return resp, errors.New(response.Data[0].SMsg)
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
+	}
+
+	return nil,err
+
 }
 
 func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {

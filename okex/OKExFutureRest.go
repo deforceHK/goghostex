@@ -841,7 +841,7 @@ func (future *Future) GetKlineRecords(
 	since int,
 ) ([]*FutureKline, []byte, error) {
 	info, err := future.GetContract(pair, contractType)
-	if err!=nil{
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -852,13 +852,13 @@ func (future *Future) GetKlineRecords(
 	uri := "/api/v5/market/candles?"
 	params := url.Values{}
 	params.Set("instId", info.ContractName)
-	params.Set("bar",  _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
-	params.Set("limit",  strconv.Itoa(size))
+	params.Set("bar", _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
+	params.Set("limit", strconv.Itoa(size))
 
 	if since > 0 {
 		endTime := time.Now()
-		params.Set("before",  strconv.Itoa(since))
-		params.Set("after",  strconv.Itoa(int(endTime.UnixNano()/1000000)))
+		params.Set("before", strconv.Itoa(since))
+		params.Set("after", strconv.Itoa(int(endTime.UnixNano()/1000000)))
 	}
 
 	var response struct {
@@ -868,7 +868,7 @@ func (future *Future) GetKlineRecords(
 	}
 	resp, err := future.DoRequestV5Market(
 		http.MethodGet,
-		uri+ params.Encode(),
+		uri+params.Encode(),
 		"",
 		&response,
 	)

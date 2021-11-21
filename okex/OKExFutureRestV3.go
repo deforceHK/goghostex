@@ -124,7 +124,6 @@ func (future *Future) getV3Limit(pair Pair, contractType string) (float64, float
 	return response.Highest, response.Lowest, nil
 }
 
-
 func (future *Future) getV3KlineRecords(
 	contractType string,
 	pair Pair,

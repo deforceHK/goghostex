@@ -73,3 +73,88 @@ func TestSwap_MarketAPI(t *testing.T) {
 		fmt.Println(string(resp))
 	}
 }
+
+const (
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
+	SWAP_API_PASSPHRASE = ""
+)
+
+// must set both
+// place the order ---> get the order info ---> cancel the order -> get the order info
+func TestSwap_TradeAPI(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint:   ENDPOINT,
+		HttpClient: &http.Client{
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse(PROXY_URL)
+			//	},
+			//},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: SWAP_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	ok := New(config)
+	pair := Pair{Basis: BTC, Counter: USDT}
+	ticker, _, err := ok.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	orderShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Sell * 1.03, //61506.1,
+		Amount:    1,
+		PlaceType: NORMAL,
+		Type:      OPEN_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  OKEX,
+	}
+
+	orderLong := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Buy * 0.97,
+		Amount:    1,
+		PlaceType: NORMAL,
+		Type:      OPEN_LONG,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  OKEX,
+	}
+
+	// 下空单
+	if resp, err := ok.Swap.PlaceOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	// 下多单
+	if resp, err := ok.Swap.PlaceOrder(&orderLong); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderLong)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := ok.Swap.GetOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+}
