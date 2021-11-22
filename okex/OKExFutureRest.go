@@ -893,11 +893,11 @@ func (future *Future) GetKlineRecords(
 				High:      ToFloat64(itm[2]),
 				Low:       ToFloat64(itm[3]),
 				Close:     ToFloat64(itm[4]),
-				Vol:       ToFloat64(itm[5]),
+				Vol:       ToFloat64(itm[6]),
 			},
 			DueTimestamp: info.DueTimestamp,
 			DueDate:      info.DueDate,
-			Vol2:         ToFloat64(itm[6]),
+			Vol2:         ToFloat64(itm[5]),
 		})
 	}
 

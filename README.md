@@ -33,7 +33,7 @@ go install
 ## Test
 
 ```
-go test -v ./{package name}/... -test.run {func name}
+go test -v ./{package name}/... -count=1 -test.run {func name}
 ```
 
 ## Todos
