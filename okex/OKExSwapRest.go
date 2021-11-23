@@ -286,6 +286,10 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		} `json:"data"`
 	}{}
 	var uri = "/api/v5/trade/order"
+
+	now := time.Now()
+	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
 	reqBody, _, _ := swap.BuildRequestBody(request)
 	resp, err := swap.DoRequest(
 		http.MethodPost,
@@ -303,6 +307,10 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	if response.Code != "0" {
 		return resp, errors.New(response.Msg)
 	}
+
+	now = time.Now()
+	order.DealTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.DealDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
 	order.OrderId = response.Data[0].OrdId
 	return resp, nil
 }
@@ -380,6 +388,7 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 			AccFillSz float64 `json:"accFillSz,string"`
 			State     string  `json:"state"`
 			Lever     float64 `json:"lever,string"`
+			Fee       float64 `json:"fee,string"`
 			UTime     int64   `json:"uTime,string"`
 			CTime     int64   `json:"cTime,string"`
 		} `json:"data"`
@@ -412,6 +421,7 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	order.AvgPrice = ToFloat64(response.Data[0].AvgPx)
 	order.DealAmount = response.Data[0].AccFillSz
 	order.LeverRate = ToInt64(response.Data[0].Lever)
+	order.Fee = response.Data[0].Fee
 
 	order.DealTimestamp = response.Data[0].UTime
 	order.DealDatetime = time.Unix(
@@ -422,7 +432,7 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	order.PlaceDatetime = time.Unix(
 		order.PlaceTimestamp/1000, 0,
 	).In(swap.config.Location).Format(GO_BIRTHDAY)
-	return nil, err
+	return resp, err
 
 }
 

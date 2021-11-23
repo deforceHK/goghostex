@@ -21,45 +21,6 @@ type Future struct {
 }
 
 // 获取合约信息
-func (future *Future) getV3FutureContract(pair Pair, contractType string) (*FutureContract, error) {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	now := time.Now().In(loc)
-
-	weekNum := int(now.Weekday())
-	minusDay := 5 - weekNum
-	if weekNum < 5 || (weekNum == 5 && now.Hour() <= 16) {
-		minusDay = -7 + 5 - weekNum
-	}
-	//最晚更新时限。
-	lastUpdateTime := time.Date(
-		now.Year(), now.Month(), now.Day(),
-		16, 0, 0, 0, now.Location(),
-	).AddDate(0, 0, minusDay)
-
-	if future.Contracts.SyncTime.IsZero() || (future.Contracts.SyncTime.Before(lastUpdateTime)) {
-		_, err := future.updateV3FutureContracts()
-		//重试三次
-		for i := 0; err != nil && i < 3; i++ {
-			time.Sleep(time.Second)
-			_, err = future.updateV3FutureContracts()
-		}
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	currencies := strings.Split(pair.ToSymbol("_", false), "_")
-	contractTypeItem := fmt.Sprintf("%s,%s,%s", currencies[0], currencies[1], contractType)
-	if cf, exist := future.Contracts.ContractTypeKV[contractTypeItem]; !exist {
-		return nil, errors.New("Can not find the contract by contract_type. ")
-	} else {
-		return cf, nil
-	}
-
-}
-
-// 获取合约信息
 func (future *Future) getFutureContract(pair Pair, contractType string) (*FutureContract, error) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
@@ -96,25 +57,6 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 		return cf, nil
 	}
 
-}
-
-//future contract info
-type okexFutureContract struct {
-	InstrumentID        string  `json:"instrument_id"`          //instrument_id for example：BTC-USD-180213
-	UnderlyingIndex     string  `json:"underlying_index"`       // 标的指数，如：BTC-USD
-	BaseCurrency        string  `json:"base_currency"`          // 交易货币，如：BTC-USD中的BTC ,BTC-USDT中的BTC
-	QuoteCurrency       string  `json:"quote_currency"`         // 计价货币币种，如：BTC-USD中的USD ,BTC-USDT中的USDT
-	SettlementCurrency  string  `json:"settlement_currency"`    // 盈亏结算和保证金币种，如：BTC
-	TickSize            float64 `json:"tick_size,string"`       //下单价格精度
-	TradeIncrement      float64 `json:"trade_increment,string"` //数量精度
-	ContractVal         float64 `json:"contract_val,string"`    //the contract vol in usd
-	ContractValCurrency string  `json:"contract_val_currency"`  //合约面值计价币种 如 usd，btc，ltc，etc xrp eos
-	Listing             string  `json:"listing"`                // 上线日期
-	Delivery            string  `json:"delivery"`               // delivery date 交割日期
-	DueTimestamp        int64   `json:"due_timestamp"`
-	DueDate             string  `json:"due_date"`
-	Alias               string  `json:"alias"` // this_week next_week quarter next_quarter
-	IsInverse           bool    `json:"is_inverse,string"`
 }
 
 func (future *Future) updateFutureContracts() ([]byte, error) {
@@ -208,109 +150,9 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	future.Contracts = futureContracts
 	return resp, nil
 }
-func (future *Future) updateV3FutureContracts() ([]byte, error) {
-	var response []okexFutureContract
-	resp, err := future.DoRequest(
-		http.MethodGet, "/api/futures/v3/instruments", "", &response,
-	)
-	if err != nil {
-		return nil, err
-	}
-	SyncTime := time.Now().In(future.config.Location)
-	asia, _ := time.LoadLocation("Asia/Shanghai")
-	futureContracts := FutureContracts{
-		ContractTypeKV: make(map[string]*FutureContract, 0),
-		ContractNameKV: make(map[string]*FutureContract, 0),
-		DueTimestampKV: make(map[string]*FutureContract, 0),
-		SyncTime:       SyncTime,
-	}
-
-	for _, item := range response {
-		dueTime, err := time.ParseInLocation("2006-01-02", item.Delivery, asia)
-		if err != nil {
-			return nil, err
-		}
-
-		openTime, err := time.ParseInLocation("2006-01-02", item.Listing, asia)
-		if err != nil {
-			return nil, err
-		}
-
-		dueTime = dueTime.Add(16 * time.Hour).In(future.config.Location)
-		openTime = openTime.Add(16 * time.Hour).In(future.config.Location)
-
-		contractType := item.Alias
-		if contractType == "bi_quarter" {
-			contractType = NEXT_QUARTER_CONTRACT
-			item.Alias = NEXT_QUARTER_CONTRACT
-		}
-
-		pair := Pair{Basis: NewCurrency(item.BaseCurrency, ""), Counter: NewCurrency(item.QuoteCurrency, "")}
-		settleMode := SETTLE_MODE_BASIS
-		if item.QuoteCurrency == item.SettlementCurrency {
-			settleMode = SETTLE_MODE_COUNTER
-		}
-
-		pricePrecision, amountPrecision := int64(0), int64(0)
-		for i := int64(0); item.TickSize < 1.0; i++ {
-			item.TickSize *= 10
-			pricePrecision += 1
-		}
-
-		for i := int64(0); item.TradeIncrement < 1.0; i++ {
-			item.TradeIncrement *= 10
-			amountPrecision += 1
-		}
-
-		contract := &FutureContract{
-			Pair:         pair,
-			Symbol:       pair.ToSymbol("_", false),
-			Exchange:     OKEX,
-			ContractType: contractType,
-			ContractName: item.InstrumentID,
-			SettleMode:   settleMode,
-
-			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
-			OpenDate:      openTime.Format(GO_BIRTHDAY),
-
-			DueTimestamp: dueTime.UnixNano() / int64(time.Millisecond),
-			DueDate:      dueTime.Format(GO_BIRTHDAY),
-
-			UnitAmount:      float64(item.ContractVal),
-			PricePrecision:  pricePrecision,
-			AmountPrecision: amountPrecision,
-		}
-
-		currencies := strings.Split(contract.Symbol, "_")
-		contractTypeItem := fmt.Sprintf("%s,%s,%s", currencies[0], currencies[1], contract.ContractType)
-		contractNameItem := fmt.Sprintf("%s,%s,%s", currencies[0], currencies[1], contract.ContractName)
-		dueTimestampItem := fmt.Sprintf("%s,%s,%d", currencies[0], currencies[1], contract.DueTimestamp)
-		futureContracts.ContractTypeKV[contractTypeItem] = contract
-		futureContracts.ContractNameKV[contractNameItem] = contract
-		futureContracts.DueTimestampKV[dueTimestampItem] = contract
-	}
-
-	future.Contracts = futureContracts
-	return resp, nil
-}
 
 func (future *Future) GetExchangeName() string {
 	return OKEX
-}
-
-// cny -> usd rate
-func (future *Future) GetRate() (float64, []byte, error) {
-	var response struct {
-		Rate         float64   `json:"rate,string"`
-		InstrumentId string    `json:"instrument_id"` //USD_CNY
-		Timestamp    time.Time `json:"timestamp"`
-	}
-	resp, err := future.DoRequest("GET", "/api/futures/v3/rate", "", &response)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	return response.Rate, resp, nil
 }
 
 func (future *Future) GetEstimatedPrice(pair Pair) (float64, []byte, error) {
@@ -377,7 +219,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	}
 
 	resp, err := future.DoRequestV5Market(
-		"GET",
+		http.MethodGet,
 		uri,
 		"",
 		&response,
@@ -521,6 +363,81 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 	//return future.getV3Limit(pair, contractType)
 }
 
+/**
+ * since : 单位毫秒,开始时间
+**/
+func (future *Future) GetKlineRecords(
+	contractType string,
+	pair Pair,
+	period,
+	size,
+	since int,
+) ([]*FutureKline, []byte, error) {
+	info, err := future.GetContract(pair, contractType)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if size > 100 {
+		size = 100
+	}
+
+	uri := "/api/v5/market/candles?"
+	params := url.Values{}
+	params.Set("instId", info.ContractName)
+	params.Set("bar", _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
+	params.Set("limit", strconv.Itoa(size))
+
+	if since > 0 {
+		endTime := time.Now()
+		params.Set("before", strconv.Itoa(since))
+		params.Set("after", strconv.Itoa(int(endTime.UnixNano()/1000000)))
+	}
+
+	var response struct {
+		Code string     `json:"code"`
+		Msg  string     `json:"msg"`
+		Data [][]string `json:"data"`
+	}
+	resp, err := future.DoRequestV5Market(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if response.Code != "0" {
+		return nil, nil, errors.New(response.Msg)
+	}
+
+	var klines []*FutureKline
+	for _, itm := range response.Data {
+		timestamp := ToInt64(itm[0])
+		t := time.Unix(timestamp/1000, 0)
+		klines = append(klines, &FutureKline{
+			Kline: Kline{
+				Timestamp: timestamp,
+				Date:      t.In(future.config.Location).Format(GO_BIRTHDAY),
+				Pair:      pair,
+				Exchange:  OKEX,
+				Open:      ToFloat64(itm[1]),
+				High:      ToFloat64(itm[2]),
+				Low:       ToFloat64(itm[3]),
+				Close:     ToFloat64(itm[4]),
+				Vol:       ToFloat64(itm[6]),
+			},
+			DueTimestamp: info.DueTimestamp,
+			DueDate:      info.DueDate,
+			Vol2:         ToFloat64(itm[5]),
+		})
+	}
+
+	return GetAscFutureKline(klines), resp, nil
+	//return future.getV3KlineRecords(contractType, pair, period, size, since)
+}
+
 func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {
 	//统一交易对，当周，次周，季度指数一样的
 	urlPath := fmt.Sprintf(
@@ -585,119 +502,203 @@ func (future *Future) normalizePrice(price float64, pair Pair) string {
 	return FloatToString(price, fc.PricePrecision)
 }
 
-//matchPrice:是否以对手价下单(0:不是 1:是)，默认为0;当取值为1时,price字段无效，当以对手价下单，order_type只能选择0:普通委托
 func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	if order == nil {
 		return nil, errors.New("ord param is nil")
 	}
-
-	urlPath := "/api/futures/v3/order"
-	var param struct {
-		ClientOid    string `json:"client_oid"`
-		InstrumentId string `json:"instrument_id"`
-		Type         int64  `json:"type"`
-		OrderType    int64  `json:"order_type"`
-		Price        string `json:"price"`
-		Size         string `json:"size"`
-		MatchPrice   int64  `json:"match_price"`
-		Leverage     int64  `json:"leverage"`
+	if order.ContractName == "" {
+		order.ContractName = future.GetInstrumentId(order.Pair, order.ContractType)
 	}
 
-	var response struct {
-		Result       bool   `json:"result"`
-		ErrorMessage string `json:"error_message"`
-		ErrorCode    string `json:"error_code"`
-		ClientOid    string `json:"client_oid"`
-		OrderId      string `json:"order_id"`
+	var sideInfo, _ = _INERNAL_V5_FUTURE_TYPE_CONVERTER[order.Type]
+	var placeInfo, _ = _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER[order.PlaceType]
+	var request = struct {
+		InstId  string `json:"instId"`
+		TdMode  string `json:"tdMode"`
+		Side    string `json:"side"`
+		PosSide string `json:"posSide,omitempty"`
+		OrdType string `json:"ordType"`
+		Sz      string `json:"sz"`
+		Px      string `json:"px"`
+		ClOrdId string `json:"clOrdId,omitempty"`
+	}{
+		order.ContractName,
+		"cross",
+		sideInfo[0],
+		sideInfo[1],
+		placeInfo,
+		strconv.FormatInt(order.Amount, 10),
+		strconv.FormatFloat(order.Price, 'f', -1, 64),
+		order.Cid,
 	}
 
-	param.InstrumentId = future.GetInstrumentId(order.Pair, order.ContractType)
-	param.ClientOid = order.Cid
-	param.Type = int64(order.Type)
-	param.Price = future.normalizePrice(order.Price, order.Pair)
-	param.Size = fmt.Sprint(order.Amount)
-	param.Leverage = order.LeverRate
-	param.MatchPrice = order.MatchPrice
-	param.OrderType = int64(order.PlaceType)
-
-	//当matchPrice=1以对手价下单，order_type只能选择0:普通委托
-	if param.MatchPrice == 1 && param.OrderType != 0 {
-		println("注意:当matchPrice=1以对手价下单时，order_type只能选择0:普通委托")
-		param.OrderType = 0
-	}
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId string `json:"clOrdId"`
+			OrdId   string `json:"ordId"`
+			SCode   string `json:"sCode"`
+			SMsg    string `json:"sMsg"`
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/trade/order"
 
 	now := time.Now()
 	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
 	order.PlaceDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
 
-	reqBody, _, _ := future.BuildRequestBody(param)
-	resp, err := future.DoRequest("POST", urlPath, reqBody, &response)
+	reqBody, _, _ := future.BuildRequestBody(request)
+	resp, err := future.DoRequest(
+		http.MethodPost,
+		uri,
+		reqBody,
+		&response,
+	)
+
 	if err != nil {
-		return nil, err
+		return resp, err
+	}
+	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
+		return resp, errors.New(response.Data[0].SMsg)
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
 	}
 
 	now = time.Now()
-	order.Cid = response.ClientOid
-	order.OrderId = response.OrderId
-	order.OrderTimestamp = now.UnixNano() / int64(time.Millisecond)
-	order.OrderDate = now.In(future.config.Location).Format(GO_BIRTHDAY)
+	order.DealTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.DealDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
+	order.OrderId = response.Data[0].OrdId
 	return resp, nil
-}
 
-func (future *Future) adaptOrder(response futureOrderResponse, order *FutureOrder) {
-	order.ContractName = response.InstrumentId
-	if response.OrderId != "" {
-		order.OrderId = response.OrderId
-	}
-	if response.ClientOid != "" {
-		order.Cid = response.ClientOid
-	}
-	order.DealAmount = int64(response.FilledQty)
-	order.AvgPrice = response.PriceAvg
-	order.Status = future.adaptOrderState(response.State)
-	order.Fee = response.Fee
-	order.OrderTimestamp = response.Timestamp.UnixNano() / int64(time.Millisecond)
-	order.OrderDate = response.Timestamp.In(future.config.Location).Format(GO_BIRTHDAY)
-	if order.Exchange == "" {
-		order.Exchange = future.GetExchangeName()
-	}
-	return
+	//return future.placeV3Order(order)
 }
 
 func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/orders/%s/%s",
-		future.GetInstrumentId(order.Pair, order.ContractType),
-		order.OrderId,
-	)
-
-	var response futureOrderResponse
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, err
+	if order == nil {
+		return nil, errors.New("ord param is nil")
+	}
+	if order.ContractName == "" {
+		order.ContractName = future.GetInstrumentId(order.Pair, order.ContractType)
 	}
 
-	future.adaptOrder(response, order)
-	return resp, nil
+	var params = url.Values{}
+	params.Set("instId", order.ContractName)
+	params.Set("ordId", order.OrderId)
+
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId   string  `json:"clOrdId"`
+			OrdId     string  `json:"ordId"`
+			Px        float64 `json:"px,string"`
+			Sz        float64 `json:"sz,string"`
+			AvgPx     string  `json:"avgPx"`
+			AccFillSz float64 `json:"accFillSz,string"`
+			State     string  `json:"state"`
+			Lever     float64 `json:"lever,string"`
+			Fee       float64 `json:"fee,string"`
+			UTime     int64   `json:"uTime,string"`
+			CTime     int64   `json:"cTime,string"`
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/trade/order?"
+
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+
+	if err != nil {
+		return resp, err
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
+	}
+	if len(response.Data) == 0 || response.Data[0].State == "live" {
+		return resp, nil
+	}
+
+	if status, exist := _INERNAL_V5_FUTURE_ORDER_STATUE_CONVERTER[response.Data[0].State]; exist {
+		order.Status = status
+	}
+	if order.Exchange == "" {
+		order.Exchange = future.GetExchangeName()
+	}
+
+	order.Price = response.Data[0].Px
+	order.Amount = ToInt64(response.Data[0].Sz)
+
+	order.AvgPrice = ToFloat64(response.Data[0].AvgPx)
+	order.DealAmount = ToInt64(response.Data[0].AccFillSz)
+	order.LeverRate = ToInt64(response.Data[0].Lever)
+	order.Fee = response.Data[0].Fee
+
+	order.DealTimestamp = response.Data[0].UTime
+	order.DealDatetime = time.Unix(
+		order.DealTimestamp/1000, 0,
+	).In(future.config.Location).Format(GO_BIRTHDAY)
+
+	order.PlaceTimestamp = response.Data[0].CTime
+	order.PlaceDatetime = time.Unix(
+		order.PlaceTimestamp/1000, 0,
+	).In(future.config.Location).Format(GO_BIRTHDAY)
+	return resp, err
+	//return future.getV3Order(order)
 }
 
 func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/cancel_order/%s/%s",
-		future.GetInstrumentId(order.Pair, order.ContractType),
+	if order == nil || order.OrderId == "" {
+		return nil, errors.New("order necessary param is nil")
+	}
+	if order.ContractName == "" {
+		order.ContractName = future.GetInstrumentId(order.Pair, order.ContractType)
+	}
+
+	var request = struct {
+		InstId string `json:"instId"`
+		OrdId  string `json:"ordId"`
+	}{
+		order.ContractName,
 		order.OrderId,
+	}
+
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId string `json:"clOrdId"`
+			OrdId   string `json:"ordId"`
+			SCode   string `json:"sCode"`
+			SMsg    string `json:"sMsg"`
+		} `json:"data"`
+	}{}
+
+	var uri = "/api/v5/trade/cancel-order"
+	reqBody, _, _ := future.BuildRequestBody(request)
+	resp, err := future.DoRequest(
+		http.MethodPost,
+		uri,
+		reqBody,
+		&response,
 	)
-	var response struct {
-		Result       bool   `json:"result"`
-		OrderId      string `json:"order_id"`
-		ClientOid    string `json:"client_oid"`
-		InstrumentId string `json:"instrument_id"`
-	}
-	resp, err := future.DoRequest("POST", urlPath, "", &response)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
+	if len(response.Data) == 0 {
+		return resp, errors.New("request lack the data. ")
+	}
+	if len(response.Data) != 0 && response.Data[0].SCode != "0" {
+		return resp, errors.New(response.Data[0].SMsg)
+	}
+
 	return resp, nil
+
+	//return future.cancelV3Order(order)
 }
 
 func (future *Future) GetPosition(
@@ -830,81 +831,6 @@ func (future *Future) GetUnFinishOrders(
 	return orders, resp, nil
 }
 
-/**
- * since : 单位毫秒,开始时间
-**/
-func (future *Future) GetKlineRecords(
-	contractType string,
-	pair Pair,
-	period,
-	size,
-	since int,
-) ([]*FutureKline, []byte, error) {
-	info, err := future.GetContract(pair, contractType)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if size > 100 {
-		size = 100
-	}
-
-	uri := "/api/v5/market/candles?"
-	params := url.Values{}
-	params.Set("instId", info.ContractName)
-	params.Set("bar", _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
-	params.Set("limit", strconv.Itoa(size))
-
-	if since > 0 {
-		endTime := time.Now()
-		params.Set("before", strconv.Itoa(since))
-		params.Set("after", strconv.Itoa(int(endTime.UnixNano()/1000000)))
-	}
-
-	var response struct {
-		Code string     `json:"code"`
-		Msg  string     `json:"msg"`
-		Data [][]string `json:"data"`
-	}
-	resp, err := future.DoRequestV5Market(
-		http.MethodGet,
-		uri+params.Encode(),
-		"",
-		&response,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if response.Code != "0" {
-		return nil, nil, errors.New(response.Msg)
-	}
-
-	var klines []*FutureKline
-	for _, itm := range response.Data {
-		timestamp := ToInt64(itm[0])
-		t := time.Unix(timestamp/1000, 0)
-		klines = append(klines, &FutureKline{
-			Kline: Kline{
-				Timestamp: timestamp,
-				Date:      t.In(future.config.Location).Format(GO_BIRTHDAY),
-				Pair:      pair,
-				Exchange:  OKEX,
-				Open:      ToFloat64(itm[1]),
-				High:      ToFloat64(itm[2]),
-				Low:       ToFloat64(itm[3]),
-				Close:     ToFloat64(itm[4]),
-				Vol:       ToFloat64(itm[6]),
-			},
-			DueTimestamp: info.DueTimestamp,
-			DueDate:      info.DueDate,
-			Vol2:         ToFloat64(itm[5]),
-		})
-	}
-
-	return GetAscFutureKline(klines), resp, nil
-	//return future.getV3KlineRecords(contractType, pair, period, size, since)
-}
-
 func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byte, error) {
 	panic("")
 }
@@ -1020,5 +946,5 @@ func (future *Future) KeepAlive() {
 	}
 
 	// call the rate api to update lastTimestamp
-	_, _, _ = future.GetRate()
+	_, _, _ = future.GetTicker(Pair{BTC, USD}, QUARTER_CONTRACT)
 }

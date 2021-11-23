@@ -117,8 +117,8 @@ type FutureOrder struct {
 	DealAmount     int64
 	PlaceTimestamp int64
 	PlaceDatetime  string
-	OrderTimestamp int64 // unit: ms
-	OrderDate      string
+	DealTimestamp  int64 // unit: ms
+	DealDatetime   string
 	Status         TradeStatus
 	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
@@ -128,7 +128,6 @@ type FutureOrder struct {
 	ContractType   string
 	ContractName   string // for future
 	Exchange       string
-	MatchPrice     int64 // some exchange need
 }
 
 type FuturePosition struct {
