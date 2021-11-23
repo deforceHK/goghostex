@@ -445,8 +445,8 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	order.OrderId = fmt.Sprintf("%d", response.OrderId)
 	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
 	order.PlaceDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
-	order.OrderTimestamp = response.UpdateTime
-	order.OrderDate = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
+	order.DealTimestamp = response.UpdateTime
+	order.DealDatetime = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
 	order.Status = statusRelation[response.Status]
 	order.Price = response.Price
 	order.Amount = response.Amount
@@ -507,8 +507,8 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	orderTime := time.Unix(response.UpdateTime/1000, 0)
 	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
 	order.PlaceDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
-	order.OrderTimestamp = response.UpdateTime
-	order.OrderDate = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
+	order.DealTimestamp = response.UpdateTime
+	order.DealDatetime = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
 	order.Status = statusRelation[response.Status]
 	if response.DealAmount > 0 {
 		order.AvgPrice = response.AvgPrice
@@ -618,8 +618,8 @@ func (future *Future) GetOrders(pair Pair, contractType string) ([]*FutureOrder,
 			DealAmount:     item.ExecutedQty,
 			PlaceTimestamp: placeTime.UnixNano() / int64(time.Millisecond),
 			PlaceDatetime:  placeTime.Format(GO_BIRTHDAY),
-			OrderTimestamp: updateTime.UnixNano() / int64(time.Millisecond),
-			OrderDate:      updateTime.Format(GO_BIRTHDAY),
+			DealTimestamp:  updateTime.UnixNano() / int64(time.Millisecond),
+			DealDatetime:   updateTime.Format(GO_BIRTHDAY),
 			Status:         _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER[item.Status],
 			PlaceType:      _INTERNAL_PLACE_TYPE_REVERSE_CONVERTER[item.TimeInForce],
 			Type:           future.getFutureType(item.Side, item.PositionSide),
@@ -679,8 +679,8 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	orderTime := time.Unix(response.UpdateTime/1000, 0)
 	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
 	order.PlaceDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
-	order.OrderTimestamp = response.UpdateTime
-	order.OrderDate = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
+	order.DealTimestamp = response.UpdateTime
+	order.DealDatetime = orderTime.In(future.config.Location).Format(GO_BIRTHDAY)
 	order.Status = statusRelation[response.Status]
 	order.Price = response.Price
 	order.Amount = response.Amount

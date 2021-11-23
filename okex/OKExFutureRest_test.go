@@ -209,7 +209,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 /**
  *
  * The func of order unit test step is:
- * 1. Get the account, and find have the enough crypto.
+ * 1. Get the account, and find have the enough crypto. (removed)
  * 2. Get BTC-USD this_week ticker.
  * 2. Order the open_long without deal.
  * 3. Get the unfinished orders info, and find the order in step 1.
@@ -236,25 +236,25 @@ func TestFuture_TradeAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	if account, resp, err := ok.Future.GetAccount(); err != nil {
-		t.Error(err)
-		return
-	} else {
-
-		t.Log("Future account standard struct: ")
-		t.Log(*account)
-
-		t.Log("Future account remote api struct: ")
-		t.Log(string(resp))
-
-		if account.SubAccount[LTC].BalanceAvail <= 1 {
-			t.Error("You do not have enough LTC for test. ")
-			return
-		}
-	}
+	//if account, resp, err := ok.Future.GetAccount(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//
+	//	t.Log("Future account standard struct: ")
+	//	t.Log(*account)
+	//
+	//	t.Log("Future account remote api struct: ")
+	//	t.Log(string(resp))
+	//
+	//	if account.SubAccount[LTC].BalanceAvail <= 1 {
+	//		t.Error("You do not have enough LTC for test. ")
+	//		return
+	//	}
+	//}
 
 	ticker, _, err := ok.Future.GetTicker(
-		Pair{Basis: LTC, Counter: USD},
+		Pair{Basis: BTC, Counter: USD},
 		THIS_WEEK_CONTRACT,
 	)
 	if err != nil {
@@ -269,9 +269,9 @@ func TestFuture_TradeAPI(t *testing.T) {
 		PlaceType:    NORMAL,
 		Type:         OPEN_SHORT,
 		LeverRate:    20,
-		Pair:         Pair{Basis: LTC, Counter: USD},
+		Pair:         Pair{Basis: BTC, Counter: USD},
 		ContractType: THIS_WEEK_CONTRACT,
-		MatchPrice:   0,
+		Exchange:     OKEX,
 	}
 	preCid := order.Cid
 
@@ -412,5 +412,161 @@ func TestFuture_TradeAPI(t *testing.T) {
 	//		return
 	//	}
 	//}
+
+}
+
+func TestFuture_DealAPI(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        FUTURE_API_KEY,
+		ApiSecretKey:  FUTURE_API_SECRETKEY,
+		ApiPassphrase: FUTURE_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	ok := New(config)
+	//if account, resp, err := ok.Future.GetAccount(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//
+	//	t.Log("Future account standard struct: ")
+	//	t.Log(*account)
+	//
+	//	t.Log("Future account remote api struct: ")
+	//	t.Log(string(resp))
+	//
+	//	if account.SubAccount[LTC].BalanceAvail <= 1 {
+	//		t.Error("You do not have enough LTC for test. ")
+	//		return
+	//	}
+	//}
+
+	ticker, _, err := ok.Future.GetTicker(
+		Pair{Basis: BTC, Counter: USD},
+		THIS_WEEK_CONTRACT,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	orderShort := FutureOrder{
+		Cid:          UUID(),
+		Price:        ticker.Last * 0.99,
+		Amount:       1,
+		PlaceType:    NORMAL,
+		Type:         OPEN_SHORT,
+		LeverRate:    20,
+		Pair:         Pair{Basis: BTC, Counter: USD},
+		ContractType: THIS_WEEK_CONTRACT,
+		Exchange:     OKEX,
+	}
+
+	orderLiquidate := FutureOrder{
+		Cid:          UUID(),
+		Price:        ticker.Last * 1.01,
+		Amount:       1,
+		PlaceType:    NORMAL,
+		Type:         LIQUIDATE_SHORT,
+		LeverRate:    20,
+		Pair:         Pair{Basis: BTC, Counter: USD},
+		ContractType: THIS_WEEK_CONTRACT,
+		Exchange:     OKEX,
+	}
+
+	if resp, err := ok.Future.PlaceOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		if standard, err := json.Marshal(orderShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Place Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Place Order remote api struct: ")
+			t.Log(string(resp))
+		}
+	}
+
+	for i := 0; ; i++ {
+		if i > 5 {
+			t.Error("too many time try. ")
+			return
+		}
+		time.Sleep(time.Second)
+
+		if resp, err := ok.Future.GetOrder(&orderShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+
+			if standard, err := json.Marshal(orderShort); err != nil {
+				t.Error(err)
+				return
+			} else {
+				t.Log("Get Order standard struct: ")
+				t.Log(string(standard))
+
+				t.Log("Get Order remote api struct: ")
+				t.Log(string(resp))
+			}
+			if orderShort.Status == ORDER_FINISH {
+				orderLiquidate.Price = orderShort.AvgPrice * 1.01
+				break
+			}
+		}
+	}
+
+	if resp, err := ok.Future.PlaceOrder(&orderLiquidate); err != nil {
+		t.Error(err)
+		return
+	} else {
+		if standard, err := json.Marshal(orderLiquidate); err != nil {
+			t.Error(err)
+			return
+		} else {
+			t.Log("Place liquidate Order standard struct: ")
+			t.Log(string(standard))
+
+			t.Log("Place liquidate Order remote api struct: ")
+			t.Log(string(resp))
+		}
+	}
+
+	for i := 0; ; i++ {
+		if i > 5 {
+			t.Error("too many time try. ")
+			return
+		}
+		time.Sleep(time.Second)
+		if resp, err := ok.Future.GetOrder(&orderLiquidate); err != nil {
+			t.Error(err)
+			return
+		} else {
+			if standard, err := json.Marshal(orderLiquidate); err != nil {
+				t.Error(err)
+				return
+			} else {
+				t.Log("Get Order after standard struct: ")
+				t.Log(string(standard))
+				t.Log("Get Order after remote api struct: ")
+				t.Log(string(resp))
+			}
+			if orderShort.Status == ORDER_FINISH {
+				break
+			}
+		}
+	}
 
 }
