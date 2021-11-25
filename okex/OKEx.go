@@ -169,7 +169,7 @@ func (ok *OKEx) DoRequest(
 	}
 }
 
-func (ok *OKEx) DoRequestV5Market(
+func (ok *OKEx) DoRequestMarket(
 	httpMethod,
 	uri,
 	reqBody string,

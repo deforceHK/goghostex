@@ -36,7 +36,7 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 			Timestamp int64   `json:"ts,string"`
 		} `json:"data"`
 	}
-	resp, err := swap.DoRequestV5Market(
+	resp, err := swap.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
@@ -86,7 +86,7 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 		} `json:"data"`
 	}
 
-	resp, err := swap.DoRequestV5Market(
+	resp, err := swap.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
@@ -147,7 +147,7 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 		} `json:"data"`
 	}
 
-	_, err := swap.DoRequestV5Market(
+	_, err := swap.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
@@ -189,7 +189,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 		Msg  string     `json:"msg"`
 		Data [][]string `json:"data"`
 	}
-	resp, err := swap.DoRequestV5Market(
+	resp, err := swap.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
