@@ -40,14 +40,6 @@ type Future struct {
 	LastTimestamp int64
 }
 
-func (future *Future) GetExchangeRule(pair Pair) (*FutureRule, []byte, error) {
-	panic("implement me")
-}
-
-func (future *Future) GetEstimatedPrice(pair Pair) (float64, []byte, error) {
-	panic("implement me")
-}
-
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
 		contractType = QUARTER_CONTRACT
@@ -199,6 +191,10 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 }
 
 func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {
+	panic("implement me")
+}
+
+func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, error) {
 	panic("implement me")
 }
 
@@ -517,53 +513,6 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (future *Future) GetPosition(pair Pair, contractType string) ([]*FuturePosition, []byte, error) {
-	contract, err := future.GetContract(pair, contractType)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	param := url.Values{}
-	param.Set("pair", pair.ToSymbol("", true))
-
-	if err := future.buildParamsSigned(&param); err != nil {
-		return nil, nil, err
-	}
-
-	var response []struct {
-		IsolatedMargin   float64 `json:"isolatedMargin,string"`
-		EntryPrice       float64 `json:"entryPrice,string"`
-		Leverage         float64 `json:"leverage,string"`
-		LiquidationPrice float64 `json:"liquidationPrice,string"`
-		PositionAmt      float64 `json:"positionAmt,string"`
-		UnRealizedProfit float64 `json:"unRealizedProfit,string"`
-		PositionSide     string  `json:"positionSide"`
-		Symbol           string  `json:"symbol"`
-		MarginType       string  `json:"marginType"`
-	}
-
-	resp, err := future.DoRequest(
-		http.MethodGet,
-		FUTURE_POSITION_URI+param.Encode(),
-		"",
-		&response,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, item := range response {
-		if item.Symbol == contract.ContractName {
-			//todo to be define
-			//FuturePosition{
-			//	Symbol:
-			//}
-		}
-	}
-	return nil, resp, errors.New("Can not find the contract position. ")
-
-}
-
 func (future *Future) GetOrders(pair Pair, contractType string) ([]*FutureOrder, []byte, error) {
 	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
@@ -689,10 +638,6 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 		order.DealAmount = response.DealAmount
 	}
 	return resp, nil
-}
-
-func (future *Future) GetUnFinishOrders(pair Pair, contractType string) ([]*FutureOrder, []byte, error) {
-	panic("implement me")
 }
 
 func (future *Future) KeepAlive() {

@@ -155,28 +155,6 @@ func (future *Future) GetExchangeName() string {
 	return OKEX
 }
 
-func (future *Future) GetEstimatedPrice(pair Pair) (float64, []byte, error) {
-	contract, err := future.getV3FutureContract(pair, QUARTER_CONTRACT)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/instruments/%s/estimated_price",
-		contract.ContractName,
-	)
-	var response struct {
-		InstrumentId    string  `json:"instrument_id"`
-		SettlementPrice float64 `json:"settlement_price,string"`
-		Timestamp       string  `json:"timestamp"`
-	}
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return 0, nil, err
-	}
-	return response.SettlementPrice, resp, nil
-}
-
 // 获取instrument_id
 func (future *Future) GetInstrumentId(pair Pair, contractAlias string) string {
 	if contractAlias != NEXT_QUARTER_CONTRACT &&
@@ -218,7 +196,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 		} `json:"data"`
 	}
 
-	resp, err := future.DoRequestV5Market(
+	resp, err := future.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
@@ -252,7 +230,6 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	}
 
 	return &ticker, resp, nil
-	//return future.getV3Ticker(pair, contractType)
 }
 
 func (future *Future) GetDepth(
@@ -286,7 +263,7 @@ func (future *Future) GetDepth(
 		} `json:"data"`
 	}
 	var uri = "/api/v5/market/books?"
-	resp, err := future.DoRequestV5Market(
+	resp, err := future.DoRequestMarket(
 		http.MethodGet,
 		uri+params.Encode(),
 		"",
@@ -322,7 +299,6 @@ func (future *Future) GetDepth(
 	}
 
 	return &dep, resp, nil
-	//return future.getV3Depth(pair, contractType, size)
 }
 
 func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64, error) {
@@ -343,7 +319,7 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 		} `json:"data"`
 	}{}
 
-	_, err = future.DoRequestV5Market(
+	_, err = future.DoRequestMarket(
 		http.MethodGet,
 		uri,
 		"",
@@ -360,7 +336,6 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 	}
 
 	return response.Data[0].BuyLmt, response.Data[0].SellLmt, nil
-	//return future.getV3Limit(pair, contractType)
 }
 
 /**
@@ -399,7 +374,7 @@ func (future *Future) GetKlineRecords(
 		Msg  string     `json:"msg"`
 		Data [][]string `json:"data"`
 	}
-	resp, err := future.DoRequestV5Market(
+	resp, err := future.DoRequestMarket(
 		http.MethodGet,
 		uri+params.Encode(),
 		"",
@@ -435,71 +410,122 @@ func (future *Future) GetKlineRecords(
 	}
 
 	return GetAscFutureKline(klines), resp, nil
-	//return future.getV3KlineRecords(contractType, pair, period, size, since)
 }
 
 func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {
-	//统一交易对，当周，次周，季度指数一样的
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/instruments/%s/index",
-		future.GetInstrumentId(pair, QUARTER_CONTRACT),
-	)
+	var params = url.Values{}
+	params.Set("instId", pair.ToSymbol("-", true))
+	var uri = "/api/v5/market/index-tickers?"
+
 	var response struct {
-		InstrumentId string  `json:"instrument_id"`
-		Index        float64 `json:"index,string"`
-		Timestamp    string  `json:"timestamp"`
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			IdxPx float64 `json:"idxPx,string"`
+		} `json:"data"`
 	}
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
+	resp, err := future.DoRequestMarket(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
 	if err != nil {
-		return 0, nil, err
+		return 0, resp, err
 	}
-	return response.Index, resp, nil
+	if response.Code != "0" {
+		return 0, resp, errors.New(response.Msg)
+	}
+
+	return response.Data[0].IdxPx, resp, nil
 }
 
-type CrossedAccountInfo struct {
-	MarginMode string  `json:"margin_mode"`
-	Equity     float64 `json:"equity,string"`
+func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, error) {
+	var instId = future.GetInstrumentId(pair, contractType)
+	var params = url.Values{}
+	params.Set("instId", instId)
+	params.Set("instType", "FUTURES")
+
+	var uri = "/api/v5/public/mark-price?"
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			MarkPx float64 `json:"MarkPx,string"`
+		} `json:"data"`
+	}{}
+
+	resp, err := future.DoRequestMarket(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+
+	if err != nil {
+		return 0, resp, err
+	}
+	if response.Code != "0" {
+		return 0, resp, errors.New(response.Msg)
+	}
+
+	return response.Data[0].MarkPx, resp, nil
 }
 
 func (future *Future) GetAccount() (*FutureAccount, []byte, error) {
-	urlPath := "/api/futures/v3/accounts"
-	var response struct {
-		Info map[string]map[string]interface{}
-	}
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			UTime   int64 `json:"uTime,string"`
+			Details []struct {
+				Ccy       string `json:"ccy"`
+				Eq        string `json:"eq"`
+				CashBal   string `json:"cashBal"`
+				AvailEq   string `json:"availEq"`
+				FrozenBal string `json:"frozenBal"`
+				OrdFrozen string `json:"ordFrozen"`
+				MgnRatio  string `json:"mgnRatio"`
+				Upl       string `json:"upl"`
+			} `json:"details"`
+		} `json:"data"`
+	}{}
 
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
+	var urlPath = "/api/v5/account/balance"
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		urlPath,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
+	if response.Code != "0" {
+		return nil, nil, errors.New(response.Msg)
+	}
 
 	acc := new(FutureAccount)
+	acc.Exchange = future.GetExchangeName()
 	acc.SubAccount = make(map[Currency]FutureSubAccount, 0)
-	for c, info := range response.Info {
-		if info["margin_mode"] == "crossed" {
-			currency := NewCurrency(c, "")
-			acc.SubAccount[currency] = FutureSubAccount{
-				Currency:       currency,
-				Margin:         ToFloat64(info["margin"]),
-				MarginDealed:   ToFloat64(info["margin_frozen"]),
-				MarginUnDealed: ToFloat64(info["margin_for_unfilled"]),
-				MarginRate:     ToFloat64(info["margin_ratio"]),
-				BalanceTotal:   ToFloat64(info["total_avail_balance"]),
-				BalanceNet:     ToFloat64(info["equity"]),
-				BalanceAvail:   ToFloat64(info["can_withdraw"]),
-				ProfitReal:     ToFloat64(info["realized_pnl"]),
-				ProfitUnreal:   ToFloat64(info["unrealized_pnl"]),
-			}
-		} else {
-			//todo 逐仓模式
+
+	for _, detail := range response.Data[0].Details {
+		currency := NewCurrency(detail.Ccy, "")
+		acc.SubAccount[currency] = FutureSubAccount{
+			Currency:       currency,
+			Margin:         ToFloat64(detail.FrozenBal), //总体被占用的保证金，
+			MarginDealed:   ToFloat64(detail.FrozenBal) - ToFloat64(detail.OrdFrozen),
+			MarginUnDealed: ToFloat64(detail.OrdFrozen),
+			MarginRate:     ToFloat64(detail.MgnRatio),
+			BalanceTotal:   ToFloat64(detail.CashBal),
+			BalanceNet:     ToFloat64(detail.Eq),
+			BalanceAvail:   ToFloat64(detail.AvailEq),
+			ProfitReal:     0,
+			ProfitUnreal:   ToFloat64(detail.Upl),
 		}
 	}
 
 	return acc, resp, nil
-}
-
-func (future *Future) normalizePrice(price float64, pair Pair) string {
-	fc, _ := future.GetContract(pair, QUARTER_CONTRACT)
-	return FloatToString(price, fc.PricePrecision)
 }
 
 func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
@@ -571,8 +597,6 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	order.DealDatetime = now.In(future.config.Location).Format(GO_BIRTHDAY)
 	order.OrderId = response.Data[0].OrdId
 	return resp, nil
-
-	//return future.placeV3Order(order)
 }
 
 func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
@@ -648,7 +672,6 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 		order.PlaceTimestamp/1000, 0,
 	).In(future.config.Location).Format(GO_BIRTHDAY)
 	return resp, err
-	//return future.getV3Order(order)
 }
 
 func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
@@ -697,83 +720,6 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	return resp, nil
-
-	//return future.cancelV3Order(order)
-}
-
-func (future *Future) GetPosition(
-	pair Pair,
-	contractType string,
-) ([]*FuturePosition, []byte, error) {
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/%s/position",
-		future.GetInstrumentId(pair, contractType),
-	)
-	var response struct {
-		Result     bool   `json:"result"`
-		MarginMode string `json:"margin_mode"`
-		Holding    []struct {
-			InstrumentId         string    `json:"instrument_id"`
-			LongQty              float64   `json:"long_qty,string"` //多
-			LongAvailQty         float64   `json:"long_avail_qty,string"`
-			LongAvgCost          float64   `json:"long_avg_cost,string"`
-			LongSettlementPrice  float64   `json:"long_settlement_price,string"`
-			LongMargin           float64   `json:"long_margin,string"`
-			LongPnl              float64   `json:"long_pnl,string"`
-			LongPnlRatio         float64   `json:"long_pnl_ratio,string"`
-			LongUnrealisedPnl    float64   `json:"long_unrealised_pnl,string"`
-			RealisedPnl          float64   `json:"realised_pnl,string"`
-			Leverage             int       `json:"leverage,string"`
-			ShortQty             float64   `json:"short_qty,string"`
-			ShortAvailQty        float64   `json:"short_avail_qty,string"`
-			ShortAvgCost         float64   `json:"short_avg_cost,string"`
-			ShortSettlementPrice float64   `json:"short_settlement_price,string"`
-			ShortMargin          float64   `json:"short_margin,string"`
-			ShortPnl             float64   `json:"short_pnl,string"`
-			ShortPnlRatio        float64   `json:"short_pnl_ratio,string"`
-			ShortUnrealisedPnl   float64   `json:"short_unrealised_pnl,string"`
-			LiquidationPrice     float64   `json:"liquidation_price,string"`
-			CreatedAt            time.Time `json:"created_at,string"`
-			UpdatedAt            time.Time `json:"updated_at"`
-		}
-	}
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var postions []*FuturePosition
-
-	if !response.Result {
-		return nil, nil, errors.New("unknown error")
-	}
-
-	if response.MarginMode == "fixed" {
-		panic("not support the fix future")
-	}
-
-	for _, pos := range response.Holding {
-		postions = append(postions, &FuturePosition{
-			Symbol:              pair,
-			ContractType:        contractType,
-			ContractId:          ToInt64(pos.InstrumentId[8:]),
-			BuyAmount:           pos.LongQty,
-			BuyAvailable:        pos.LongAvailQty,
-			BuyPriceAvg:         pos.LongAvgCost,
-			BuyPriceCost:        pos.LongAvgCost,
-			BuyProfitReal:       pos.LongPnl,
-			SellAmount:          pos.ShortQty,
-			SellAvailable:       pos.ShortAvailQty,
-			SellPriceAvg:        pos.ShortAvgCost,
-			SellPriceCost:       pos.ShortAvgCost,
-			SellProfitReal:      pos.ShortPnl,
-			ForceLiquidatePrice: pos.LiquidationPrice,
-			LeverRate:           pos.Leverage,
-			CreateDate:          pos.CreatedAt.Unix(),
-		})
-	}
-
-	return postions, resp, nil
 }
 
 func (future *Future) GetOrders(
@@ -783,159 +729,8 @@ func (future *Future) GetOrders(
 	panic("")
 }
 
-type futureOrderResponse struct {
-	InstrumentId string    `json:"instrument_id"`
-	ClientOid    string    `json:"client_oid"`
-	OrderId      string    `json:"order_id"`
-	Size         float64   `json:"size,string"`
-	Price        float64   `json:"price,string"`
-	FilledQty    float64   `json:"filled_qty,string"`
-	PriceAvg     float64   `json:"price_avg,string"`
-	Fee          float64   `json:"fee,string"`
-	Type         int       `json:"type,string"`
-	OrderType    int       `json:"order_type,string"`
-	Pnl          float64   `json:"pnl,string"`
-	Leverage     int       `json:"leverage,string"`
-	ContractVal  float64   `json:"contract_val,string"`
-	State        int       `json:"state,string"`
-	Timestamp    time.Time `json:"timestamp,string"`
-}
-
-func (future *Future) GetUnFinishOrders(
-	pair Pair,
-	contractType string,
-) ([]*FutureOrder, []byte, error) {
-	urlPath := fmt.Sprintf(
-		"/api/futures/v3/orders/%s?state=6&limit=100",
-		future.GetInstrumentId(pair, contractType),
-	)
-	var response struct {
-		Result    bool                  `json:"result"`
-		OrderInfo []futureOrderResponse `json:"order_info"`
-	}
-	resp, err := future.DoRequest("GET", urlPath, "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-	if !response.Result {
-		return nil, nil, errors.New("error")
-	}
-
-	var orders []*FutureOrder
-	for _, itm := range response.OrderInfo {
-		ord := FutureOrder{}
-		future.adaptOrder(itm, &ord)
-		orders = append(orders, &ord)
-	}
-
-	return orders, resp, nil
-}
-
 func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byte, error) {
 	panic("")
-}
-
-func (future *Future) GetFutureMarkPrice(pair Pair, contractType string) (float64, []byte, error) {
-	uri := fmt.Sprintf(
-		"/api/futures/v3/instruments/%s/mark_price",
-		future.GetInstrumentId(pair, contractType),
-	)
-
-	response := struct {
-		InstrumentId string  `json:"instrument_id"`
-		MarkPrice    float64 `json:"mark_price,string"`
-		Timestamp    string  `json:"timestamp"`
-	}{}
-
-	resp, err := future.DoRequest(
-		"GET",
-		uri,
-		"",
-		&response,
-	)
-
-	if err != nil {
-		return 0, resp, err
-	}
-
-	return response.MarkPrice, resp, nil
-}
-
-//特殊接口
-/*
- 市价全平仓
- contract:合约ID
- oType：平仓方向：CLOSE_SELL平空，CLOSE_BUY平多
-*/
-func (future *Future) MarketCloseAllPosition(pair Pair, contract string, oType int) (bool, []byte, error) {
-	urlPath := "/api/futures/v3/close_position"
-	var response struct {
-		InstrumentId string `json:"instrument_id"`
-		Result       bool   `json:"result"`
-		Message      string `json:"message"`
-		Code         int    `json:"code"`
-	}
-
-	var param struct {
-		InstrumentId string `json:"instrument_id"`
-		Direction    string `json:"direction"`
-	}
-
-	param.InstrumentId = future.GetInstrumentId(pair, contract)
-	if oType == int(LIQUIDATE_LONG) { //CLOSE_BUY {
-		param.Direction = "long"
-	} else {
-		param.Direction = "short"
-	}
-	reqBody, _, _ := future.BuildRequestBody(param)
-	resp, err := future.DoRequest("POST", urlPath, reqBody, &response)
-	if err != nil {
-		return false, nil, err
-	}
-
-	if !response.Result {
-		return false, nil, errors.New(response.Message)
-	}
-
-	return true, resp, nil
-}
-
-func (future *Future) GetExchangeRule(pair Pair) (*FutureRule, []byte, error) {
-	uri := "/api/futures/v3/instruments"
-	rules := make([]*struct {
-		BaseCurrency   string  `json:"base_currency"`
-		QuotaCurrency  string  `json:"quota_currency"`
-		TickSize       float64 `json:"tick_size,string"`
-		TradeIncrement float64 `json:"trade_increment"`
-		ContractVal    float64 `json:"contract_val,string"`
-	}, 0)
-	resp, err := future.DoRequest(http.MethodGet, uri, "", &rules)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	base := pair.Basis.String()
-	counter := pair.Counter.String()
-	for _, r := range rules {
-		if base != r.BaseCurrency || counter != r.QuotaCurrency {
-			continue
-		}
-
-		rule := FutureRule{
-			Rule: Rule{
-				Pair:             pair,
-				Base:             NewCurrency(r.BaseCurrency, ""),
-				BasePrecision:    GetPrecision(r.TradeIncrement),
-				BaseMinSize:      r.TradeIncrement,
-				Counter:          NewCurrency(r.QuotaCurrency, ""),
-				CounterPrecision: GetPrecision(r.TickSize),
-			},
-			ContractVal: r.ContractVal,
-		}
-
-		return &rule, resp, nil
-	}
-	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }
 
 func (future *Future) KeepAlive() {

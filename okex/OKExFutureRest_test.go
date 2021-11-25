@@ -43,76 +43,76 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	//if ticker, body, err := ok.Future.GetTicker(
-	//	Pair{Basis: BTC, Counter: USD},
-	//	NEXT_QUARTER_CONTRACT,
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	standard, err := json.Marshal(ticker)
-	//	if err != nil {
-	//		t.Error(err)
-	//		return
-	//	}
-	//
-	//	t.Log("Ticker standard struct: ")
-	//	t.Log(string(standard))
-	//
-	//	t.Log("Ticker remote api response: ")
-	//	t.Log(string(body))
-	//}
+	if ticker, body, err := ok.Future.GetTicker(
+		Pair{Basis: BTC, Counter: USD},
+		NEXT_QUARTER_CONTRACT,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(ticker)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
-	//if depth, body, err := ok.Future.GetDepth(
-	//	NewPair("btc_usd", "_"),
-	//	NEXT_QUARTER_CONTRACT,
-	//	20,
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	standard, err := json.Marshal(depth)
-	//	if err != nil {
-	//		t.Error(err)
-	//		return
-	//	}
-	//
-	//	t.Log("Depth standard struct: ")
-	//	t.Log(string(standard))
-	//
-	//	t.Log("Depth remote api response: ")
-	//	t.Log(string(body))
-	//
-	//	if depth1, _, err := ok.Future.GetDepth(
-	//		Pair{Basis: BTC, Counter: USD},
-	//		NEXT_QUARTER_CONTRACT,
-	//		20,
-	//	); err != nil {
-	//		t.Error(err)
-	//		return
-	//	} else {
-	//		if depth1.Sequence < depth.Sequence {
-	//			t.Error("The sequence not work. ")
-	//			return
-	//		}
-	//
-	//		if err := depth.Verify(); err != nil {
-	//			t.Error(err)
-	//			return
-	//		}
-	//
-	//		if err := depth1.Verify(); err != nil {
-	//			t.Error(err)
-	//			return
-	//		}
-	//	}
-	//}
+		t.Log("Ticker standard struct: ")
+		t.Log(string(standard))
 
-	//if highest, lowest, err := ok.Future.GetLimit(Pair{BTC, USD}, THIS_WEEK_CONTRACT); err != nil {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(highest, lowest)
-	//}
+		t.Log("Ticker remote api response: ")
+		t.Log(string(body))
+	}
+
+	if depth, body, err := ok.Future.GetDepth(
+		NewPair("btc_usd", "_"),
+		NEXT_QUARTER_CONTRACT,
+		20,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(depth)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		t.Log("Depth standard struct: ")
+		t.Log(string(standard))
+
+		t.Log("Depth remote api response: ")
+		t.Log(string(body))
+
+		if depth1, _, err := ok.Future.GetDepth(
+			Pair{Basis: BTC, Counter: USD},
+			NEXT_QUARTER_CONTRACT,
+			20,
+		); err != nil {
+			t.Error(err)
+			return
+		} else {
+			if depth1.Sequence < depth.Sequence {
+				t.Error("The sequence not work. ")
+				return
+			}
+
+			if err := depth.Verify(); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if err := depth1.Verify(); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}
+
+	if highest, lowest, err := ok.Future.GetLimit(Pair{BTC, USD}, THIS_WEEK_CONTRACT); err != nil {
+		t.Error(err)
+	} else {
+		t.Log(highest, lowest)
+	}
 
 	if minKline, body, err := ok.Future.GetKlineRecords(
 		NEXT_QUARTER_CONTRACT,
@@ -174,6 +174,30 @@ func TestFuture_MarketAPI(t *testing.T) {
 				return
 			}
 		}
+	}
+
+	if index, resp, err := ok.Future.GetIndex(Pair{BTC, USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		t.Log("btc usdt index: ")
+		t.Log(index)
+
+		t.Log("index remote api response: ")
+		t.Log(string(resp))
+	}
+
+	if index, resp, err := ok.Future.GetMark(Pair{BTC, USDT}, THIS_WEEK_CONTRACT); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		t.Log("btc usdt mark price: ")
+		t.Log(index)
+
+		t.Log("mark price remote api response: ")
+		t.Log(string(resp))
 	}
 
 	//Contracts, err := ok.Future.GetContract(
@@ -433,22 +457,26 @@ func TestFuture_DealAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	//if account, resp, err := ok.Future.GetAccount(); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	t.Log("Future account standard struct: ")
-	//	t.Log(*account)
-	//
-	//	t.Log("Future account remote api struct: ")
-	//	t.Log(string(resp))
-	//
-	//	if account.SubAccount[LTC].BalanceAvail <= 1 {
-	//		t.Error("You do not have enough LTC for test. ")
-	//		return
-	//	}
-	//}
+	if account, resp, err := ok.Future.GetAccount(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("Future account standard struct: ")
+		raw, err := json.Marshal(account.SubAccount[BTC])
+		if err != nil {
+			t.Log(err)
+			return
+		}
+		t.Log(string(raw))
+
+		t.Log("Future account remote api struct: ")
+		t.Log(string(resp))
+
+		if account.SubAccount[BTC].BalanceAvail <= 0 {
+			t.Error("You do not have enough BTC for test. ")
+			return
+		}
+	}
 
 	ticker, _, err := ok.Future.GetTicker(
 		Pair{Basis: BTC, Counter: USD},
