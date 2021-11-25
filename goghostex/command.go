@@ -340,7 +340,7 @@ func (c *Command) Info() {
 
 	switch c.Type {
 	case "future":
-		fr, resp, err := futureClients[c.Exchange].GetExchangeRule(p)
+		fr, resp, err := swapClients[c.Exchange].GetExchangeRule(p)
 		if err != nil {
 			fmt.Println(err)
 			return
