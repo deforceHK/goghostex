@@ -2,6 +2,7 @@ package okex
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -595,6 +596,77 @@ func TestFuture_DealAPI(t *testing.T) {
 				break
 			}
 		}
+	}
+
+}
+
+func TestFuture_ErrorAPI(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        FUTURE_API_KEY,
+		ApiSecretKey:  FUTURE_API_SECRETKEY,
+		ApiPassphrase: FUTURE_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	ok := New(config)
+	if account, resp, err := ok.Future.GetAccount(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("Future account standard struct: ")
+		raw, err := json.Marshal(account.SubAccount[BTC])
+		if err != nil {
+			t.Log(err)
+			return
+		}
+		t.Log(string(raw))
+
+		t.Log("Future account remote api struct: ")
+		t.Log(string(resp))
+
+		if account.SubAccount[BTC].BalanceAvail <= 0 {
+			t.Error("You do not have enough BTC for test. ")
+			return
+		}
+	}
+
+	_, low, err := ok.Future.GetLimit(
+		Pair{Basis: BTC, Counter: USD},
+		THIS_WEEK_CONTRACT,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	orderShort := FutureOrder{
+		Cid:          UUID(),
+		Price:        low * 0.9,
+		Amount:       1,
+		PlaceType:    NORMAL,
+		Type:         OPEN_SHORT,
+		LeverRate:    20,
+		Pair:         Pair{Basis: BTC, Counter: USD},
+		ContractType: THIS_WEEK_CONTRACT,
+		Exchange:     OKEX,
+	}
+
+	if resp, err := ok.Future.PlaceOrder(&orderShort); err != nil {
+		t.Log(err)
+		t.Log(string(resp))
+		return
+	} else {
+		t.Error(errors.New("no error here, why? "))
+		return
 	}
 
 }

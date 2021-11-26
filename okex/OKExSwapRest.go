@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/strengthening/goghostex"
@@ -452,8 +453,82 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 	panic("implement me")
 }
 
+var _INERNAL_V5_FLOW_TYPE_CONVERTER = map[string]string{
+	"2": SUBJECT_COMMISSION,
+	//"REALIZED_PNL": SUBJECT_SETTLE,
+	"8": SUBJECT_FUNDING_FEE,
+}
+
 func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
-	panic("implement me")
+	var params = url.Values{}
+	params.Set("instType", "SWAP")
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			Bal     string `json:"bal"`
+			BalChg  string `json:"balChg"`
+			BillId  string `json:"billId"`
+			Ccy     string `json:"ccy"`
+			Fee     string `json:"fee"`
+			InstId  string `json:"instId"`
+			SubType string `json:"subType"`
+			Pnl     string `json:"pnl"`
+			Type    string `json:"type"`
+			Sz      string `json:"sz"`
+			Ts      int64  `json:"ts,string"`
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/account/bills?"
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+
+	if err != nil {
+		return nil, resp, err
+	}
+	if response.Code != "0" {
+		return nil, resp, errors.New(response.Msg)
+	}
+
+	var items = make([]*SwapAccountItem, 0)
+	for _, item := range response.Data {
+		pairInfo := strings.Split(item.InstId, "-")
+
+		itemType, exist := _INERNAL_V5_FLOW_TYPE_CONVERTER[item.Type]
+		if !exist {
+			continue
+		}
+
+		var settleMode = int64(1)
+		if pairInfo[1] == item.Ccy {
+			settleMode = 2
+		}
+
+		var amount = ToFloat64(item.Fee)
+		if itemType == SUBJECT_FUNDING_FEE {
+			amount = ToFloat64(item.Pnl)
+		}
+		var datetime = time.Unix(item.Ts/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+
+		var saItem = SwapAccountItem{
+			Pair:     NewPair(pairInfo[0]+"-"+pairInfo[1], "-"),
+			Exchange: OKEX,
+			Subject:  itemType,
+
+			SettleMode:     settleMode, // 1: basis 2: counter
+			SettleCurrency: NewCurrency(item.Ccy, ""),
+			Amount:         amount,
+			Timestamp:      item.Ts,
+			DateTime:       datetime,
+			Info:           "",
+		}
+		items = append(items, &saItem)
+	}
+	return items, resp, nil
 }
 
 func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
@@ -462,5 +537,5 @@ func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
 }
 
 func (swap *Swap) KeepAlive() {
-	panic("implement me")
+	_, _, _ = swap.GetDepth(Pair{BTC, USDT}, 2)
 }

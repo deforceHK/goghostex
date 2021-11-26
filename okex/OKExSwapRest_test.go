@@ -100,6 +100,15 @@ func TestSwap_TradeAPI(t *testing.T) {
 	}
 
 	ok := New(config)
+	//if items, resp, err := ok.Swap.GetAccountFlow(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(string(resp))
+	//	output, _ := json.Marshal(items)
+	//	t.Log(string(output))
+	//}
+
 	pair := Pair{Basis: BTC, Counter: USDT}
 	ticker, _, err := ok.Swap.GetTicker(pair)
 	if err != nil {
