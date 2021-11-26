@@ -75,9 +75,9 @@ func TestSwap_MarketAPI(t *testing.T) {
 }
 
 const (
-	SWAP_API_KEY        = "d07d52bf-f364-4f2d-9ffa-03812068870e"
-	SWAP_API_SECRETKEY  = "EFCC8C41DC21EB2464B990DE48F6529B"
-	SWAP_API_PASSPHRASE = "strengthening"
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
+	SWAP_API_PASSPHRASE = ""
 )
 
 // must set both
