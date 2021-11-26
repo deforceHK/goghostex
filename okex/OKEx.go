@@ -333,33 +333,3 @@ func (ok *OKEx) ContractTimestamp(
 	}
 	return
 }
-
-const ()
-
-func (ok *OKEx) DoRequestV5(
-	httpMethod,
-	uri,
-	reqBody string,
-	response interface{},
-) ([]byte, error) {
-
-	url := "https://www.okex.com" + uri
-	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
-	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
-		CONTENT_TYPE:         APPLICATION_JSON_UTF8,
-		ACCEPT:               APPLICATION_JSON,
-		OK_ACCESS_KEY:        ok.config.ApiKey,
-		OK_ACCESS_PASSPHRASE: ok.config.ApiPassphrase,
-		OK_ACCESS_SIGN:       sign,
-		OK_ACCESS_TIMESTAMP:  fmt.Sprint(timestamp)})
-	if err != nil {
-		return nil, err
-	} else {
-		nowTimestamp := time.Now().Unix() * 1000
-		if nowTimestamp > ok.config.LastTimestamp {
-			ok.config.LastTimestamp = nowTimestamp
-		}
-		return resp, json.Unmarshal(resp, &response)
-	}
-
-}

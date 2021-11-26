@@ -75,9 +75,9 @@ func TestSwap_MarketAPI(t *testing.T) {
 }
 
 const (
-	SWAP_API_KEY        = ""
-	SWAP_API_SECRETKEY  = ""
-	SWAP_API_PASSPHRASE = ""
+	SWAP_API_KEY        = "d07d52bf-f364-4f2d-9ffa-03812068870e"
+	SWAP_API_SECRETKEY  = "EFCC8C41DC21EB2464B990DE48F6529B"
+	SWAP_API_PASSPHRASE = "strengthening"
 )
 
 // must set both
@@ -100,6 +100,15 @@ func TestSwap_TradeAPI(t *testing.T) {
 	}
 
 	ok := New(config)
+	//if items, resp, err := ok.Swap.GetAccountFlow(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(string(resp))
+	//	output, _ := json.Marshal(items)
+	//	t.Log(string(output))
+	//}
+
 	pair := Pair{Basis: BTC, Counter: USDT}
 	ticker, _, err := ok.Swap.GetTicker(pair)
 	if err != nil {

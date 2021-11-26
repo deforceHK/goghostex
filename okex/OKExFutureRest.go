@@ -30,10 +30,10 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 	if weekNum < 5 || (weekNum == 5 && now.Hour() <= 16) {
 		minusDay = -7 + 5 - weekNum
 	}
-	//最晚更新时限。
+	//最晚更新时限。由于okex 新生成合约改成了16:10故修改这里的时间。
 	lastUpdateTime := time.Date(
 		now.Year(), now.Month(), now.Day(),
-		16, 0, 0, 0, now.Location(),
+		16, 10, 0, 0, now.Location(),
 	).AddDate(0, 0, minusDay)
 
 	if future.Contracts.SyncTime.IsZero() || (future.Contracts.SyncTime.Before(lastUpdateTime)) {
