@@ -7,7 +7,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,69 +36,6 @@ type Swap struct {
 	uTime         time.Time
 	bnbAvgPrice   float64 // 抵扣交易费用的 bnb 平均持仓成本
 	LastTimestamp int64
-}
-
-type SwapContract struct {
-	Symbol string `json:"symbol"`
-
-	PricePrecision int64   `json:"pricePrecision"` // 下单价格精度
-	PriceMaxScale  float64 `json:"priceMaxScale"`  // 下单价格最大值
-	PriceMinScale  float64 `json:"priceMinScale"`  // 下单价格最小值
-
-	AmountPrecision int64   `json:"quantityPrecision"` // 下单数量精度
-	AmountMax       float64 `json:"amountMax"`         // 下单数量最大值
-	AmountMin       float64 `json:"amountMin"`         // 下单数量最小值
-}
-
-type SwapContracts map[string]SwapContract
-
-func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
-	uri := "/fapi/v1/exchangeInfo"
-	r := struct {
-		Symbols []map[string]json.RawMessage `json:"symbols"`
-	}{}
-	resp, err := swap.DoRequest(http.MethodGet, uri, "", &r)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	symbol := pair.ToSymbol("", true)
-	for _, s := range r.Symbols {
-		input, _ := json.Marshal(s)
-		r := struct {
-			Symbol     string                   `json:"symbol"`
-			BaseAsset  string                   `json:"baseAsset"`
-			QuotaAsset string                   `json:"quotaAsset"`
-			Filters    []map[string]interface{} `json:"filters"`
-		}{}
-
-		_ = json.Unmarshal(input, &r)
-		if r.Symbol != symbol {
-			continue
-		}
-
-		basePrecision, counterPrecision, baseMinSize := int(0), int(0), float64(0)
-		for _, f := range r.Filters {
-			if f["filterType"] == "PRICE_FILTER" {
-				counterPrecision = GetPrecision(ToFloat64(f["tickSize"]))
-			}
-			if f["filterType"] == "LOT_SIZE" {
-				basePrecision = GetPrecision(ToFloat64(f["stepSize"]))
-				baseMinSize = ToFloat64(f["minQty"])
-			}
-		}
-		rule := Rule{
-			Pair:          pair,
-			Base:          NewCurrency(r.BaseAsset, ""),
-			BasePrecision: basePrecision,
-			BaseMinSize:   baseMinSize,
-
-			Counter:          NewCurrency(r.QuotaAsset, ""),
-			CounterPrecision: counterPrecision,
-		}
-		return &SwapRule{Rule: rule, ContractVal: 1}, input, nil
-	}
-	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
@@ -205,31 +141,92 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 }
 
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
-	response := struct {
-		Price float64 `json:"price,string"`
-	}{}
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
-	_, err := swap.DoRequest(
-		http.MethodGet,
-		fmt.Sprintf("/fapi/v1/ticker/price?symbol=%s", pair.ToSymbol("", true)),
-		"",
-		&response,
-	)
+	var price float64 = 0
+	var priceErr error
+	go func() {
+		defer wg.Done()
+		var response = struct {
+			Price float64 `json:"markPrice,string"`
+		}{}
 
-	if err != nil {
-		return 0, 0, err
+		//此处取得是标记价格，这个币安文档里面写的。
+		_, priceErr = swap.DoRequest(
+			http.MethodGet,
+			fmt.Sprintf("/fapi/v1/premiumIndex?symbol=%s", pair.ToSymbol("", true)),
+			"",
+			&response,
+		)
+
+		if priceErr != nil {
+			return
+		}
+
+		price = response.Price
+	}()
+
+	var highestRatio float64 = 0
+	var lowestRatio float64 = 0
+	var pricePrecision = 0
+	var limitErr error
+
+	go func() {
+		defer wg.Done()
+		var response struct {
+			ServerTime int64 `json:"serverTime"`
+			Symbols    []struct {
+				ContractType   string                   `json:"contractType"`
+				BaseAsset      string                   `json:"baseAsset"`
+				CounterAsset   string                   `json:"quoteAsset"`
+				PricePrecision int                      `json:"pricePrecision"`
+				Filters        []map[string]interface{} `json:"filters"`
+			} `json:"symbols"`
+		}
+
+		_, limitErr = swap.DoRequest(http.MethodGet, "/fapi/v1/exchangeInfo", "", &response)
+		if limitErr != nil {
+			return
+		}
+
+		for _, c := range response.Symbols {
+			respPair := Pair{
+				Basis:   NewCurrency(c.BaseAsset, ""),
+				Counter: NewCurrency(c.CounterAsset, ""),
+			}
+			if respPair.ToSymbol("_", false) != pair.ToSymbol("_", false) {
+				continue
+			}
+
+			pricePrecision = c.PricePrecision
+			for _, f := range c.Filters {
+				if f["filterType"] != "PERCENT_PRICE" {
+					continue
+				}
+				minPercent := 1 / math.Pow10(ToInt(f["multiplierDecimal"]))
+				highestRatio = ToFloat64(f["multiplierUp"]) - minPercent
+				lowestRatio = ToFloat64(f["multiplierDown"]) + minPercent
+				return
+			}
+
+			limitErr = errors.New(fmt.Sprintf("Can not find the symbol %s", pair.ToSymbol("_", false)))
+			return
+		}
+
+		limitErr = errors.New(fmt.Sprintf("Can not find the symbol %s", pair.ToSymbol("_", false)))
+		return
+	}()
+	wg.Wait()
+
+	if limitErr != nil {
+		return 0, 0, limitErr
 	}
-
-	contract := swap.getContract(pair)
-	floatTemplate := "%." + fmt.Sprintf("%d", contract.PricePrecision) + "f"
-
-	highest := response.Price * contract.PriceMaxScale
-	highest, _ = strconv.ParseFloat(fmt.Sprintf(floatTemplate, highest), 64)
-
-	lowest := response.Price * contract.PriceMinScale
-	lowest, _ = strconv.ParseFloat(fmt.Sprintf(floatTemplate, lowest), 64)
-
-	return highest, lowest, nil
+	if priceErr != nil {
+		return 0, 0, priceErr
+	}
+	var tmp = math.Pow10(pricePrecision)
+	return math.Floor(price*highestRatio*tmp) / tmp, math.Floor(price*lowestRatio*tmp) / tmp, nil
 }
 
 func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error) {
@@ -606,80 +603,6 @@ func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 	return swapOrders, resp, nil
 }
 
-func (swap *Swap) GetOrders1(orderIds []string, pair Pair) ([]*SwapOrder, []byte, error) {
-	param := url.Values{}
-	param.Set("symbol", pair.ToSymbol("", true))
-	if err := swap.buildParamsSigned(&param); err != nil {
-		return nil, nil, err
-	}
-
-	response := make([]struct {
-		Fee           float64 `json:"commission,string"`
-		FeeAsset      string  `json:"commissionAsset"`
-		OrderId       int64   `json:"orderId"`
-		AvgPrice      float64 `json:"price,string"`
-		DealAmount    float64 `json:"qty,string"`
-		DealTimestamp int64   `json:"time"`
-	}, 0)
-	resp, err := swap.DoRequest(http.MethodGet, SWAP_GET_ORDERS_URI+param.Encode(), "", &response)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(response) == 0 {
-		return make([]*SwapOrder, 0), resp, nil
-	}
-
-	idKV := map[string]int{}
-	for i, rawOrder := range response {
-		idKV[fmt.Sprintf("%d", rawOrder.OrderId)] = i
-	}
-	swapOrders := make([]*SwapOrder, 0)
-	if len(orderIds) == 0 {
-		for _, rawOrder := range response {
-			fee := rawOrder.Fee
-			if rawOrder.FeeAsset == "BNB" {
-				fee *= swap.bnbAvgPrice
-			}
-			if fee > 0 {
-				fee = 0 - fee
-			}
-			s := &SwapOrder{
-				OrderId:    fmt.Sprintf("%d", rawOrder.OrderId),
-				AvgPrice:   rawOrder.AvgPrice,
-				DealAmount: rawOrder.DealAmount,
-				Fee:        fee,
-				Pair:       pair,
-				Exchange:   BINANCE,
-			}
-			swapOrders = append(swapOrders, s)
-		}
-	} else {
-		for _, orderId := range orderIds {
-			i, exist := idKV[orderId]
-			if !exist {
-				continue
-			}
-			fee := response[i].Fee
-			if response[i].FeeAsset == "BNB" {
-				fee *= swap.bnbAvgPrice
-			}
-			if fee > 0 {
-				fee = 0 - fee
-			}
-			s := &SwapOrder{
-				OrderId:    fmt.Sprintf("%d", response[i].OrderId),
-				AvgPrice:   response[i].AvgPrice,
-				DealAmount: response[i].DealAmount,
-				Fee:        fee,
-				Pair:       pair,
-				Exchange:   BINANCE,
-			}
-			swapOrders = append(swapOrders, s)
-		}
-	}
-	return swapOrders, resp, nil
-}
-
 func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 	param := url.Values{}
 	param.Set("symbol", pair.ToSymbol("", true))
@@ -1040,10 +963,11 @@ func (swap *Swap) KeepAlive() {
 	if (nowTimestamp - swap.LastTimestamp) < 5*1000 {
 		return
 	}
+	_ = swap.getContract(Pair{Basis: BTC, Counter: USDT})
 	_, _ = swap.GetFundingFee(Pair{Basis: BTC, Counter: USDT})
 }
 
-func (swap *Swap) getContract(pair Pair) SwapContract {
+func (swap *Swap) getContract(pair Pair) *SwapContract {
 
 	now := time.Now().In(swap.config.Location)
 	//第一次调用或者
@@ -1062,60 +986,59 @@ func (swap *Swap) getContract(pair Pair) SwapContract {
 		}
 		swap.Unlock()
 	}
-	return swap.swapContracts[pair.ToSymbol("_", false)]
+	return swap.swapContracts.SymbolKV[pair.ToSymbol("_", false)]
 }
 
 func (swap *Swap) updateContracts() ([]byte, error) {
 
-	var rawExchangeInfo struct {
+	var response struct {
 		ServerTime int64 `json:"serverTime"`
 		Symbols    []struct {
-			SwapContract `json:",-"`
-			BaseAsset    string                   `json:"baseAsset"`
-			CounterAsset string                   `json:"quoteAsset"`
-			Filters      []map[string]interface{} `json:"filters"`
+			ContractType      string                   `json:"contractType"`
+			BaseAsset         string                   `json:"baseAsset"`
+			CounterAsset      string                   `json:"quoteAsset"`
+			MarginAsset       string                   `json:"marginAsset"`
+			PricePrecision    int64                    `json:"pricePrecision"`
+			QuantityPrecision int64                    `json:"quantityPrecision"`
+			Filters           []map[string]interface{} `json:"filters"`
 		} `json:"symbols"`
 	}
 
-	resp, err := swap.DoRequest(http.MethodGet, "/fapi/v1/exchangeInfo", "", &rawExchangeInfo)
+	resp, err := swap.DoRequest(http.MethodGet, "/fapi/v1/exchangeInfo", "", &response)
 	if err != nil {
 		return nil, err
 	}
 
-	uTime := time.Unix(rawExchangeInfo.ServerTime/1000, 0).In(swap.config.Location)
-	for _, c := range rawExchangeInfo.Symbols {
+	var uTime = time.Unix(response.ServerTime/1000, 0).In(swap.config.Location)
+	var swapContracts = SwapContracts{
+		SymbolKV: make(map[string]*SwapContract, 0),
+	}
+	for _, c := range response.Symbols {
+		if c.ContractType != "PERPETUAL" {
+			continue
+		}
+
 		pair := Pair{Basis: NewCurrency(c.BaseAsset, ""), Counter: NewCurrency(c.CounterAsset, "")}
 		var stdSymbol = pair.ToSymbol("_", false)
-		var priceMaxScale float64
-		var priceMinScale float64
-
-		var amountMax float64
-		var amountMin float64
-
-		for _, f := range c.Filters {
-			if f["filterType"] == "PERCENT_PRICE" {
-				minPercent := 1 / math.Pow10(ToInt(f["multiplierDecimal"]))
-				priceMaxScale = ToFloat64(f["multiplierUp"]) - minPercent
-				priceMinScale = ToFloat64(f["multiplierDown"]) + minPercent
-			} else if f["filterType"] == "LOT_SIZE" {
-				amountMax = ToFloat64(f["maxQty"])
-				amountMin = ToFloat64(f["minQty"])
-			}
+		var settleMode = SETTLE_MODE_BASIS
+		if c.MarginAsset == c.CounterAsset {
+			settleMode = SETTLE_MODE_COUNTER
 		}
 
 		contract := SwapContract{
-			stdSymbol,
-			c.PricePrecision,
-			priceMaxScale,
-			priceMinScale,
-			c.AmountPrecision,
-			amountMax,
-			amountMin,
+			Pair:            pair,
+			Symbol:          stdSymbol,
+			Exchange:        BINANCE,
+			SettleMode:      settleMode,
+			UnitAmount:      1,
+			PricePrecision:  c.PricePrecision,
+			AmountPrecision: c.QuantityPrecision,
 		}
 
-		swap.swapContracts[stdSymbol] = contract
+		swapContracts.SymbolKV[stdSymbol] = &contract
 	}
 	swap.uTime = uTime
+	swap.swapContracts = swapContracts
 	return resp, nil
 }
 

@@ -1,6 +1,8 @@
 package goghostex
 
-import "errors"
+import (
+	"errors"
+)
 
 type SwapTicker struct {
 	Pair      Pair    `json:"-"`
@@ -141,4 +143,19 @@ type SwapAccountItem struct {
 type SwapRule struct {
 	Rule        Rule    `json:",-"`           // 按照Rule里面的规则进行。
 	ContractVal float64 `json:"contract_val"` //合约一手价格
+}
+
+type SwapContracts struct {
+	SymbolKV map[string]*SwapContract `json:"contract_name_kv"`
+}
+
+type SwapContract struct {
+	Pair       Pair   `json:"-"`
+	Symbol     string `json:"symbol"`
+	Exchange   string `json:"exchange"`
+	SettleMode int64  `json:"settle_mode"` // 1: BASIS 2: COUNTER
+
+	UnitAmount      float64 `json:"unit_amount"`
+	PricePrecision  int64   `json:"price_precision"`
+	AmountPrecision int64   `json:"amount_precision"`
 }
