@@ -591,6 +591,9 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		return resp, errors.New("The api data not ready. ")
 	}
 
+	var swapContracts = SwapContracts{
+		SymbolKV: make(map[string]*SwapContract, 0),
+	}
 	for _, item := range response.Data {
 		var pair = NewPair(item.Uly, "-")
 		var symbol = pair.ToSymbol("_", false)
@@ -611,11 +614,11 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
 		}
 
-		swap.swapContracts.SymbolKV[symbol] = &contract
+		swapContracts.SymbolKV[symbol] = &contract
 	}
-
 	var uTime = time.Now().In(swap.config.Location)
 	swap.uTime = uTime
+	swap.swapContracts = swapContracts
 	return resp, nil
 }
 
