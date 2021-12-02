@@ -7,7 +7,7 @@ type MarginRestAPI interface {
 	GetDepth(pair Pair, size int) (*Depth, []byte, error)
 	GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error)
 	GetExchangeName() string
-	GetExchangeRule(pair Pair) (*Rule, []byte, error)
+	//GetExchangeRule(pair Pair) (*Rule, []byte, error)
 
 	// private api
 	GetAccount(pair Pair) (*MarginAccount, []byte, error)

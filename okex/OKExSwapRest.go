@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/strengthening/goghostex"
@@ -14,6 +15,9 @@ import (
 
 type Swap struct {
 	*OKEx
+	sync.Locker
+	swapContracts SwapContracts
+	uTime         time.Time
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
@@ -531,9 +535,91 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 	return items, resp, nil
 }
 
-func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
-	panic("implement me")
-	//return nil,nil,nil
+func (swap *Swap) getContract(pair Pair) *SwapContract {
+
+	now := time.Now().In(swap.config.Location)
+	//第一次调用或者
+	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
+		swap.Lock()
+		_, err := swap.updateContracts()
+		//重试三次
+		for i := 0; err != nil && i < 3; i++ {
+			time.Sleep(time.Second)
+			_, err = swap.updateContracts()
+		}
+
+		// 初次启动必须可以吧。
+		if swap.uTime.IsZero() && err != nil {
+			panic(err)
+		}
+		swap.Unlock()
+	}
+	return swap.swapContracts.SymbolKV[pair.ToSymbol("_", false)]
+}
+
+func (swap *Swap) updateContracts() ([]byte, error) {
+	var params = url.Values{}
+	params.Set("instType", "SWAP")
+
+	var uri = "/api/v5/public/instruments?"
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			InstId    string `json:"instId"`
+			Uly       string `json:"uly"`
+			SettleCcy string `json:"settleCcy"`
+			CtVal     string `json:"ctVal"`
+			TickSz    string `json:"tickSz"`
+			LotSz     string `json:"lotSz"`
+			MinSz     string `json:"minSz"`
+		} `json:"data"`
+	}{}
+	resp, err := swap.DoRequestMarket(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+	if err != nil {
+		return resp, err
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
+	}
+	if len(response.Data) == 0 {
+		return resp, errors.New("The api data not ready. ")
+	}
+
+	var swapContracts = SwapContracts{
+		SymbolKV: make(map[string]*SwapContract, 0),
+	}
+	for _, item := range response.Data {
+		var pair = NewPair(item.Uly, "-")
+		var symbol = pair.ToSymbol("_", false)
+		var firstCurrency = strings.Split(symbol, "_")[0]
+		var settleMode = SETTLE_MODE_BASIS
+		if firstCurrency != strings.ToLower(item.SettleCcy) {
+			settleMode = SETTLE_MODE_COUNTER
+		}
+
+		var contract = SwapContract{
+			Pair:     pair,
+			Symbol:   pair.ToSymbol("_", false),
+			Exchange: OKEX,
+			//ContractName:    item.InstId,
+			SettleMode:      settleMode,
+			UnitAmount:      ToFloat64(item.CtVal),
+			PricePrecision:  GetPrecisionInt64(ToFloat64(item.TickSz)),
+			AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
+		}
+
+		swapContracts.SymbolKV[symbol] = &contract
+	}
+	var uTime = time.Now().In(swap.config.Location)
+	swap.uTime = uTime
+	swap.swapContracts = swapContracts
+	return resp, nil
 }
 
 func (swap *Swap) KeepAlive() {

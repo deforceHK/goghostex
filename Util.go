@@ -144,6 +144,20 @@ func GetPrecision(minSize float64) int {
 	}
 }
 
+func GetPrecisionInt64(minSize float64) int64 {
+
+	if minSize < 0.0000000001 {
+		return 10
+	}
+
+	for i := int64(0); ; i++ {
+		if minSize >= 1 {
+			return i
+		}
+		minSize *= 10
+	}
+}
+
 func GetAscKline(klines []*Kline) []*Kline {
 	if len(klines) <= 1 {
 		return klines

@@ -131,6 +131,8 @@ func TestSwap_MarketAPI(t *testing.T) {
 		t.Log(fees)
 		//t.Log(string(resp))
 	}
+
+	bn.Swap.KeepAlive()
 }
 
 func TestSwap_Account(t *testing.T) {

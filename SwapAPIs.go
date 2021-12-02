@@ -3,7 +3,7 @@ package goghostex
 type SwapRestAPI interface {
 	// public api
 	GetExchangeName() string
-	GetExchangeRule(pair Pair) (*SwapRule, []byte, error)
+	//GetExchangeRule(pair Pair) (*SwapRule, []byte, error)
 	GetTicker(pair Pair) (*SwapTicker, []byte, error)
 	GetDepth(pair Pair, size int) (*SwapDepth, []byte, error)
 	GetLimit(pair Pair) (float64, float64, error)
