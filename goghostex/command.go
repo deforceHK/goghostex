@@ -334,45 +334,45 @@ func (c *Command) coDepth() {
 
 func (c *Command) Info() {
 
-	p := NewPair(c.Pair, "_")
-	var rule *Rule
-	var response []byte
+	//p := NewPair(c.Pair, "_")
+	//var rule *Rule
+	//var response []byte
+	//
+	//switch c.Type {
+	//case "future":
+	//	fr, resp, err := swapClients[c.Exchange].GetExchangeRule(p)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		return
+	//	}
+	//	rule = &fr.Rule
+	//	response = resp
+	//case "spot":
+	//	r, resp, err := spotClients[c.Exchange].GetExchangeRule(p)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		return
+	//	}
+	//	rule = r
+	//	response = resp
+	//case "swap":
+	//	sr, resp, err := swapClients[c.Exchange].GetExchangeRule(p)
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		return
+	//	}
+	//	rule = &sr.Rule
+	//	response = resp
+	//default:
+	//	panic("imp it!")
+	//}
 
-	switch c.Type {
-	case "future":
-		fr, resp, err := swapClients[c.Exchange].GetExchangeRule(p)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		rule = &fr.Rule
-		response = resp
-	case "spot":
-		r, resp, err := spotClients[c.Exchange].GetExchangeRule(p)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		rule = r
-		response = resp
-	case "swap":
-		sr, resp, err := swapClients[c.Exchange].GetExchangeRule(p)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		rule = &sr.Rule
-		response = resp
-	default:
-		panic("imp it!")
-	}
-
-	fmt.Printf("%s %s @%s rule: \n", c.Pair, c.Type, c.Exchange)
-	fmt.Printf("The min order amount: %f \n", rule.BaseMinSize)
-	fmt.Printf("The order amount precision: %d \n", rule.BasePrecision)
-	fmt.Printf("The order price precision: %d \n", rule.CounterPrecision)
+	//fmt.Printf("%s %s @%s rule: \n", c.Pair, c.Type, c.Exchange)
+	//fmt.Printf("The min order amount: %f \n", rule.BaseMinSize)
+	//fmt.Printf("The order amount precision: %d \n", rule.BasePrecision)
+	//fmt.Printf("The order price precision: %d \n", rule.CounterPrecision)
 	fmt.Println("------------------- Raw Response From Exchange -------------------")
-	fmt.Println(string(response))
+	//fmt.Println(string(response))
 }
 
 func (c *Command) initClients() {
