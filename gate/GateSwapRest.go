@@ -16,41 +16,41 @@ type Swap struct {
 	*Gate
 }
 
-func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
-	uri := "/api/v4/futures/%s/contracts/%s"
-	symbol := pair.ToSymbol("_", true)
-	if strings.Index(symbol, "_USDT") > 0 {
-		uri = fmt.Sprintf(uri, strings.ToLower(pair.Counter.Symbol), symbol)
-	} else {
-		uri = fmt.Sprintf(uri, strings.ToLower(pair.Basis.Symbol), symbol)
-	}
-
-	r := struct {
-		OrderSizeMin    int     `json:"order_size_min"`
-		OrderPriceRound float64 `json:"order_price_round,string"`
-	}{}
-	if resp, err := swap.DoRequest(
-		http.MethodGet,
-		uri,
-		"",
-		"",
-		&r,
-	); err != nil {
-		return nil, resp, err
-	} else {
-		return &SwapRule{
-			Rule: Rule{
-				Pair:             pair,
-				Base:             pair.Basis,
-				Counter:          pair.Counter,
-				BaseMinSize:      float64(r.OrderSizeMin),
-				BasePrecision:    GetPrecision(r.OrderPriceRound),
-				CounterPrecision: GetPrecision(float64(r.OrderSizeMin)),
-			},
-			ContractVal: 1,
-		}, resp, nil
-	}
-}
+//func (swap *Swap) GetExchangeRule(pair Pair) (*SwapRule, []byte, error) {
+//	uri := "/api/v4/futures/%s/contracts/%s"
+//	symbol := pair.ToSymbol("_", true)
+//	if strings.Index(symbol, "_USDT") > 0 {
+//		uri = fmt.Sprintf(uri, strings.ToLower(pair.Counter.Symbol), symbol)
+//	} else {
+//		uri = fmt.Sprintf(uri, strings.ToLower(pair.Basis.Symbol), symbol)
+//	}
+//
+//	r := struct {
+//		OrderSizeMin    int     `json:"order_size_min"`
+//		OrderPriceRound float64 `json:"order_price_round,string"`
+//	}{}
+//	if resp, err := swap.DoRequest(
+//		http.MethodGet,
+//		uri,
+//		"",
+//		"",
+//		&r,
+//	); err != nil {
+//		return nil, resp, err
+//	} else {
+//		return &SwapRule{
+//			Rule: Rule{
+//				Pair:             pair,
+//				Base:             pair.Basis,
+//				Counter:          pair.Counter,
+//				BaseMinSize:      float64(r.OrderSizeMin),
+//				BasePrecision:    GetPrecision(r.OrderPriceRound),
+//				CounterPrecision: GetPrecision(float64(r.OrderSizeMin)),
+//			},
+//			ContractVal: 1,
+//		}, resp, nil
+//	}
+//}
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 	uri := "/api/v4/futures/%s/tickers"

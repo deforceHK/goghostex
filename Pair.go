@@ -1,6 +1,7 @@
 package goghostex
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -49,4 +50,8 @@ func (pair Pair) ToSymbol(joinChar string, isUpper bool) string {
 		return strings.ToUpper(rawSymbol)
 	}
 	return strings.ToLower(rawSymbol)
+}
+
+func (pair Pair) ToSwapContractName() string {
+	return fmt.Sprintf("%s-SWAP", pair.ToSymbol("-", true))
 }

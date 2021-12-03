@@ -536,7 +536,6 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 }
 
 func (swap *Swap) getContract(pair Pair) *SwapContract {
-
 	now := time.Now().In(swap.config.Location)
 	//第一次调用或者
 	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
@@ -554,7 +553,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 		}
 		swap.Unlock()
 	}
-	return swap.swapContracts.SymbolKV[pair.ToSymbol("_", false)]
+	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
 }
 
 func (swap *Swap) updateContracts() ([]byte, error) {
@@ -592,11 +591,12 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 	}
 
 	var swapContracts = SwapContracts{
-		SymbolKV: make(map[string]*SwapContract, 0),
+		ContractNameKV: make(map[string]*SwapContract, 0),
 	}
 	for _, item := range response.Data {
 		var pair = NewPair(item.Uly, "-")
 		var symbol = pair.ToSymbol("_", false)
+		var stdContractName = pair.ToSwapContractName()
 		var firstCurrency = strings.Split(symbol, "_")[0]
 		var settleMode = SETTLE_MODE_BASIS
 		if firstCurrency != strings.ToLower(item.SettleCcy) {
@@ -604,17 +604,17 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		}
 
 		var contract = SwapContract{
-			Pair:     pair,
-			Symbol:   pair.ToSymbol("_", false),
-			Exchange: OKEX,
-			//ContractName:    item.InstId,
+			Pair:            pair,
+			Symbol:          pair.ToSymbol("_", false),
+			Exchange:        OKEX,
+			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      ToFloat64(item.CtVal),
 			PricePrecision:  GetPrecisionInt64(ToFloat64(item.TickSz)),
 			AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
 		}
 
-		swapContracts.SymbolKV[symbol] = &contract
+		swapContracts.ContractNameKV[stdContractName] = &contract
 	}
 	var uTime = time.Now().In(swap.config.Location)
 	swap.uTime = uTime
