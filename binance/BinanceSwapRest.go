@@ -986,7 +986,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 		}
 		swap.Unlock()
 	}
-	return swap.swapContracts.SymbolKV[pair.ToSymbol("_", false)]
+	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
 }
 
 func (swap *Swap) updateContracts() ([]byte, error) {
@@ -1011,7 +1011,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 	var uTime = time.Unix(response.ServerTime/1000, 0).In(swap.config.Location)
 	var swapContracts = SwapContracts{
-		SymbolKV: make(map[string]*SwapContract, 0),
+		ContractNameKV: make(map[string]*SwapContract, 0),
 	}
 	for _, c := range response.Symbols {
 		if c.ContractType != "PERPETUAL" {
@@ -1020,6 +1020,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 		pair := Pair{Basis: NewCurrency(c.BaseAsset, ""), Counter: NewCurrency(c.CounterAsset, "")}
 		var stdSymbol = pair.ToSymbol("_", false)
+		var stdContractName = pair.ToSwapContractName()
 		var settleMode = SETTLE_MODE_BASIS
 		if c.MarginAsset == c.CounterAsset {
 			settleMode = SETTLE_MODE_COUNTER
@@ -1029,13 +1030,14 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			Pair:            pair,
 			Symbol:          stdSymbol,
 			Exchange:        BINANCE,
+			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      1,
 			PricePrecision:  c.PricePrecision,
 			AmountPrecision: c.QuantityPrecision,
 		}
 
-		swapContracts.SymbolKV[stdSymbol] = &contract
+		swapContracts.ContractNameKV[stdContractName] = &contract
 	}
 	swap.uTime = uTime
 	swap.swapContracts = swapContracts
