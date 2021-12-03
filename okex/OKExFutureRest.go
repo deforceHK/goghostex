@@ -177,9 +177,17 @@ func (future *Future) GetContract(pair Pair, contractType string) (*FutureContra
 }
 
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
-	var params = url.Values{}
-	params.Set("instId", future.GetInstrumentId(pair, contractType))
+	contract, err := future.GetContract(pair, contractType)
+	if err != nil {
+		return nil, nil, err
+	}
+	nowTimestamp := time.Now().UnixNano() / int64(time.Millisecond)
+	if nowTimestamp > contract.DueTimestamp {
+		return nil, nil, errors.New("The new contract is generating. ")
+	}
 
+	var params = url.Values{}
+	params.Set("instId", contract.ContractName)
 	var uri = "/api/v5/market/ticker?" + params.Encode()
 	var response struct {
 		Code string `json:"code"`
@@ -237,9 +245,13 @@ func (future *Future) GetDepth(
 	contractType string,
 	size int,
 ) (*FutureDepth, []byte, error) {
-	info, err := future.GetContract(pair, contractType)
+	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
+	}
+	nowTimestamp := time.Now().UnixNano() / int64(time.Millisecond)
+	if nowTimestamp > contract.DueTimestamp {
+		return nil, nil, errors.New("The new contract is listing. ")
 	}
 
 	if size < 20 {
@@ -250,7 +262,7 @@ func (future *Future) GetDepth(
 	}
 
 	var params = url.Values{}
-	params.Set("instId", info.ContractName)
+	params.Set("instId", contract.ContractName)
 	params.Set("sz", fmt.Sprintf("%d", size))
 
 	var response struct {
@@ -283,7 +295,7 @@ func (future *Future) GetDepth(
 	var dep FutureDepth
 	dep.Pair = pair
 	dep.ContractType = contractType
-	dep.DueTimestamp = info.DueTimestamp
+	dep.DueTimestamp = contract.DueTimestamp
 	dep.Timestamp = response.Data[0].Timestamp
 	dep.Sequence = dep.Timestamp
 	dep.Date = date.In(future.config.Location).Format(GO_BIRTHDAY)
@@ -348,9 +360,13 @@ func (future *Future) GetKlineRecords(
 	size,
 	since int,
 ) ([]*FutureKline, []byte, error) {
-	info, err := future.GetContract(pair, contractType)
+	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
+	}
+	nowTimestamp := time.Now().UnixNano() / int64(time.Millisecond)
+	if nowTimestamp > contract.DueTimestamp {
+		return nil, nil, errors.New("The new contract is listing. ")
 	}
 
 	if size > 100 {
@@ -359,7 +375,7 @@ func (future *Future) GetKlineRecords(
 
 	uri := "/api/v5/market/candles?"
 	params := url.Values{}
-	params.Set("instId", info.ContractName)
+	params.Set("instId", contract.ContractName)
 	params.Set("bar", _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
 	params.Set("limit", strconv.Itoa(size))
 
@@ -403,8 +419,8 @@ func (future *Future) GetKlineRecords(
 				Close:     ToFloat64(itm[4]),
 				Vol:       ToFloat64(itm[6]),
 			},
-			DueTimestamp: info.DueTimestamp,
-			DueDate:      info.DueDate,
+			DueTimestamp: contract.DueTimestamp,
+			DueDate:      contract.DueDate,
 			Vol2:         ToFloat64(itm[5]),
 		})
 	}
