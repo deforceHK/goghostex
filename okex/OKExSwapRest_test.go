@@ -21,9 +21,9 @@ func TestSwap_MarketAPI(t *testing.T) {
 				},
 			},
 		},
-		ApiKey:        SPOT_API_KEY,
-		ApiSecretKey:  SPOT_API_SECRETKEY,
-		ApiPassphrase: SPOT_API_PASSPHRASE,
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -119,7 +119,7 @@ func TestSwap_TradeAPI(t *testing.T) {
 	orderShort := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Sell * 1.03,
-		Amount:    1,
+		Amount:    1.1,
 		PlaceType: NORMAL,
 		Type:      OPEN_SHORT,
 		LeverRate: 20,
@@ -130,7 +130,7 @@ func TestSwap_TradeAPI(t *testing.T) {
 	orderLong := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Buy * 0.97,
-		Amount:    1,
+		Amount:    1.1,
 		PlaceType: NORMAL,
 		Type:      OPEN_LONG,
 		LeverRate: 20,

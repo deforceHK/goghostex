@@ -270,6 +270,7 @@ var _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER = map[PlaceType]string{
 }
 
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
+	var contract = swap.getContract(order.Pair)
 	var request = struct {
 		InstId  string `json:"instId"`
 		TdMode  string `json:"tdMode"`
@@ -288,8 +289,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	request.PosSide = sideInfo[1]
 	placeInfo, _ := _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER[order.PlaceType]
 	request.OrdType = placeInfo
-	request.Sz = strconv.FormatFloat(order.Amount, 'f', -1, 64)
-	request.Px = strconv.FormatFloat(order.Price, 'f', -1, 64)
+	request.Sz = FloatToString(order.Amount, contract.AmountPrecision)
+	request.Px = FloatToString(order.Price, contract.PricePrecision)
 	request.ClOrdId = order.Cid
 
 	var response = struct {
