@@ -75,8 +75,8 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 }
 
 func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
-
-	params := &url.Values{}
+	var contract = swap.getContract(pair)
+	var params = &url.Values{}
 	params.Set("instId", pair.ToSymbol("-", true)+"-SWAP")
 	params.Set("sz", fmt.Sprintf("%d", size))
 
@@ -117,20 +117,32 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	depth.Sequence = response.Data[0].Timestamp
 
 	for _, bid := range response.Data[0].Bids {
-		price := ToFloat64(bid[0])
-		amount := ToFloat64(bid[1])
-		depthItem := DepthRecord{Price: price, Amount: amount}
+		var price = ToFloat64(bid[0])
+		var amountContract = ToFloat64(bid[1])
+		var amount = swap.getAmount(price, amountContract, contract)
+		var depthItem = DepthRecord{Price: price, Amount: amount}
 		depth.BidList = append(depth.BidList, depthItem)
 	}
 
 	for _, ask := range response.Data[0].Asks {
-		price := ToFloat64(ask[0])
-		amount := ToFloat64(ask[1])
-		depthItem := DepthRecord{Price: price, Amount: amount}
+		var price = ToFloat64(ask[0])
+		var amountContract = ToFloat64(ask[1])
+		var amount = swap.getAmount(price, amountContract, contract)
+		var depthItem = DepthRecord{Price: price, Amount: amount}
 		depth.AskList = append(depth.AskList, depthItem)
 	}
 
 	return depth, resp, nil
+}
+
+func (swap *Swap) getAmount(price, amountContract float64, contract *SwapContract) float64 {
+	var amount float64 = 0
+	if contract.SettleMode == SETTLE_MODE_BASIS {
+		amount = amountContract * contract.UnitAmount / price
+	} else {
+		amount = amountContract * contract.UnitAmount
+	}
+	return amount
 }
 
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
@@ -536,22 +548,22 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 }
 
 func (swap *Swap) getContract(pair Pair) *SwapContract {
+	defer swap.Unlock()
+	swap.Lock()
 	now := time.Now().In(swap.config.Location)
 	//第一次调用或者
 	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
-		swap.Lock()
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
 			time.Sleep(time.Second)
 			_, err = swap.updateContracts()
 		}
-
 		// 初次启动必须可以吧。
 		if swap.uTime.IsZero() && err != nil {
 			panic(err)
 		}
-		swap.Unlock()
+
 	}
 	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
 }

@@ -40,38 +40,38 @@ func TestSwap_MarketAPI(t *testing.T) {
 	//	fmt.Println(string(raw))
 	//}
 
-	//if depth, resp, err := ok.Swap.GetDepth(
-	//	Pair{Basis: BTC, Counter: USDT},
-	//	200,
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	fmt.Println(depth)
-	//	fmt.Println(string(resp))
-	//}
-	//
-	//if high, low, err := ok.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	fmt.Println(high, low)
-	//}
-
-	if klines, resp, err := ok.Swap.GetKline(
-		Pair{Basis: BTC, Counter: USD},
-		KLINE_PERIOD_1DAY,
-		100,
-		0,
+	if depth, resp, err := ok.Swap.GetDepth(
+		Pair{Basis: BTC, Counter: USDT},
+		200,
 	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		raw, _ := json.Marshal(klines)
-
-		fmt.Println(string(raw))
+		fmt.Println(depth)
 		fmt.Println(string(resp))
 	}
+
+	if high, low, err := ok.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		fmt.Println(high, low)
+	}
+
+	//if klines, resp, err := ok.Swap.GetKline(
+	//	Pair{Basis: BTC, Counter: USD},
+	//	KLINE_PERIOD_1DAY,
+	//	100,
+	//	0,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	raw, _ := json.Marshal(klines)
+	//
+	//	fmt.Println(string(raw))
+	//	fmt.Println(string(resp))
+	//}
 }
 
 const (
