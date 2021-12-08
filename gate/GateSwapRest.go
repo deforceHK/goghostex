@@ -156,6 +156,10 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	}
 }
 
+func (swap *Swap) GetContract(pair Pair) *SwapContract {
+	panic("implement me")
+}
+
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	panic("implement me")
 }

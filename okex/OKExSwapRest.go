@@ -145,6 +145,10 @@ func (swap *Swap) getAmount(price, amountContract float64, contract *SwapContrac
 	return amount
 }
 
+func (swap *Swap) GetContract(pair Pair) *SwapContract {
+	return swap.getContract(pair)
+}
+
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 
 	params := &url.Values{}
