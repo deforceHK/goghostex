@@ -140,6 +140,10 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	return depth, resp, err
 }
 
+func (swap *Swap) GetContract(pair Pair) *SwapContract {
+	return swap.getContract(pair)
+}
+
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -968,11 +972,13 @@ func (swap *Swap) KeepAlive() {
 }
 
 func (swap *Swap) getContract(pair Pair) *SwapContract {
+	defer swap.Unlock()
+	swap.Lock()
 
 	now := time.Now().In(swap.config.Location)
 	//第一次调用或者
 	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
-		swap.Lock()
+
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -980,11 +986,12 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 			_, err = swap.updateContracts()
 		}
 
+		// todo 如果初次启动接口挂了，需要有个手动默认的
 		// 初次启动必须可以吧。
 		if swap.uTime.IsZero() && err != nil {
 			panic(err)
 		}
-		swap.Unlock()
+
 	}
 	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
 }
