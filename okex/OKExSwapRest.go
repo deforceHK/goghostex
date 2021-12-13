@@ -185,7 +185,7 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 		return 0, 0, errors.New("lack response data. ")
 	}
 
-	return response.Data[0].SellLmt, response.Data[0].BuyLmt, nil
+	return response.Data[0].BuyLmt, response.Data[0].SellLmt, nil
 
 }
 
