@@ -20,6 +20,93 @@ type Future struct {
 	LastTimestamp int64
 }
 
+var okTimestampFlags = []int64{
+	1420185600000,
+}
+
+var okDueTimestampBoard = map[string][]int64{
+	THIS_WEEK_CONTRACT:    {1420790400000},
+	NEXT_WEEK_CONTRACT:    {1421395200000},
+	QUARTER_CONTRACT:      {1427443200000},
+	NEXT_QUARTER_CONTRACT: {1435305600000},
+}
+var okNextQuarterListKV = make(map[int64]int64, 0)        //k list_timestamp v due_timestamp
+var okNextQuarterListReverseKV = make(map[int64]int64, 0) // k due_timestamp v list_timestamp
+
+func init() {
+	fridays := getLastFridayQuarter()
+	for i := 2; i < len(fridays); i++ {
+		var generateTS = fridays[i-2].AddDate(0, 0, -14).Unix() * 1000
+		var nextQuarterTS = fridays[i].Unix() * 1000
+		okNextQuarterListKV[generateTS] = nextQuarterTS
+		okNextQuarterListReverseKV[nextQuarterTS] = generateTS
+	}
+
+	// 计算2500周，大概50年
+	for i := int64(1); i < 2500; i++ {
+		var ts = okTimestampFlags[0] + i*7*24*60*60*1000
+
+		if nextQuarterTS, exist := okNextQuarterListKV[ts]; exist {
+
+			okDueTimestampBoard[THIS_WEEK_CONTRACT] = append(
+				okDueTimestampBoard[THIS_WEEK_CONTRACT],
+				okDueTimestampBoard[NEXT_WEEK_CONTRACT][len(okDueTimestampBoard[NEXT_WEEK_CONTRACT])-1],
+			)
+			okDueTimestampBoard[NEXT_WEEK_CONTRACT] = append(
+				okDueTimestampBoard[NEXT_WEEK_CONTRACT],
+				okDueTimestampBoard[QUARTER_CONTRACT][len(okDueTimestampBoard[QUARTER_CONTRACT])-1],
+			)
+			okDueTimestampBoard[QUARTER_CONTRACT] = append(
+				okDueTimestampBoard[QUARTER_CONTRACT],
+				okDueTimestampBoard[NEXT_QUARTER_CONTRACT][len(okDueTimestampBoard[NEXT_QUARTER_CONTRACT])-1],
+			)
+			okDueTimestampBoard[NEXT_QUARTER_CONTRACT] = append(
+				okDueTimestampBoard[NEXT_QUARTER_CONTRACT],
+				nextQuarterTS,
+			)
+		} else {
+			okDueTimestampBoard[THIS_WEEK_CONTRACT] = append(
+				okDueTimestampBoard[THIS_WEEK_CONTRACT],
+				okDueTimestampBoard[NEXT_WEEK_CONTRACT][len(okDueTimestampBoard[NEXT_WEEK_CONTRACT])-1],
+			)
+			okDueTimestampBoard[NEXT_WEEK_CONTRACT] = append(
+				okDueTimestampBoard[NEXT_WEEK_CONTRACT],
+				okDueTimestampBoard[THIS_WEEK_CONTRACT][len(okDueTimestampBoard[THIS_WEEK_CONTRACT])-1]+7*24*60*60*1000,
+			)
+			okDueTimestampBoard[QUARTER_CONTRACT] = append(
+				okDueTimestampBoard[QUARTER_CONTRACT],
+				okDueTimestampBoard[QUARTER_CONTRACT][len(okDueTimestampBoard[QUARTER_CONTRACT])-1],
+			)
+			okDueTimestampBoard[NEXT_QUARTER_CONTRACT] = append(
+				okDueTimestampBoard[NEXT_QUARTER_CONTRACT],
+				okDueTimestampBoard[NEXT_QUARTER_CONTRACT][len(okDueTimestampBoard[NEXT_QUARTER_CONTRACT])-1],
+			)
+		}
+	}
+}
+
+func getLastFridayQuarter() []time.Time {
+	var lastFridayQuarter = make([]time.Time, 0)
+	var loc, _ = time.LoadLocation("Asia/Shanghai")
+	var months = []time.Month{time.March, time.June, time.September, time.December}
+	for year := 2015; year < 2050; year += 1 {
+
+		for _, month := range months {
+			var lastFriday = time.Date(
+				year, month, 1,
+				16, 0, 0, 0, loc,
+			)
+			// 月末最后一天
+			lastFriday = lastFriday.AddDate(0, 1, 0).AddDate(0, 0, -1)
+			for lastFriday.Weekday() != time.Friday {
+				lastFriday = lastFriday.AddDate(0, 0, -1)
+			}
+			lastFridayQuarter = append(lastFridayQuarter, lastFriday)
+		}
+	}
+	return lastFridayQuarter
+}
+
 // 获取合约信息
 func (future *Future) getFutureContract(pair Pair, contractType string) (*FutureContract, error) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
@@ -30,10 +117,10 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 	if weekNum < 5 || (weekNum == 5 && now.Hour() <= 16) {
 		minusDay = -7 + 5 - weekNum
 	}
-	//最晚更新时限。由于okex 新生成合约改成了16:10故修改这里的时间。
+	//最晚更新时限。
 	lastUpdateTime := time.Date(
 		now.Year(), now.Month(), now.Day(),
-		16, 10, 0, 0, now.Location(),
+		16, 0, 0, 0, loc,
 	).AddDate(0, 0, minusDay)
 
 	if future.Contracts.SyncTime.IsZero() || (future.Contracts.SyncTime.Before(lastUpdateTime)) {
@@ -82,6 +169,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		"",
 		&response,
 	)
+	fmt.Println(string(resp)) // 线上debug
 	if err != nil {
 		return nil, err
 	}
@@ -89,22 +177,32 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		return nil, errors.New(response.Msg)
 	}
 
-	SyncTime := time.Now().In(future.config.Location)
+	var nowTime = time.Now()
 	futureContracts := FutureContracts{
 		ContractTypeKV: make(map[string]*FutureContract, 0),
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
-		SyncTime:       SyncTime,
+		SyncTime:       nowTime.In(future.config.Location),
 	}
 
-	for _, item := range response.Data {
-		dueTime := time.Unix(item.ExpTime/1000, 0).In(future.config.Location)
-		openTime := time.Unix(item.ListTime/1000, 0).In(future.config.Location)
+	var flag = (nowTime.Unix()*1000 - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000)
 
-		contractType := item.Alias
+	for _, item := range response.Data {
+
+		var contractType = item.Alias
+		var dueTimestamp = okDueTimestampBoard[contractType][flag]
+		var dueTime = time.Unix(dueTimestamp/1000, 0).In(future.config.Location)
+		var openTimestamp int64
+		if tmpTS, exist := okNextQuarterListReverseKV[dueTimestamp]; exist {
+			openTimestamp = tmpTS
+		} else {
+			openTimestamp = dueTimestamp - 14*24*60*60*1000
+		}
+		var openTime = time.Unix(openTimestamp/1000, 0).In(future.config.Location)
+
 		pair := NewPair(item.Uly, "-")
 		settleMode := SETTLE_MODE_BASIS
-		if item.CtValCcy != "USD" {
+		if item.SettleCcy != strings.Split(item.Uly, "-")[0] {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
@@ -124,7 +222,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			Symbol:       pair.ToSymbol("_", false),
 			Exchange:     OKEX,
 			ContractType: contractType,
-			ContractName: item.InstId,
+			ContractName: item.Uly + "-" + dueTime.Format("060102"),
 			SettleMode:   settleMode,
 
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
@@ -406,6 +504,11 @@ func (future *Future) GetKlineRecords(
 	var klines []*FutureKline
 	for _, itm := range response.Data {
 		timestamp := ToInt64(itm[0])
+		// 刚生成合约时，okex接口会返回很多别的交割日期的kline。这里都过滤掉。
+		if timestamp < contract.OpenTimestamp && period == KLINE_PERIOD_1MIN {
+			continue
+		}
+
 		t := time.Unix(timestamp/1000, 0)
 		klines = append(klines, &FutureKline{
 			Kline: Kline{
