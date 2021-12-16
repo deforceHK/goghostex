@@ -34,6 +34,10 @@ func TestSwap_MarketAPI(t *testing.T) {
 	}
 
 	bn := New(config)
+
+	var contract = bn.Swap.GetContract(Pair{Basis: BTC, Counter: USD})
+	t.Log(*contract)
+
 	// ticker unit test
 	if ticker, resp, err := bn.Swap.GetTicker(
 		Pair{Basis: BTC, Counter: USDT},
