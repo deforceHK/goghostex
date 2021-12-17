@@ -38,6 +38,7 @@ type Future struct {
 	Locker        sync.Locker
 	Contracts     FutureContracts
 	LastTimestamp int64
+	LastUpdateContractTime time.Time
 }
 
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
@@ -98,8 +99,6 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	return nil, nil, errors.New("Can not find the contract type. " + contractType)
 }
 func (future *Future) GetContract(pair Pair, contractType string) (*FutureContract, error) {
-	future.Locker.Lock()
-	defer future.Locker.Unlock()
 	return future.getFutureContract(pair, contractType)
 }
 
@@ -673,22 +672,12 @@ func (future *Future) DoRequest(httpMethod, uri, reqBody string, response interf
 
 // get the future contract info.
 func (future *Future) getFutureContract(pair Pair, contractType string) (*FutureContract, error) {
-	loc, _ := time.LoadLocation("Asia/Shanghai")
-	now := time.Now().In(loc)
+	future.Locker.Lock()
+	defer future.Locker.Unlock()
 
-	weekNum := int(now.Weekday())
-	minusDay := 5 - weekNum
-	if weekNum < 5 || (weekNum == 5 && now.Hour() <= 16) {
-		minusDay = -7 + 5 - weekNum
-	}
+	now := time.Now()
 
-	//最晚更新时限。
-	lastUpdateTime := time.Date(
-		now.Year(), now.Month(), now.Day(),
-		16, 0, 0, 0, now.Location(),
-	).AddDate(0, 0, minusDay)
-
-	if future.Contracts.SyncTime.IsZero() || (future.Contracts.SyncTime.Before(lastUpdateTime)) {
+	if now.After(future.LastUpdateContractTime) {
 		_, err := future.updateFutureContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -735,6 +724,8 @@ type binanceContractInfo struct {
 
 // update the future contracts info.
 func (future *Future) updateFutureContracts() ([]byte, error) {
+
+
 	response := struct {
 		Symbols    []*binanceContractInfo `json:"symbols"`
 		ServerTime int64                  `json:"serverTime"`
@@ -751,8 +742,6 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		ContractTypeKV: make(map[string]*FutureContract, 0),
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
-
-		SyncTime: time.Now().In(future.config.Location), // sync from remote time.
 	}
 
 	for _, item := range response.Symbols {
@@ -828,6 +817,9 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	}
 
 	future.Contracts = contracts
+	// todo binance 也需要准确的更新合约信息shijian.
+	var nextUpdateTime = time.Now().AddDate(0,0,1)
+	future.LastUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
 

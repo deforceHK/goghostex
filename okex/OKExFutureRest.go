@@ -481,8 +481,8 @@ func (future *Future) GetKlineRecords(
 		return nil, nil, err
 	}
 
-	if size > 100 {
-		size = 100
+	if size > 300 {
+		size = 300
 	}
 
 	uri := "/api/v5/market/candles?"
@@ -901,5 +901,4 @@ func (future *Future) KeepAlive() {
 
 	// call the rate api to update lastTimestamp
 	_, _, _ = future.GetTicker(Pair{BTC, USD}, QUARTER_CONTRACT)
-	future.config.LastTimestamp = nowTimestamp
 }

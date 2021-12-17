@@ -119,7 +119,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		QUARTER_CONTRACT,
 		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
-		20,
+		300,
 		0,
 		//int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
 	); err != nil {
