@@ -513,12 +513,15 @@ func (future *Future) GetKlineRecords(
 	if response.Code != "0" {
 		return nil, nil, errors.New(response.Msg)
 	}
-
 	if len(response.Data) == 0 {
-		return make([]*FutureKline, 0), nil, nil
+		return make([]*FutureKline, 0), resp, nil
 	}
 
-	var flag = (ToInt64(response.Data[0][0]) - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000)
+	var maxKlineTS = ToInt64(response.Data[len(response.Data)-1][0])
+	if ToInt64(response.Data[0][0]) > maxKlineTS {
+		maxKlineTS = ToInt64(response.Data[0][0])
+	}
+	var flag = (maxKlineTS - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000)
 	var swapTimestamp = okTimestampFlags[flag]
 	var dueTimestamp = okDueTimestampBoard[contractType][flag]
 	var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
