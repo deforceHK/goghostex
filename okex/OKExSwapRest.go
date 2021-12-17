@@ -324,10 +324,10 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		return resp, err
 	}
 	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
-		return resp, errors.New(response.Data[0].SMsg)
+		return resp, errors.New(string(resp)) // very important cause it has the error code
 	}
 	if response.Code != "0" {
-		return resp, errors.New(response.Msg)
+		return resp, errors.New(string(resp)) // very important cause it has the error code
 	}
 
 	now = time.Now()

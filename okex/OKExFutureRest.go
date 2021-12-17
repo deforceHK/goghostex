@@ -744,10 +744,10 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 		return resp, err
 	}
 	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
-		return resp, errors.New(response.Data[0].SMsg)
+		return resp, errors.New(string(resp)) //todo 更好的获取错误码的方案
 	}
 	if response.Code != "0" {
-		return resp, errors.New(response.Msg)
+		return resp, errors.New(string(resp))
 	}
 
 	now = time.Now()
