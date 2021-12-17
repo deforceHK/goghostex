@@ -15,9 +15,9 @@ import (
 
 type Future struct {
 	*OKEx
-	Locker        sync.Locker
-	Contracts     FutureContracts
-	LastTimestamp int64
+	Locker                 sync.Locker
+	LastUpdateContractTime time.Time
+	Contracts              FutureContracts
 }
 
 var okTimestampFlags = []int64{
@@ -110,21 +110,13 @@ func getLastFridayQuarter() []time.Time {
 
 // 获取合约信息
 func (future *Future) getFutureContract(pair Pair, contractType string) (*FutureContract, error) {
+	future.Locker.Lock()
+	defer future.Locker.Unlock()
+
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 
-	weekNum := int(now.Weekday())
-	minusDay := 5 - weekNum
-	if weekNum < 5 || (weekNum == 5 && now.Hour() <= 16) {
-		minusDay = -7 + 5 - weekNum
-	}
-	//最晚更新时限。
-	lastUpdateTime := time.Date(
-		now.Year(), now.Month(), now.Day(),
-		16, 0, 0, 0, loc,
-	).AddDate(0, 0, minusDay)
-
-	if future.Contracts.SyncTime.IsZero() || (future.Contracts.SyncTime.Before(lastUpdateTime)) {
+	if now.After(future.LastUpdateContractTime) {
 		_, err := future.updateFutureContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -162,6 +154,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			TickSz    float64 `json:"tickSz,string"`
 			LotSz     float64 `json:"lotSz,string"`
 			Uly       string  `json:"uly"`
+			State  string `json:"state"`
 		} `json:"data"`
 	}
 	resp, err := future.DoRequest(
@@ -177,18 +170,26 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	if response.Code != "0" {
 		return nil, errors.New(response.Msg)
 	}
+	if len(response.Data) == 0 {
+		return nil, errors.New("The contract api not ready. ")
+	}
 
 	var nowTime = time.Now()
 	futureContracts := FutureContracts{
 		ContractTypeKV: make(map[string]*FutureContract, 0),
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
-		SyncTime:       nowTime.In(future.config.Location),
 	}
 
 	var flag = (nowTime.Unix()*1000 - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000)
+	var isFreshNext10min = false
 
 	for _, item := range response.Data {
+		// 只要有合约状态不是live，那就是十分钟后更新
+		if isFreshNext10min == false && item.State=="live"{
+		//if isFreshNext10min == false && item.State!="live"{
+			isFreshNext10min = true
+		}
 
 		var contractType = item.Alias
 		var dueTimestamp = okDueTimestampBoard[contractType][flag]
@@ -245,8 +246,13 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		futureContracts.ContractNameKV[contractNameItem] = contract
 		futureContracts.DueTimestampKV[dueTimestampItem] = contract
 	}
-
 	future.Contracts = futureContracts
+
+	var nextUpdateTime = time.Unix(okTimestampFlags[flag+1]/1000, 0).In(future.config.Location)
+	if isFreshNext10min{
+		nextUpdateTime = nowTime.Add(10*time.Minute)
+	}
+	future.LastUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
 
@@ -262,16 +268,11 @@ func (future *Future) GetInstrumentId(pair Pair, contractAlias string) string {
 		contractAlias != THIS_WEEK_CONTRACT {
 		return contractAlias
 	}
-
-	future.Locker.Lock()
-	defer future.Locker.Unlock()
 	fc, _ := future.getFutureContract(pair, contractAlias)
 	return fc.ContractName
 }
 
 func (future *Future) GetContract(pair Pair, contractType string) (*FutureContract, error) {
-	future.Locker.Lock()
-	defer future.Locker.Unlock()
 	return future.getFutureContract(pair, contractType)
 }
 
@@ -900,4 +901,5 @@ func (future *Future) KeepAlive() {
 
 	// call the rate api to update lastTimestamp
 	_, _, _ = future.GetTicker(Pair{BTC, USD}, QUARTER_CONTRACT)
+	future.config.LastTimestamp = nowTimestamp
 }

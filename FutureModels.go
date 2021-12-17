@@ -2,7 +2,6 @@ package goghostex
 
 import (
 	"errors"
-	"time"
 )
 
 /**
@@ -191,5 +190,5 @@ type FutureContracts struct {
 	ContractNameKV map[string]*FutureContract `json:"contract_name_kv"`
 	DueTimestampKV map[string]*FutureContract `json:"due_timestamp_kv"`
 
-	SyncTime time.Time // sync from remote service time
+	//SyncTime time.Time // sync from remote service time
 }

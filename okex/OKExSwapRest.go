@@ -640,5 +640,12 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 }
 
 func (swap *Swap) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	// last in 5s, no need to keep alive.
+	if (nowTimestamp - swap.config.LastTimestamp) < 5*1000 {
+		return
+	}
+
 	_, _, _ = swap.GetDepth(Pair{BTC, USDT}, 2)
+	swap.config.LastTimestamp = nowTimestamp
 }
