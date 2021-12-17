@@ -115,67 +115,67 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(highest, lowest)
 	//}
 	//
-	//if minKline, body, err := ok.Future.GetKlineRecords(
-	//	NEXT_QUARTER_CONTRACT,
-	//	Pair{Basis: BTC, Counter: USD},
-	//	KLINE_PERIOD_1MIN,
-	//	20,
-	//	0,
-	//	//int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	standard, err := json.Marshal(minKline)
-	//	if err != nil {
-	//		t.Error(err)
-	//		return
-	//	}
-	//
-	//	t.Log("minKline standard struct: ")
-	//	t.Log(string(standard))
-	//
-	//	t.Log("minKline remote api response: ")
-	//	t.Log(string(body))
-	//
-	//	for _, kline := range minKline {
-	//		if kline.Timestamp < 1000000000000 {
-	//			t.Error("The timestamp must be 13 number. ")
-	//			return
-	//		}
-	//	}
-	//}
-
-	if dayKline, body, err := ok.Future.GetKlineRecords(
-		NEXT_QUARTER_CONTRACT,
+	if minKline, body, err := ok.Future.GetKlineRecords(
+		QUARTER_CONTRACT,
 		Pair{Basis: BTC, Counter: USD},
-		KLINE_PERIOD_1DAY,
+		KLINE_PERIOD_1MIN,
 		20,
-		//int(time.Now().Add(-20*24*time.Hour).UnixNano()/1000000),
 		0,
+		//int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
 	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		standard, err := json.Marshal(dayKline)
+		standard, err := json.Marshal(minKline)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		t.Log("dayKline standard struct: ")
+		t.Log("minKline standard struct: ")
 		t.Log(string(standard))
 
-		t.Log("dayKline remote api response: ")
+		t.Log("minKline remote api response: ")
 		t.Log(string(body))
 
-		for _, kline := range dayKline {
+		for _, kline := range minKline {
 			if kline.Timestamp < 1000000000000 {
 				t.Error("The timestamp must be 13 number. ")
 				return
 			}
 		}
 	}
+
+	//if dayKline, body, err := ok.Future.GetKlineRecords(
+	//	NEXT_QUARTER_CONTRACT,
+	//	Pair{Basis: BTC, Counter: USD},
+	//	KLINE_PERIOD_1DAY,
+	//	20,
+	//	//int(time.Now().Add(-20*24*time.Hour).UnixNano()/1000000),
+	//	0,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(dayKline)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("dayKline standard struct: ")
+	//	t.Log(string(standard))
+	//
+	//	t.Log("dayKline remote api response: ")
+	//	t.Log(string(body))
+	//
+	//	for _, kline := range dayKline {
+	//		if kline.Timestamp < 1000000000000 {
+	//			t.Error("The timestamp must be 13 number. ")
+	//			return
+	//		}
+	//	}
+	//}
 
 	//if index, resp, err := ok.Future.GetIndex(Pair{BTC, USDT}); err != nil {
 	//	t.Error(err)
@@ -201,17 +201,14 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(resp))
 	//}
 
-	Contracts, err := ok.Future.GetContract(
-		Pair{Basis: BTC, Counter: USD},
-		NEXT_WEEK_CONTRACT,
-	)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	raw, _ := json.Marshal(Contracts)
-	t.Log(string(raw))
+	//Contracts, err := ok.Future.GetContract(
+	//	Pair{Basis: BTC, Counter: USD},
+	//	NEXT_WEEK_CONTRACT,
+	//)
+	//if err != nil {
+	//	t.Error(err)
+	//	return
+	//}
 
 	//ContractName := ok.Future.GetInstrumentId(
 	//	Pair{Basis: BTC, Counter: USD},

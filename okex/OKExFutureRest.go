@@ -30,6 +30,7 @@ var okDueTimestampBoard = map[string][]int64{
 	QUARTER_CONTRACT:      {1427443200000},
 	NEXT_QUARTER_CONTRACT: {1435305600000},
 }
+
 var okNextQuarterListKV = make(map[int64]int64, 0)        //k list_timestamp v due_timestamp
 var okNextQuarterListReverseKV = make(map[int64]int64, 0) // k due_timestamp v list_timestamp
 
@@ -45,7 +46,7 @@ func init() {
 	// 计算2500周，大概50年
 	for i := int64(1); i < 2500; i++ {
 		var ts = okTimestampFlags[0] + i*7*24*60*60*1000
-
+		okTimestampFlags = append(okTimestampFlags, ts)
 		if nextQuarterTS, exist := okNextQuarterListKV[ts]; exist {
 
 			okDueTimestampBoard[THIS_WEEK_CONTRACT] = append(
@@ -448,6 +449,22 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 	return response.Data[0].BuyLmt, response.Data[0].SellLmt, nil
 }
 
+// 次季生成日，在交割时间段前后kline所属contract_type对照
+var listKlineKV = map[string]string{
+	THIS_WEEK_CONTRACT:    NEXT_WEEK_CONTRACT,
+	NEXT_WEEK_CONTRACT:    QUARTER_CONTRACT,
+	QUARTER_CONTRACT:      NEXT_QUARTER_CONTRACT,
+	NEXT_QUARTER_CONTRACT: THIS_WEEK_CONTRACT,
+}
+
+// 非次季生成日，在交割时间段前后kline所属contract_type对照
+var nonListKlineKV = map[string]string{
+	THIS_WEEK_CONTRACT:    NEXT_WEEK_CONTRACT,
+	NEXT_WEEK_CONTRACT:    THIS_WEEK_CONTRACT,
+	QUARTER_CONTRACT:      QUARTER_CONTRACT,
+	NEXT_QUARTER_CONTRACT: NEXT_QUARTER_CONTRACT,
+}
+
 /**
  * since : 单位毫秒,开始时间
 **/
@@ -461,10 +478,6 @@ func (future *Future) GetKlineRecords(
 	contract, err := future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
-	}
-	nowTimestamp := time.Now().UnixNano() / int64(time.Millisecond)
-	if nowTimestamp > contract.DueTimestamp {
-		return nil, nil, errors.New("The new contract is listing. ")
 	}
 
 	if size > 100 {
@@ -501,12 +514,34 @@ func (future *Future) GetKlineRecords(
 		return nil, nil, errors.New(response.Msg)
 	}
 
+	if len(response.Data) == 0 {
+		return make([]*FutureKline, 0), nil, nil
+	}
+
+	var flag = (ToInt64(response.Data[0][0]) - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000)
+	var swapTimestamp = okTimestampFlags[flag]
+	var dueTimestamp = okDueTimestampBoard[contractType][flag]
+	var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+
+	// 如果是次季生成日，则情况有所不同。
+	var prevContractType = nonListKlineKV[contractType]
+	if _, exist := okNextQuarterListKV[swapTimestamp]; exist {
+		prevContractType = listKlineKV[contractType]
+	}
+	var prevDueTimestamp = okDueTimestampBoard[prevContractType][flag-1]
+	var prevDueDate = time.Unix(prevDueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+
 	var klines []*FutureKline
 	for _, itm := range response.Data {
 		timestamp := ToInt64(itm[0])
-		// 刚生成合约时，okex接口会返回很多别的交割日期的kline。这里都过滤掉。
-		if timestamp < contract.OpenTimestamp && period == KLINE_PERIOD_1MIN {
-			continue
+		var ct = contractType
+		var dt = dueTimestamp
+		var dd = dueDate
+		// 如果时间间隔小的话这样使用没问题，但是时间间隔长，ok这个设计没法实现。
+		if timestamp < swapTimestamp && period <= KLINE_PERIOD_1H {
+			ct = prevContractType
+			dt = prevDueTimestamp
+			dd = prevDueDate
 		}
 
 		t := time.Unix(timestamp/1000, 0)
@@ -522,8 +557,9 @@ func (future *Future) GetKlineRecords(
 				Close:     ToFloat64(itm[4]),
 				Vol:       ToFloat64(itm[6]),
 			},
-			DueTimestamp: contract.DueTimestamp,
-			DueDate:      contract.DueDate,
+			ContractType: ct,
+			DueTimestamp: dt,
+			DueDate:      dd,
 			Vol2:         ToFloat64(itm[5]),
 		})
 	}

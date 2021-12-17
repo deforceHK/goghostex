@@ -747,13 +747,12 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		return nil, err
 	}
 
-	syncTime := time.Unix(response.ServerTime/1000, response.ServerTime%1000).In(future.config.Location)
 	contracts := FutureContracts{
 		ContractTypeKV: make(map[string]*FutureContract, 0),
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
 
-		SyncTime: syncTime, // sync from remote time.
+		SyncTime: time.Now().In(future.config.Location), // sync from remote time.
 	}
 
 	for _, item := range response.Symbols {

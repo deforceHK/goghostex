@@ -59,6 +59,7 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 			SWAP_TICKER_URI+"?"+params.Encode(),
 			"",
 			&tickerResp,
+			SETTLE_MODE_COUNTER,
 		)
 	}()
 
@@ -114,6 +115,7 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 		fmt.Sprintf(SWAP_DEPTH_URI, pair.ToSymbol("", true), size),
 		"",
 		&response,
+		SETTLE_MODE_COUNTER,
 	)
 
 	depth := new(SwapDepth)
@@ -162,6 +164,7 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 			fmt.Sprintf("/fapi/v1/premiumIndex?symbol=%s", pair.ToSymbol("", true)),
 			"",
 			&response,
+			SETTLE_MODE_COUNTER,
 		)
 
 		if priceErr != nil {
@@ -189,7 +192,13 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 			} `json:"symbols"`
 		}
 
-		_, limitErr = swap.DoRequest(http.MethodGet, "/fapi/v1/exchangeInfo", "", &response)
+		_, limitErr = swap.DoRequest(
+			http.MethodGet,
+			"/fapi/v1/exchangeInfo",
+			"",
+			&response,
+			SETTLE_MODE_COUNTER,
+		)
 		if limitErr != nil {
 			return
 		}
@@ -256,7 +265,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 
 	uri := SWAP_KLINE_URI + params.Encode()
 	klines := make([][]interface{}, 0)
-	resp, err := swap.DoRequest(http.MethodGet, uri, "", &klines)
+	resp, err := swap.DoRequest(http.MethodGet, uri, "", &klines, SETTLE_MODE_COUNTER)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -298,6 +307,7 @@ func (swap *Swap) GetOpenAmount(pair Pair) (float64, int64, []byte, error) {
 		"/futures/data/openInterestHist?"+params.Encode(),
 		"",
 		&responses,
+		SETTLE_MODE_COUNTER,
 	)
 	if err != nil {
 		return 0, 0, nil, err
@@ -322,6 +332,7 @@ func (swap *Swap) GetFundingFee(pair Pair) (float64, error) {
 		"/fapi/v1/premiumIndex?"+param.Encode(),
 		"",
 		&info,
+		SETTLE_MODE_COUNTER,
 	); err != nil {
 		return 0, err
 	} else {
@@ -344,6 +355,7 @@ func (swap *Swap) GetFundingFees(pair Pair) ([][]interface{}, []byte, error) {
 		"/fapi/v1/fundingRate?"+param.Encode(),
 		"",
 		&rawFees,
+		SETTLE_MODE_COUNTER,
 	); err != nil {
 		return nil, nil, err
 	} else {
@@ -434,7 +446,13 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	if err := swap.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
-	resp, err := swap.DoRequest(http.MethodPost, SWAP_PLACE_ORDER_URI+param.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodPost,
+		SWAP_PLACE_ORDER_URI+param.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +498,13 @@ func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
 	if err := swap.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
-	resp, err := swap.DoRequest(http.MethodDelete, SWAP_CANCEL_ORDER_URI+param.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodDelete,
+		SWAP_CANCEL_ORDER_URI+param.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +550,13 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	if err := swap.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
-	resp, err := swap.DoRequest(http.MethodGet, SWAP_GET_ORDER_URI+param.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		SWAP_GET_ORDER_URI+param.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -567,7 +597,13 @@ func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 		return nil, nil, err
 	}
 
-	resp, err := swap.DoRequest(http.MethodGet, SWAP_GET_ORDERS_URI+params.Encode(), "", &rawOrders)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		SWAP_GET_ORDERS_URI+params.Encode(),
+		"",
+		&rawOrders,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -628,7 +664,13 @@ func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 		PositionSide   string  `json:"positionSide"`
 	}, 0)
 
-	resp, err := swap.DoRequest(http.MethodGet, "/fapi/v1/openOrders?"+param.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		"/fapi/v1/openOrders?"+param.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -680,7 +722,13 @@ func (swap *Swap) GetPosition(pair Pair, openType FutureType) (*SwapPosition, []
 		MarkPrice        float64 `json:"markPrice,string"`
 	}, 0)
 
-	resp, err := swap.DoRequest(http.MethodGet, "/fapi/v1/positionRisk?"+param.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		"/fapi/v1/positionRisk?"+param.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -757,7 +805,13 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 		} `json:"positions"`
 	}{}
 
-	resp, err := swap.DoRequest(http.MethodGet, SWAP_ACCOUNT_URI+params.Encode(), "", &response)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		SWAP_ACCOUNT_URI+params.Encode(),
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -833,7 +887,13 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 		Time       int64   `json:"time"`
 	}, 0)
 
-	resp, err := swap.DoRequest(http.MethodGet, SWAP_INCOME_URI+params.Encode(), "", &responses)
+	resp, err := swap.DoRequest(
+		http.MethodGet,
+		SWAP_INCOME_URI+params.Encode(),
+		"",
+		&responses,
+		SETTLE_MODE_COUNTER,
+	)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -927,6 +987,7 @@ func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount floa
 		"/fapi/v1/positionMargin?"+param.Encode(),
 		"",
 		nil,
+		SETTLE_MODE_COUNTER,
 	); err != nil {
 		return nil, err
 	} else {
@@ -934,7 +995,7 @@ func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount floa
 	}
 }
 
-func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}, settleMode int64) ([]byte, error) {
 	header := map[string]string{
 		"X-MBX-APIKEY": swap.config.ApiKey,
 	}
@@ -942,10 +1003,16 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 		header["Content-Type"] = "application/x-www-form-urlencoded"
 	}
 
+	var bnUrl = ""
+	if settleMode == SETTLE_MODE_COUNTER {
+		bnUrl = SWAP_ENDPOINT + uri
+	} else {
+		bnUrl = "https://dapi.binance.com" + uri
+	}
 	resp, err := NewHttpRequest(
 		swap.config.HttpClient,
 		httpMethod,
-		SWAP_ENDPOINT+uri,
+		bnUrl,
 		reqBody,
 		header,
 	)
@@ -976,9 +1043,19 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 	swap.Lock()
 
 	now := time.Now().In(swap.config.Location)
-	//第一次调用或者
-	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
+	nextUpdateTime := time.Date(
+		now.Year(), now.Month(), now.Day(),
+		16, 0, 0, 0, swap.config.Location,
+	).AddDate(0, 0, -1)
+	if now.Hour() >= 16 {
+		nextUpdateTime = time.Date(
+			now.Year(), now.Month(), now.Day(),
+			16, 0, 0, 0, swap.config.Location,
+		)
+	}
 
+	//第一次调用或者每天下午4点更新
+	if swap.uTime.IsZero() || swap.uTime.Before(nextUpdateTime) {
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -986,21 +1063,62 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 			_, err = swap.updateContracts()
 		}
 
-		// todo 如果初次启动接口挂了，需要有个手动默认的
-		// 初次启动必须可以吧。
+		// init fail at first time, get a default one.
 		if swap.uTime.IsZero() && err != nil {
-			panic(err)
+			swap.swapContracts = SwapContracts{
+				ContractNameKV: map[string]*SwapContract{
+					"BTC-USD-SWAP": {
+						Pair:            Pair{BTC, USD},
+						Symbol:          "btc_usd",
+						Exchange:        BINANCE,
+						ContractName:    "BTC-USD-SWAP",
+						SettleMode:      SETTLE_MODE_BASIS,
+						UnitAmount:      100,
+						PricePrecision:  1,
+						AmountPrecision: 0,
+					},
+					"BTC-USDT-SWAP": {
+						Pair:            Pair{BTC, USDT},
+						Symbol:          "btc_usdt",
+						Exchange:        BINANCE,
+						ContractName:    "BTC-USDT-SWAP",
+						SettleMode:      SETTLE_MODE_COUNTER,
+						UnitAmount:      1,
+						PricePrecision:  1,
+						AmountPrecision: 2,
+					},
+					"ETH-USD-SWAP": {
+						Pair:            Pair{ETH, USD},
+						Symbol:          "eth_usd",
+						Exchange:        BINANCE,
+						ContractName:    "ETH-USD-SWAP",
+						SettleMode:      SETTLE_MODE_BASIS,
+						UnitAmount:      10,
+						PricePrecision:  2,
+						AmountPrecision: 0,
+					},
+					"ETH-USDT-SWAP": {
+						Pair:            Pair{ETH, USDT},
+						Symbol:          "eth_usdt",
+						Exchange:        BINANCE,
+						ContractName:    "ETH-USDT-SWAP",
+						SettleMode:      SETTLE_MODE_COUNTER,
+						UnitAmount:      1,
+						PricePrecision:  2,
+						AmountPrecision: 1,
+					},
+				},
+			}
+			swap.uTime = now
 		}
-
 	}
 	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
 }
 
 func (swap *Swap) updateContracts() ([]byte, error) {
 
-	var response struct {
-		ServerTime int64 `json:"serverTime"`
-		Symbols    []struct {
+	var responseCounter struct {
+		Symbols []struct {
 			ContractType      string                   `json:"contractType"`
 			BaseAsset         string                   `json:"baseAsset"`
 			CounterAsset      string                   `json:"quoteAsset"`
@@ -1011,16 +1129,62 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		} `json:"symbols"`
 	}
 
-	resp, err := swap.DoRequest(http.MethodGet, "/fapi/v1/exchangeInfo", "", &response)
-	if err != nil {
-		return nil, err
+	var wg = sync.WaitGroup{}
+	wg.Add(2)
+
+	var respCounter []byte
+	var errCounter error
+	go func() {
+		respCounter, errCounter = swap.DoRequest(
+			http.MethodGet,
+			"/fapi/v1/exchangeInfo",
+			"",
+			&responseCounter,
+			SETTLE_MODE_COUNTER,
+		)
+		wg.Done()
+	}()
+
+	var responseBasis = struct {
+		ServerTime int64 `json:"serverTime"`
+		Symbols    []struct {
+			ContractType      string                   `json:"contractType"`
+			ContractSize      float64                  `json:"contractSize"`
+			BaseAsset         string                   `json:"baseAsset"`
+			CounterAsset      string                   `json:"quoteAsset"`
+			MarginAsset       string                   `json:"marginAsset"`
+			PricePrecision    int64                    `json:"pricePrecision"`
+			QuantityPrecision int64                    `json:"quantityPrecision"`
+			Filters           []map[string]interface{} `json:"filters"`
+		} `json:"symbols"`
+	}{}
+
+	var respBasis []byte
+	var errBasis error
+	go func() {
+		respBasis, errBasis = swap.DoRequest(
+			http.MethodGet,
+			"/dapi/v1/exchangeInfo",
+			"",
+			&responseBasis,
+			SETTLE_MODE_BASIS,
+		)
+		wg.Done()
+	}()
+
+	wg.Wait()
+	if errCounter != nil {
+		return respCounter, errCounter
+	}
+	if errBasis != nil {
+		return respBasis, errBasis
 	}
 
-	var uTime = time.Unix(response.ServerTime/1000, 0).In(swap.config.Location)
 	var swapContracts = SwapContracts{
 		ContractNameKV: make(map[string]*SwapContract, 0),
 	}
-	for _, c := range response.Symbols {
+
+	for _, c := range responseCounter.Symbols {
 		if c.ContractType != "PERPETUAL" {
 			continue
 		}
@@ -1046,9 +1210,37 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 		swapContracts.ContractNameKV[stdContractName] = &contract
 	}
-	swap.uTime = uTime
+
+	for _, c := range responseBasis.Symbols {
+		if c.ContractType != "PERPETUAL" {
+			continue
+		}
+		var pair = Pair{
+			Basis:   NewCurrency(c.BaseAsset, ""),
+			Counter: NewCurrency(c.CounterAsset, ""),
+		}
+		var stdSymbol = pair.ToSymbol("_", false)
+		var stdContractName = pair.ToSwapContractName()
+		var settleMode = SETTLE_MODE_BASIS
+		if c.MarginAsset == c.CounterAsset {
+			settleMode = SETTLE_MODE_COUNTER
+		}
+
+		contract := SwapContract{
+			Pair:            pair,
+			Symbol:          stdSymbol,
+			Exchange:        BINANCE,
+			ContractName:    stdContractName,
+			SettleMode:      settleMode,
+			UnitAmount:      c.ContractSize,
+			PricePrecision:  c.PricePrecision,
+			AmountPrecision: c.QuantityPrecision,
+		}
+		swapContracts.ContractNameKV[stdContractName] = &contract
+	}
+	swap.uTime = time.Now().In(swap.config.Location)
 	swap.swapContracts = swapContracts
-	return resp, nil
+	return respCounter, nil
 }
 
 // not support the binance both mode.
