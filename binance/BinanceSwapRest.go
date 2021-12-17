@@ -1118,7 +1118,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 func (swap *Swap) updateContracts() ([]byte, error) {
 
 	var responseCounter struct {
-		Symbols    []struct {
+		Symbols []struct {
 			ContractType      string                   `json:"contractType"`
 			BaseAsset         string                   `json:"baseAsset"`
 			CounterAsset      string                   `json:"quoteAsset"`
@@ -1144,7 +1144,6 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		)
 		wg.Done()
 	}()
-
 
 	var responseBasis = struct {
 		ServerTime int64 `json:"serverTime"`
