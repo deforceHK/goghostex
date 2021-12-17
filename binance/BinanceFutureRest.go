@@ -35,9 +35,9 @@ const (
 
 type Future struct {
 	*Binance
-	Locker        sync.Locker
-	Contracts     FutureContracts
-	LastTimestamp int64
+	Locker                 sync.Locker
+	Contracts              FutureContracts
+	LastTimestamp          int64
 	LastUpdateContractTime time.Time
 }
 
@@ -725,7 +725,6 @@ type binanceContractInfo struct {
 // update the future contracts info.
 func (future *Future) updateFutureContracts() ([]byte, error) {
 
-
 	response := struct {
 		Symbols    []*binanceContractInfo `json:"symbols"`
 		ServerTime int64                  `json:"serverTime"`
@@ -818,7 +817,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 
 	future.Contracts = contracts
 	// todo binance 也需要准确的更新合约信息shijian.
-	var nextUpdateTime = time.Now().AddDate(0,0,1)
+	var nextUpdateTime = time.Now().AddDate(0, 0, 1)
 	future.LastUpdateContractTime = nextUpdateTime
 	return resp, nil
 }

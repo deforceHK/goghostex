@@ -154,7 +154,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			TickSz    float64 `json:"tickSz,string"`
 			LotSz     float64 `json:"lotSz,string"`
 			Uly       string  `json:"uly"`
-			State  string `json:"state"`
+			State     string  `json:"state"`
 		} `json:"data"`
 	}
 	resp, err := future.DoRequest(
@@ -163,7 +163,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		"",
 		&response,
 	)
-	fmt.Println(string(resp)) // 线上debug
+
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +186,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 
 	for _, item := range response.Data {
 		// 只要有合约状态不是live，那就是十分钟后更新
-		if isFreshNext10min == false && item.State=="live"{
-		//if isFreshNext10min == false && item.State!="live"{
+		if isFreshNext10min == false && item.State != "live" {
 			isFreshNext10min = true
 		}
 
@@ -249,8 +248,8 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	future.Contracts = futureContracts
 
 	var nextUpdateTime = time.Unix(okTimestampFlags[flag+1]/1000, 0).In(future.config.Location)
-	if isFreshNext10min{
-		nextUpdateTime = nowTime.Add(10*time.Minute)
+	if isFreshNext10min || futureContracts.ContractTypeKV["btc,usd,this_week"] == nil {
+		nextUpdateTime = nowTime.Add(10 * time.Minute)
 	}
 	future.LastUpdateContractTime = nextUpdateTime
 	return resp, nil
