@@ -32,10 +32,11 @@ const (
 type Swap struct {
 	*Binance
 	sync.Locker
-	swapContracts SwapContracts
-	uTime         time.Time
-	bnbAvgPrice   float64 // 抵扣交易费用的 bnb 平均持仓成本
-	LastTimestamp int64
+	swapContracts          SwapContracts
+	uTime                  time.Time
+	bnbAvgPrice            float64 // 抵扣交易费用的 bnb 平均持仓成本
+	LastTimestamp          int64
+	NextUpdateContractTime time.Time
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
@@ -1043,19 +1044,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 	swap.Lock()
 
 	now := time.Now().In(swap.config.Location)
-	nextUpdateTime := time.Date(
-		now.Year(), now.Month(), now.Day(),
-		16, 0, 0, 0, swap.config.Location,
-	).AddDate(0, 0, -1)
-	if now.Hour() >= 16 {
-		nextUpdateTime = time.Date(
-			now.Year(), now.Month(), now.Day(),
-			16, 0, 0, 0, swap.config.Location,
-		)
-	}
-
-	//第一次调用或者每天下午4点更新
-	if swap.uTime.IsZero() || swap.uTime.Before(nextUpdateTime) {
+	if now.After(swap.NextUpdateContractTime) {
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -1064,7 +1053,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 		}
 
 		// init fail at first time, get a default one.
-		if swap.uTime.IsZero() && err != nil {
+		if swap.NextUpdateContractTime.IsZero() && err != nil {
 			swap.swapContracts = SwapContracts{
 				ContractNameKV: map[string]*SwapContract{
 					"BTC-USD-SWAP": {
@@ -1109,7 +1098,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 					},
 				},
 			}
-			swap.uTime = now
+			swap.NextUpdateContractTime = now.Add(10 * time.Minute)
 		}
 	}
 	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
@@ -1238,7 +1227,23 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		}
 		swapContracts.ContractNameKV[stdContractName] = &contract
 	}
-	swap.uTime = time.Now().In(swap.config.Location)
+
+	// setting next update time.
+	var nowTime = time.Now().In(swap.config.Location)
+	var nextUpdateTime time.Time
+	if nowTime.Hour() >= 16 {
+		nextUpdateTime = time.Date(
+			nowTime.Year(), nowTime.Month(), nowTime.Day(),
+			16, 0, 0, 0, swap.config.Location,
+		).AddDate(0, 0, 1)
+	} else {
+		nextUpdateTime = time.Date(
+			nowTime.Year(), nowTime.Month(), nowTime.Day(),
+			16, 0, 0, 0, swap.config.Location,
+		)
+	}
+
+	swap.NextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
 	return respCounter, nil
 }

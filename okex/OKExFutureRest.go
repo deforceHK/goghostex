@@ -15,9 +15,10 @@ import (
 
 type Future struct {
 	*OKEx
+	Contracts FutureContracts
+
 	Locker                 sync.Locker
-	LastUpdateContractTime time.Time
-	Contracts              FutureContracts
+	NextUpdateContractTime time.Time //  下一次更新合约时间
 }
 
 var okTimestampFlags = []int64{
@@ -116,7 +117,7 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(loc)
 
-	if now.After(future.LastUpdateContractTime) {
+	if now.After(future.NextUpdateContractTime) {
 		_, err := future.updateFutureContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -251,7 +252,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	if isFreshNext10min || futureContracts.ContractTypeKV["btc,usd,this_week"] == nil {
 		nextUpdateTime = nowTime.Add(10 * time.Minute)
 	}
-	future.LastUpdateContractTime = nextUpdateTime
+	future.NextUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
 

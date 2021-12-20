@@ -38,7 +38,7 @@ type Future struct {
 	Locker                 sync.Locker
 	Contracts              FutureContracts
 	LastTimestamp          int64
-	LastUpdateContractTime time.Time
+	NextUpdateContractTime time.Time
 }
 
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
@@ -677,7 +677,7 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 
 	now := time.Now()
 
-	if now.After(future.LastUpdateContractTime) {
+	if now.After(future.NextUpdateContractTime) {
 		_, err := future.updateFutureContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -818,7 +818,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	future.Contracts = contracts
 	// todo binance 也需要准确的更新合约信息shijian.
 	var nextUpdateTime = time.Now().AddDate(0, 0, 1)
-	future.LastUpdateContractTime = nextUpdateTime
+	future.NextUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
 
