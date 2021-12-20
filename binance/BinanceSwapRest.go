@@ -156,11 +156,9 @@ func (swap *Swap) GetMark(pair Pair) (float64, error) {
 func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	var contract = swap.GetContract(pair)
 
-	var settleMode = SETTLE_MODE_COUNTER
 	var uri = SWAP_COUNTER_DEPTH_URI
 	var symbol = pair.ToSymbol("", true)
 	if contract.SettleMode == SETTLE_MODE_BASIS {
-		settleMode = SETTLE_MODE_BASIS
 		uri = SWAP_BASIS_DEPTH_URI
 		symbol = symbol + "_PERP"
 	}
@@ -188,7 +186,7 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 		uri+params.Encode(),
 		"",
 		&response,
-		settleMode,
+		contract.SettleMode,
 	)
 
 	var now = time.Now()
