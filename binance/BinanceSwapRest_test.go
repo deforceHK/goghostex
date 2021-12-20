@@ -16,7 +16,137 @@ const (
 	SWAP_PROXY_URL     = "socks5://127.0.0.1:1090"
 )
 
-func TestSwap_MarketAPI(t *testing.T) {
+func TestSwap_MarketAPI_Counter(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(SWAP_PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+
+	var contract = bn.Swap.GetContract(Pair{Basis: BTC, Counter: USDT})
+	t.Log(*contract)
+
+	// ticker unit test
+	if ticker, resp, err := bn.Swap.GetTicker(
+		Pair{Basis: BTC, Counter: USDT},
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(ticker)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		t.Log("Ticker standard struct: ")
+		t.Log(string(standard))
+		t.Log("Ticker remote api response: ")
+		t.Log(string(resp))
+	}
+
+	// depth unit test
+	if depth, resp, err := bn.Swap.GetDepth(
+		Pair{Basis: BTC, Counter: USDT},
+		100,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		standard, err := json.Marshal(depth)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		t.Log("Depth standard struct:")
+		t.Log(string(standard))
+		t.Log("Depth remote api response: ")
+		t.Log(string(resp))
+
+		// make sure the later request get bigger sequence
+		depth1, _, _ := bn.Swap.GetDepth(
+			Pair{Basis: BTC, Counter: USDT},
+			100,
+		)
+
+		if depth1.Sequence < depth.Sequence {
+			t.Error("later request get smaller sequence!!")
+			return
+		}
+
+		if err := depth.Verify(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if err := depth1.Verify(); err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	if price, err := bn.Swap.GetMark(Pair{Basis: BTC, Counter: USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("mark price: ", price)
+	}
+
+	if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("highest: ", highest)
+		t.Log("lowest: ", lowest)
+	}
+
+	if klines, resp, err := bn.Swap.GetKline(
+		Pair{Basis: BTC, Counter: USDT},
+		KLINE_PERIOD_1DAY,
+		20,
+		1271149752000,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		klineRaw, _ := json.Marshal(klines)
+		t.Log(string(klineRaw))
+		t.Log(string(resp))
+	}
+
+	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(openAmount)
+		t.Log(timestamp)
+	}
+
+	if fees, _, err := bn.Swap.GetFundingFees(Pair{Basis: BTC, Counter: USDT}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(fees)
+		//t.Log(string(resp))
+	}
+
+	bn.Swap.KeepAlive()
+}
+
+func TestSwap_MarketAPI_Basis(t *testing.T) {
 
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
@@ -59,8 +189,8 @@ func TestSwap_MarketAPI(t *testing.T) {
 
 	// depth unit test
 	if depth, resp, err := bn.Swap.GetDepth(
-		Pair{Basis: BTC, Counter: USDT},
-		20,
+		Pair{Basis: BTC, Counter: USD},
+		100,
 	); err != nil {
 		t.Error(err)
 		return
@@ -78,7 +208,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 
 		// make sure the later request get bigger sequence
 		depth1, _, _ := bn.Swap.GetDepth(
-			Pair{Basis: BTC, Counter: USDT},
+			Pair{Basis: BTC, Counter: USD},
 			20,
 		)
 
@@ -98,7 +228,14 @@ func TestSwap_MarketAPI(t *testing.T) {
 		}
 	}
 
-	if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USDT}); err != nil {
+	if price, err := bn.Swap.GetMark(Pair{Basis: BTC, Counter: USD}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log("mark price: ", price)
+	}
+
+	if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -107,7 +244,7 @@ func TestSwap_MarketAPI(t *testing.T) {
 	}
 
 	if klines, resp, err := bn.Swap.GetKline(
-		Pair{Basis: BTC, Counter: USDT},
+		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1DAY,
 		20,
 		1271149752000,
@@ -120,23 +257,23 @@ func TestSwap_MarketAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log(openAmount)
-		t.Log(timestamp)
-	}
-
-	if fees, _, err := bn.Swap.GetFundingFees(Pair{Basis: BTC, Counter: USDT}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log(fees)
-		//t.Log(string(resp))
-	}
-
-	bn.Swap.KeepAlive()
+	//if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(openAmount)
+	//	t.Log(timestamp)
+	//}
+	//
+	//if fees, _, err := bn.Swap.GetFundingFees(Pair{Basis: BTC, Counter: USDT}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(fees)
+	//	//t.Log(string(resp))
+	//}
+	//
+	//bn.Swap.KeepAlive()
 }
 
 func TestSwap_Account(t *testing.T) {
