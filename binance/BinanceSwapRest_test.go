@@ -117,7 +117,7 @@ func TestSwap_MarketAPI_Counter(t *testing.T) {
 		Pair{Basis: BTC, Counter: USDT},
 		KLINE_PERIOD_1DAY,
 		20,
-		1271149752000,
+		1638288000000,
 	); err != nil {
 		t.Error(err)
 		return
@@ -125,6 +125,7 @@ func TestSwap_MarketAPI_Counter(t *testing.T) {
 		klineRaw, _ := json.Marshal(klines)
 		t.Log(string(klineRaw))
 		t.Log(string(resp))
+		//return
 	}
 
 	if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
@@ -245,9 +246,9 @@ func TestSwap_MarketAPI_Basis(t *testing.T) {
 
 	if klines, resp, err := bn.Swap.GetKline(
 		Pair{Basis: BTC, Counter: USD},
-		KLINE_PERIOD_1DAY,
+		KLINE_PERIOD_1MIN,
 		20,
-		1271149752000,
+		1638288000000,
 	); err != nil {
 		t.Error(err)
 		return

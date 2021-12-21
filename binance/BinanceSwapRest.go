@@ -197,15 +197,15 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 	depth.Sequence = response.LastUpdateId
 
 	for _, bid := range response.Bids {
-		price := ToFloat64(bid[0])
-		amount := ToFloat64(bid[1])
+		var price = ToFloat64(bid[0])
+		var amount = ToFloat64(bid[1])
 		depthItem := DepthRecord{Price: price, Amount: amount}
 		depth.BidList = append(depth.BidList, depthItem)
 	}
 
 	for _, ask := range response.Asks {
-		price := ToFloat64(ask[0])
-		amount := ToFloat64(ask[1])
+		var price = ToFloat64(ask[0])
+		var amount = ToFloat64(ask[1])
 		depthItem := DepthRecord{Price: price, Amount: amount}
 		depth.AskList = append(depth.AskList, depthItem)
 	}
@@ -306,17 +306,16 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error) {
 	var contract = swap.GetContract(pair)
 
-	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
-	if len(startTimeFmt) > 13 {
-		startTimeFmt = startTimeFmt[0:13]
-	}
-
-	if len(endTimeFmt) > 13 {
-		endTimeFmt = endTimeFmt[0:13]
-	}
-
 	if size > 1500 {
 		size = 1500
+	}
+
+	var endTimestamp = since + size*_INERNAL_KLINE_SECOND_CONVERTER[period]
+	if endTimestamp > since+200*24*60*60*1000 {
+		endTimestamp = since + 200*24*60*60*1000
+	}
+	if endTimestamp > int(time.Now().Unix()*1000) {
+		endTimestamp = int(time.Now().Unix() * 1000)
 	}
 
 	var symbol = pair.ToSymbol("", true)
@@ -326,8 +325,8 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 	var params = url.Values{}
 	params.Set("symbol", symbol)
 	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", startTimeFmt)
-	params.Set("endTime", endTimeFmt)
+	params.Set("startTime", fmt.Sprintf("%d", since))
+	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
 	params.Set("limit", fmt.Sprintf("%d", size))
 
 	var uri = SWAP_COUNTER_KLINE_URI + params.Encode()
