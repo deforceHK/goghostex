@@ -60,6 +60,24 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1MONTH: "1M",
 }
 
+var _INERNAL_KLINE_SECOND_CONVERTER = map[int]int{
+	KLINE_PERIOD_1MIN:   60 * 1000,
+	KLINE_PERIOD_3MIN:   3 * 60 * 1000,
+	KLINE_PERIOD_5MIN:   5 * 60 * 1000,
+	KLINE_PERIOD_15MIN:  15 * 60 * 1000,
+	KLINE_PERIOD_30MIN:  30 * 60 * 1000,
+	KLINE_PERIOD_60MIN:  60 * 60 * 1000,
+	KLINE_PERIOD_2H:     2 * 60 * 60 * 1000,
+	KLINE_PERIOD_4H:     4 * 60 * 60 * 1000,
+	KLINE_PERIOD_6H:     6 * 60 * 60 * 1000,
+	KLINE_PERIOD_8H:     8 * 60 * 60 * 1000,
+	KLINE_PERIOD_12H:    12 * 60 * 60 * 1000,
+	KLINE_PERIOD_1DAY:   24 * 60 * 60 * 1000,
+	KLINE_PERIOD_3DAY:   3 * 24 * 60 * 60 * 1000,
+	KLINE_PERIOD_1WEEK:  7 * 24 * 60 * 60 * 1000,
+	KLINE_PERIOD_1MONTH: 30.5 * 24 * 60 * 60 * 1000,
+}
+
 func New(config *APIConfig) *Binance {
 	binance := &Binance{config: config}
 	binance.Spot = &Spot{Binance: binance}
