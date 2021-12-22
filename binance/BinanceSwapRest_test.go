@@ -164,8 +164,7 @@ func TestSwap_MarketAPI_Basis(t *testing.T) {
 		Location:      time.Now().Location(),
 	}
 
-	bn := New(config)
-
+	var bn = New(config)
 	var contract = bn.Swap.GetContract(Pair{Basis: BTC, Counter: USD})
 	t.Log(*contract)
 
@@ -318,7 +317,7 @@ func TestSwap_Account(t *testing.T) {
 
 // must set both
 // place the order ---> get the order info ---> cancel the order -> get the order info
-func TestSwap_TradeAPI(t *testing.T) {
+func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
@@ -453,4 +452,376 @@ func TestSwap_TradeAPI(t *testing.T) {
 	//	t.Log(string(resp))
 	//	t.Log(s)
 	//}
+}
+
+// place the order ---> get the order info ---> deal
+func TestSwap_DEALAPI_COUNTER(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+	if account, raw, err := bn.Swap.GetAccount(); err != nil {
+		t.Error(err)
+		return
+	} else {
+
+		rawAccount, _ := json.Marshal(account)
+		t.Log(string(rawAccount))
+		t.Log(string(raw))
+
+		if account.BalanceAvail < 1 {
+			t.Error("There have no enough asset to trade. ")
+			return
+		}
+	}
+
+	pair := Pair{Basis: BTC, Counter: USDT}
+	ticker, _, err := bn.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	openShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Sell * 0.99,
+		Amount:    0.012,
+		PlaceType: NORMAL,
+		Type:      OPEN_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 下空单
+	if resp, err := bn.Swap.PlaceOrder(&openShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(openShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	var isDeal = false
+	for i := 0; i < 5; i++ {
+		if resp, err := bn.Swap.GetOrder(&openShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+			stdOrder, _ := json.Marshal(openShort)
+			t.Log(string(resp))
+			t.Log(string(stdOrder))
+
+			if openShort.Status == ORDER_FINISH {
+				isDeal = true
+				break
+			}
+		}
+	}
+
+	if !isDeal {
+		t.Error("The open order hasn't deal. ")
+		return
+	}
+
+	liquidateShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Buy * 1.01,
+		Amount:    openShort.DealAmount,
+		PlaceType: NORMAL,
+		Type:      LIQUIDATE_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 平空单
+	if resp, err := bn.Swap.PlaceOrder(&liquidateShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(liquidateShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	isDeal = false
+	for i := 0; i < 5; i++ {
+		if resp, err := bn.Swap.GetOrder(&liquidateShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+			stdOrder, _ := json.Marshal(liquidateShort)
+			t.Log(string(resp))
+			t.Log(string(stdOrder))
+
+			if liquidateShort.Status == ORDER_FINISH {
+				isDeal = true
+				break
+			}
+		}
+	}
+
+	if !isDeal {
+		t.Error("The liquidate order hasn't deal. ")
+		return
+	}
+
+}
+
+// place the order ---> get the order info ---> cancel the order -> get the order info
+func TestSwap_TradeAPI_BASIS(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	var bn = New(config)
+	//if account, raw, err := bn.Swap.GetAccount(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//
+	//	rawAccount, _ := json.Marshal(account)
+	//	t.Log(string(rawAccount))
+	//	t.Log(string(raw))
+	//
+	//	if account.BalanceAvail < 1 {
+	//		t.Error("There have no enough asset to trade. ")
+	//		return
+	//	}
+	//}
+
+	var pair = Pair{Basis: BTC, Counter: USD}
+	ticker, _, err := bn.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	orderShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Sell * 1.03,
+		Amount:    1,
+		PlaceType: NORMAL,
+		Type:      OPEN_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	orderLong := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Buy * 0.97,
+		Amount:    1,
+		PlaceType: NORMAL,
+		Type:      OPEN_LONG,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 开空单
+	if resp, err := bn.Swap.PlaceOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	// 开多单
+	if resp, err := bn.Swap.PlaceOrder(&orderLong); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderLong)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.GetOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.CancelOrder(&orderShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	if resp, err := bn.Swap.CancelOrder(&orderLong); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderLong)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+}
+
+// place the order ---> get the order info ---> deal
+func TestSwap_DEALAPI_BASIS(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+	//if account, raw, err := bn.Swap.GetAccount(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//
+	//	rawAccount, _ := json.Marshal(account)
+	//	t.Log(string(rawAccount))
+	//	t.Log(string(raw))
+	//
+	//	if account.BalanceAvail < 1 {
+	//		t.Error("There have no enough asset to trade. ")
+	//		return
+	//	}
+	//}
+
+	var pair = Pair{Basis: BTC, Counter: USD}
+	var ticker, tickerResp, err = bn.Swap.GetTicker(pair)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log(string(tickerResp))
+	t.Log(ticker)
+
+	openShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Sell * 0.99,
+		Amount:    1,
+		PlaceType: NORMAL,
+		Type:      OPEN_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 下空单
+	if resp, err := bn.Swap.PlaceOrder(&openShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(openShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	var isDeal = false
+	for i := 0; i < 5; i++ {
+		if resp, err := bn.Swap.GetOrder(&openShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+			stdOrder, _ := json.Marshal(openShort)
+			t.Log(string(resp))
+			t.Log(string(stdOrder))
+
+			if openShort.Status == ORDER_FINISH {
+				isDeal = true
+				break
+			}
+		}
+	}
+
+	if !isDeal {
+		t.Error("The open order hasn't deal. ")
+		return
+	}
+
+	liquidateShort := SwapOrder{
+		Cid:       UUID(),
+		Price:     ticker.Buy * 1.01,
+		Amount:    openShort.DealAmount,
+		PlaceType: NORMAL,
+		Type:      LIQUIDATE_SHORT,
+		LeverRate: 20,
+		Pair:      pair,
+		Exchange:  BINANCE,
+	}
+
+	// 平空单
+	if resp, err := bn.Swap.PlaceOrder(&liquidateShort); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(liquidateShort)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
+	isDeal = false
+	for i := 0; i < 5; i++ {
+		if resp, err := bn.Swap.GetOrder(&liquidateShort); err != nil {
+			t.Error(err)
+			return
+		} else {
+			stdOrder, _ := json.Marshal(liquidateShort)
+			t.Log(string(resp))
+			t.Log(string(stdOrder))
+
+			if liquidateShort.Status == ORDER_FINISH {
+				isDeal = true
+				break
+			}
+		}
+	}
+
+	if !isDeal {
+		t.Error("The liquidate order hasn't deal. ")
+		return
+	}
+
 }
