@@ -15,22 +15,27 @@ import (
 )
 
 const (
-	SWAP_COUNTER_ENDPOINT  = "https://fapi.binance.com"
-	SWAP_COUNTER_DEPTH_URI = "/fapi/v1/depth?"
-	SWAP_COUNTER_KLINE_URI = "/fapi/v1/klines?"
+	SWAP_COUNTER_ENDPOINT   = "https://fapi.binance.com"
+	SWAP_COUNTER_DEPTH_URI  = "/fapi/v1/depth?"
+	SWAP_COUNTER_KLINE_URI  = "/fapi/v1/klines?"
+	SWAP_COUNTER_TICKER_URI = "/fapi/v1/ticker/24hr?"
 
-	SWAP_BASIS_ENDPOINT  = "https://dapi.binance.com"
-	SWAP_BASIS_DEPTH_URI = "/dapi/v1/depth?"
-	SWAP_BASIS_KLINE_URI = "/dapi/v1/klines?"
+	SWAP_COUNTER_PLACE_ORDER_URI  = "/fapi/v1/order?"
+	SWAP_COUNTER_GET_ORDER_URI    = "/fapi/v1/order?"
+	SWAP_COUNTER_CANCEL_ORDER_URI = "/fapi/v1/order?"
 
-	SWAP_TICKER_URI = "/fapi/v1/ticker/24hr"
+	SWAP_BASIS_ENDPOINT   = "https://dapi.binance.com"
+	SWAP_BASIS_DEPTH_URI  = "/dapi/v1/depth?"
+	SWAP_BASIS_KLINE_URI  = "/dapi/v1/klines?"
+	SWAP_BASIS_TICKER_URI = "/dapi/v1/ticker/24hr?"
 
-	SWAP_INCOME_URI       = "/fapi/v1/income?"
-	SWAP_ACCOUNT_URI      = "/fapi/v1/account?"
-	SWAP_PLACE_ORDER_URI  = "/fapi/v1/order?"
-	SWAP_CANCEL_ORDER_URI = "/fapi/v1/order?"
-	SWAP_GET_ORDER_URI    = "/fapi/v1/order?"
-	SWAP_GET_ORDERS_URI   = "/fapi/v1/allOrders?"
+	SWAP_BASIS_PLACE_ORDER_URI  = "/dapi/v1/order?"
+	SWAP_BASIS_GET_ORDER_URI    = "/dapi/v1/order?"
+	SWAP_BASIS_CANCEL_ORDER_URI = "/dapi/v1/order?"
+
+	SWAP_INCOME_URI     = "/fapi/v1/income?"
+	SWAP_ACCOUNT_URI    = "/fapi/v1/account?"
+	SWAP_GET_ORDERS_URI = "/fapi/v1/allOrders?"
 )
 
 type Swap struct {
@@ -44,28 +49,40 @@ type Swap struct {
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
-
-	wg := sync.WaitGroup{}
+	var contract = swap.GetContract(pair)
+	var wg = sync.WaitGroup{}
 	wg.Add(2)
 
 	var tickerRaw []byte
 	var tickerErr error
-	tickerResp := make(map[string]interface{}, 0)
-
+	var tickerCounter = make(map[string]interface{}, 0)
+	var tickerBasis = make([]map[string]interface{}, 0)
 	var swapDepth *SwapDepth
 	var depthErr error
 
 	go func() {
 		defer wg.Done()
 		params := url.Values{}
-		params.Set("symbol", pair.ToSymbol("", true))
-		tickerRaw, tickerErr = swap.DoRequest(
-			http.MethodGet,
-			SWAP_TICKER_URI+"?"+params.Encode(),
-			"",
-			&tickerResp,
-			SETTLE_MODE_COUNTER,
-		)
+		if contract.SettleMode == SETTLE_MODE_COUNTER {
+			params.Set("symbol", pair.ToSymbol("", true))
+			tickerRaw, tickerErr = swap.DoRequest(
+				http.MethodGet,
+				SWAP_COUNTER_TICKER_URI+params.Encode(),
+				"",
+				&tickerCounter,
+				contract.SettleMode,
+			)
+		} else {
+			params.Set("symbol", pair.ToSymbol("", true)+"_PERP")
+			tickerRaw, tickerErr = swap.DoRequest(
+				http.MethodGet,
+				SWAP_BASIS_TICKER_URI+params.Encode(),
+				"",
+				&tickerBasis,
+				contract.SettleMode,
+			)
+
+		}
 	}()
 
 	go func() {
@@ -83,17 +100,28 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 		return nil, nil, depthErr
 	}
 
-	now := time.Now()
+	var now = time.Now()
+	var last, vol, high, low float64 = 0, 0, 0, 0
+	if contract.SettleMode == SETTLE_MODE_COUNTER {
+		last = ToFloat64(tickerCounter["lastPrice"])
+		vol = ToFloat64(tickerCounter["volume"])
+		high = ToFloat64(tickerCounter["highPrice"])
+		low = ToFloat64(tickerCounter["lowPrice"])
+	} else {
+		last = ToFloat64(tickerBasis[0]["lastPrice"])
+		vol = ToFloat64(tickerBasis[0]["baseVolume"])
+		high = ToFloat64(tickerBasis[0]["highPrice"])
+		low = ToFloat64(tickerBasis[0]["lowPrice"])
+	}
+
 	var ticker SwapTicker
 	ticker.Pair = pair
 	ticker.Timestamp = now.UnixNano() / int64(time.Millisecond)
 	ticker.Date = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-
-	ticker.Last = ToFloat64(tickerResp["lastPrice"])
-	ticker.Vol = ToFloat64(tickerResp["volume"])
-	ticker.High = ToFloat64(tickerResp["highPrice"])
-	ticker.Low = ToFloat64(tickerResp["lowPrice"])
-
+	ticker.Last = last
+	ticker.Vol = vol
+	ticker.High = high
+	ticker.Low = low
 	ticker.Buy = ToFloat64(swapDepth.BidList[0].Price)
 	ticker.Sell = ToFloat64(swapDepth.AskList[0].Price)
 	return &ticker, tickerRaw, nil
@@ -477,8 +505,9 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		return nil, errors.New("order param is nil")
 	}
 
-	side, positionSide, placeType := "", "", ""
-	exist := false
+	var side, positionSide, placeType = "", "", ""
+	var exist = false
+
 	if side, exist = sideRelation[order.Type]; !exist {
 		return nil, errors.New("swap type not found. ")
 	}
@@ -489,13 +518,21 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		return nil, errors.New("place type not found. ")
 	}
 
-	param := url.Values{}
-	param.Set("symbol", order.Pair.ToSymbol("", true))
+	var contract = swap.GetContract(order.Pair)
+	var paramSymbol = order.Pair.ToSymbol("", true)
+	var uri = SWAP_COUNTER_PLACE_ORDER_URI
+	if contract.SettleMode == SETTLE_MODE_BASIS {
+		paramSymbol += "_PERP"
+		uri = SWAP_BASIS_PLACE_ORDER_URI
+	}
+
+	var param = url.Values{}
+	param.Set("symbol", paramSymbol)
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", swap.normalPrice(order.Price, order.Pair))
-	param.Set("quantity", swap.normalAmount(order.Amount, order.Pair))
+	param.Set("price", FloatToString(order.Price, contract.PricePrecision))
+	param.Set("quantity", FloatToString(order.Amount, contract.AmountPrecision))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
 	// "FOK": 无法全部立即成交就撤销。
@@ -522,10 +559,10 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	}
 	resp, err := swap.DoRequest(
 		http.MethodPost,
-		SWAP_PLACE_ORDER_URI+param.Encode(),
+		uri+param.Encode(),
 		"",
 		&response,
-		SETTLE_MODE_COUNTER,
+		contract.SettleMode,
 	)
 	if err != nil {
 		return nil, err
@@ -551,47 +588,87 @@ func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
 		return nil, errors.New("The orderid and cid is empty. ")
 	}
 
-	param := url.Values{}
-	param.Set("symbol", order.Pair.ToSymbol("", true))
+	var contract = swap.GetContract(order.Pair)
+	var paramSymbol = order.Pair.ToSymbol("", true)
+	if contract.SettleMode == SETTLE_MODE_BASIS {
+		paramSymbol += "_PERP"
+	}
+
+	var param = url.Values{}
+	param.Set("symbol", paramSymbol)
 	if order.OrderId != "" {
 		param.Set("orderId", order.OrderId)
 	} else {
 		param.Set("origClientOrderId", order.Cid)
 	}
-
-	var response struct {
-		Cid        string  `json:"clientOrderId"`
-		Status     string  `json:"status"`
-		CumQuote   float64 `json:"cumQuote,string"`
-		DealAmount float64 `json:"executedQty,string"`
-		OrderId    int64   `json:"orderId"`
-		UpdateTime int64   `json:"updateTime"`
-	}
-
-	now := time.Now()
 	if err := swap.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
-	resp, err := swap.DoRequest(
-		http.MethodDelete,
-		SWAP_CANCEL_ORDER_URI+param.Encode(),
-		"",
-		&response,
-		SETTLE_MODE_COUNTER,
-	)
-	if err != nil {
-		return nil, err
-	}
 
-	orderTime := time.Unix(response.UpdateTime/1000, 0)
-	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
-	order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	order.DealTimestamp = response.UpdateTime
-	order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
-	order.Status = statusRelation[response.Status]
-	if response.DealAmount > 0 {
-		order.AvgPrice = response.CumQuote / response.DealAmount
-		order.DealAmount = response.DealAmount
+	var now = time.Now()
+	var resp []byte
+	var err error
+	if contract.SettleMode == SETTLE_MODE_COUNTER {
+		var response struct {
+			Cid        string  `json:"clientOrderId"`
+			Status     string  `json:"status"`
+			CumQuote   float64 `json:"cumQuote,string"`
+			DealAmount float64 `json:"executedQty,string"`
+			OrderId    int64   `json:"orderId"`
+			UpdateTime int64   `json:"updateTime"`
+		}
+		resp, err = swap.DoRequest(
+			http.MethodDelete,
+			SWAP_COUNTER_CANCEL_ORDER_URI+param.Encode(),
+			"",
+			&response,
+			contract.SettleMode,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		orderTime := time.Unix(response.UpdateTime/1000, 0)
+		order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+		order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.UpdateTime
+		order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.Status = statusRelation[response.Status]
+		if response.DealAmount > 0 {
+			order.AvgPrice = response.CumQuote / response.DealAmount
+			order.DealAmount = response.DealAmount
+		}
+	} else {
+		var response struct {
+			Cid        string  `json:"clientOrderId"`
+			Status     string  `json:"status"`
+			CumBase    float64 `json:"cumBase,string"`
+			AvgPrice   float64 `json:"avgPrice,string"`
+			DealAmount float64 `json:"executedQty,string"`
+			OrderId    int64   `json:"orderId"`
+			UpdateTime int64   `json:"updateTime"`
+		}
+		resp, err = swap.DoRequest(
+			http.MethodDelete,
+			SWAP_BASIS_CANCEL_ORDER_URI+param.Encode(),
+			"",
+			&response,
+			contract.SettleMode,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		orderTime := time.Unix(response.UpdateTime/1000, 0)
+		order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+		order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.UpdateTime
+		order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.Status = statusRelation[response.Status]
+		if response.DealAmount > 0 {
+			order.AvgPrice = response.AvgPrice
+			order.DealAmount = response.DealAmount
+		}
 	}
 	return resp, nil
 }
@@ -601,51 +678,94 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 		return nil, errors.New("The orderid and cid is empty. ")
 	}
 
-	param := url.Values{}
-	param.Set("symbol", order.Pair.ToSymbol("", true))
+	var contract = swap.GetContract(order.Pair)
+	var paramSymbol = order.Pair.ToSymbol("", true)
+	if contract.SettleMode == SETTLE_MODE_BASIS {
+		paramSymbol += "_PERP"
+	}
+	var param = url.Values{}
+	param.Set("symbol", paramSymbol)
 	if order.OrderId != "" {
 		param.Set("orderId", order.OrderId)
 	} else {
 		param.Set("origClientOrderId", order.Cid)
 	}
-
-	var response struct {
-		Cid        string  `json:"clientOrderId"`
-		Status     string  `json:"status"`
-		CumQuote   float64 `json:"cumQuote,string"`
-		DealAmount float64 `json:"executedQty,string"`
-		Price      float64 `json:"price,string"`
-		Amount     float64 `json:"origQty,string"`
-		OrderId    int64   `json:"orderId"`
-		UpdateTime int64   `json:"updateTime"`
-	}
-
-	now := time.Now()
 	if err := swap.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
-	resp, err := swap.DoRequest(
-		http.MethodGet,
-		SWAP_GET_ORDER_URI+param.Encode(),
-		"",
-		&response,
-		SETTLE_MODE_COUNTER,
-	)
-	if err != nil {
-		return nil, err
-	}
 
-	orderTime := time.Unix(response.UpdateTime/1000, 0)
-	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
-	order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	order.DealTimestamp = response.UpdateTime
-	order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
-	order.Status = statusRelation[response.Status]
-	order.Price = response.Price
-	order.Amount = response.Amount
-	if response.DealAmount > 0 {
-		order.AvgPrice = response.CumQuote / response.DealAmount
-		order.DealAmount = response.DealAmount
+	var now = time.Now()
+	var resp []byte
+	var err error
+	if contract.SettleMode == SETTLE_MODE_COUNTER {
+		var response struct {
+			Cid        string  `json:"clientOrderId"`
+			Status     string  `json:"status"`
+			CumQuote   float64 `json:"cumQuote,string"`
+			DealAmount float64 `json:"executedQty,string"`
+			Price      float64 `json:"price,string"`
+			Amount     float64 `json:"origQty,string"`
+			OrderId    int64   `json:"orderId"`
+			UpdateTime int64   `json:"updateTime"`
+		}
+		resp, err = swap.DoRequest(
+			http.MethodGet,
+			SWAP_COUNTER_GET_ORDER_URI+param.Encode(),
+			"",
+			&response,
+			contract.SettleMode,
+		)
+		if err != nil {
+			return resp, err
+		}
+
+		orderTime := time.Unix(response.UpdateTime/1000, 0)
+		order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+		order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.UpdateTime
+		order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.Status = statusRelation[response.Status]
+		order.Price = response.Price
+		order.Amount = response.Amount
+		if response.DealAmount > 0 {
+			order.AvgPrice = response.CumQuote / response.DealAmount
+			order.DealAmount = response.DealAmount
+		}
+	} else {
+		var response struct {
+			Cid        string  `json:"clientOrderId"`
+			Status     string  `json:"status"`
+			CumBase    float64 `json:"cumBase,string"`
+			DealAmount float64 `json:"executedQty,string"`
+			Price      float64 `json:"price,string"`
+			AvgPrice   float64 `json:"avgPrice,string"`
+			Amount     float64 `json:"origQty,string"`
+			OrderId    int64   `json:"orderId"`
+			UpdateTime int64   `json:"updateTime"`
+		}
+		resp, err = swap.DoRequest(
+			http.MethodGet,
+			SWAP_BASIS_GET_ORDER_URI+param.Encode(),
+			"",
+			&response,
+			contract.SettleMode,
+		)
+		if err != nil {
+			return resp, err
+		}
+
+		orderTime := time.Unix(response.UpdateTime/1000, 0)
+		order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+		order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = response.UpdateTime
+		order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
+		order.Status = statusRelation[response.Status]
+		order.Price = response.Price
+		order.Amount = response.Amount
+		if response.DealAmount > 0 {
+			order.AvgPrice = response.AvgPrice
+			order.DealAmount = response.DealAmount
+		}
 	}
 	return resp, nil
 }
