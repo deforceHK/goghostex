@@ -319,12 +319,12 @@ func TestSwap_ACCOUNTAPI(t *testing.T) {
 
 	ok := New(config)
 
-	if items, resp, err := ok.Swap.GetPairFlow(Pair{BTC,USD});err!=nil{
+	if items, resp, err := ok.Swap.GetPairFlow(Pair{ETH, USDT}); err != nil {
 		t.Error(err)
 		t.Log(string(resp))
 		return
-	}else{
-		t.Log(items)
+	} else {
+		var body, _ = json.Marshal(items)
+		t.Log(string(body))
 	}
 }
-

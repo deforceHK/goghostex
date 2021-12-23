@@ -1494,7 +1494,8 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 	swap.NextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
 	var scbody, _ = json.Marshal(swapContracts)
-	fmt.Println(string(scbody))
+	fmt.Println(string(scbody)) //debug online
+	fmt.Println(nextUpdateTime) //debug online
 	return respCounter, nil
 }
 
