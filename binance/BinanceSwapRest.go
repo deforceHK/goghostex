@@ -23,6 +23,7 @@ const (
 	SWAP_COUNTER_PLACE_ORDER_URI  = "/fapi/v1/order?"
 	SWAP_COUNTER_GET_ORDER_URI    = "/fapi/v1/order?"
 	SWAP_COUNTER_CANCEL_ORDER_URI = "/fapi/v1/order?"
+	SWAP_COUNTER_INCOME_URI       = "/fapi/v1/income?"
 
 	SWAP_BASIS_ENDPOINT   = "https://dapi.binance.com"
 	SWAP_BASIS_DEPTH_URI  = "/dapi/v1/depth?"
@@ -32,8 +33,8 @@ const (
 	SWAP_BASIS_PLACE_ORDER_URI  = "/dapi/v1/order?"
 	SWAP_BASIS_GET_ORDER_URI    = "/dapi/v1/order?"
 	SWAP_BASIS_CANCEL_ORDER_URI = "/dapi/v1/order?"
+	SWAP_BASIS_INCOME_URI       = "/dapi/v1/income?"
 
-	SWAP_INCOME_URI     = "/fapi/v1/income?"
 	SWAP_ACCOUNT_URI    = "/fapi/v1/account?"
 	SWAP_GET_ORDERS_URI = "/fapi/v1/allOrders?"
 )
@@ -1067,12 +1068,12 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 
 func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
-	params := url.Values{}
+	var params = url.Values{}
 	if err := swap.buildParamsSigned(&params); err != nil {
 		return nil, nil, err
 	}
 
-	responses := make([]*struct {
+	var responses = make([]*struct {
 		Symbol     string  `json:"symbol"`
 		IncomeType string  `json:"incomeType"`
 		Income     float64 `json:"income,string"`
@@ -1083,7 +1084,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 	resp, err := swap.DoRequest(
 		http.MethodGet,
-		SWAP_INCOME_URI+params.Encode(),
+		SWAP_COUNTER_INCOME_URI+params.Encode(),
 		"",
 		&responses,
 		SETTLE_MODE_COUNTER,
@@ -1151,6 +1152,62 @@ func (swap *Swap) transferSubject(income float64, remoteSubject string) string {
 		return strings.ToLower(remoteSubject)
 	}
 
+}
+
+func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
+	var contract = swap.GetContract(pair)
+	var paramSymbol = pair.ToSymbol("", true)
+	var uri = SWAP_COUNTER_INCOME_URI
+	if contract.SettleMode == SETTLE_MODE_BASIS {
+		paramSymbol += "_PERP"
+		uri = SWAP_BASIS_INCOME_URI
+	}
+
+	var params = url.Values{}
+	params.Set("symbol", paramSymbol)
+	if err := swap.buildParamsSigned(&params); err != nil {
+		return nil, nil, err
+	}
+
+	var responses = make([]*struct {
+		Symbol     string  `json:"symbol"`
+		IncomeType string  `json:"incomeType"`
+		Income     float64 `json:"income,string"`
+		Asset      string  `json:"asset"`
+		Info       string  `json:"info"`
+		Time       int64   `json:"time"`
+	}, 0)
+
+	var resp, err = swap.DoRequest(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&responses,
+		contract.SettleMode,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	items := make([]*SwapAccountItem, 0)
+	for i := len(responses) - 1; i >= 0; i-- {
+		r := responses[i]
+		dateTime := time.Unix(r.Time/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
+		sai := &SwapAccountItem{
+			Pair:           pair,
+			Exchange:       BINANCE,
+			Subject:        swap.transferSubject(r.Income, r.IncomeType),
+			SettleMode:     contract.SettleMode,
+			SettleCurrency: NewCurrency(r.Asset, ""),
+			Amount:         r.Income,
+			Timestamp:      r.Time,
+			DateTime:       dateTime,
+			Info:           r.Info,
+		}
+		items = append(items, sai)
+	}
+
+	return items, resp, nil
 }
 
 func (swap *Swap) AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
@@ -1436,6 +1493,8 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 	swap.NextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
+	var scbody, _ = json.Marshal(swapContracts)
+	fmt.Println(string(scbody))
 	return respCounter, nil
 }
 
