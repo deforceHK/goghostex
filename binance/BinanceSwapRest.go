@@ -45,7 +45,7 @@ type Swap struct {
 	swapContracts SwapContracts
 	bnbAvgPrice   float64 // 抵扣交易费用的 bnb 平均持仓成本
 
-	NextUpdateContractTime time.Time // 下一次更新交易所contract信息
+	nextUpdateContractTime time.Time // 下一次更新交易所contract信息
 	LastKeepLiveTime       time.Time // 上一次keep live时间。
 }
 
@@ -1292,7 +1292,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 	swap.Lock()
 
 	now := time.Now().In(swap.config.Location)
-	if now.After(swap.NextUpdateContractTime) {
+	if now.After(swap.nextUpdateContractTime) {
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -1301,7 +1301,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 		}
 
 		// init fail at first time, get a default one.
-		if swap.NextUpdateContractTime.IsZero() && err != nil {
+		if swap.nextUpdateContractTime.IsZero() && err != nil {
 			swap.swapContracts = SwapContracts{
 				ContractNameKV: map[string]*SwapContract{
 					"BTC-USD-SWAP": {
@@ -1346,7 +1346,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 					},
 				},
 			}
-			swap.NextUpdateContractTime = now.Add(10 * time.Minute)
+			swap.nextUpdateContractTime = now.Add(10 * time.Minute)
 		}
 	}
 	return swap.swapContracts.ContractNameKV[pair.ToSwapContractName()]
@@ -1478,24 +1478,16 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 	// setting next update time.
 	var nowTime = time.Now().In(swap.config.Location)
-	var nextUpdateTime time.Time
+	var nextUpdateTime = time.Date(
+		nowTime.Year(), nowTime.Month(), nowTime.Day(),
+		16, 0, 0, 0, swap.config.Location,
+	)
 	if nowTime.Hour() >= 16 {
-		nextUpdateTime = time.Date(
-			nowTime.Year(), nowTime.Month(), nowTime.Day(),
-			16, 0, 0, 0, swap.config.Location,
-		).AddDate(0, 0, 1)
-	} else {
-		nextUpdateTime = time.Date(
-			nowTime.Year(), nowTime.Month(), nowTime.Day(),
-			16, 0, 0, 0, swap.config.Location,
-		)
+		nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
 	}
 
-	swap.NextUpdateContractTime = nextUpdateTime
+	swap.nextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
-	var scbody, _ = json.Marshal(swapContracts)
-	fmt.Println(string(scbody)) //debug online
-	fmt.Println(nextUpdateTime) //debug online
 	return respCounter, nil
 }
 
