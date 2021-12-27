@@ -3,6 +3,7 @@ package okex
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -670,27 +671,30 @@ func TestFuture_ErrorAPI(t *testing.T) {
 
 func TestInit(t *testing.T) {
 
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
-		},
-		ApiKey:        FUTURE_API_KEY,
-		ApiSecretKey:  FUTURE_API_SECRETKEY,
-		ApiPassphrase: FUTURE_API_PASSPHRASE,
-		Location:      time.Now().Location(),
-	}
+	//config := &APIConfig{
+	//	Endpoint: ENDPOINT,
+	//	HttpClient: &http.Client{
+	//		Transport: &http.Transport{
+	//			Proxy: func(req *http.Request) (*url.URL, error) {
+	//				return url.Parse(PROXY_URL)
+	//			},
+	//		},
+	//	},
+	//	ApiKey:        FUTURE_API_KEY,
+	//	ApiSecretKey:  FUTURE_API_SECRETKEY,
+	//	ApiPassphrase: FUTURE_API_PASSPHRASE,
+	//	Location:      time.Now().Location(),
+	//}
+	//
+	//ok := New(config)
+	//
+	//if contract, err := ok.Future.GetContract(Pair{BTC, USD}, THIS_WEEK_CONTRACT); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(*contract)
+	//}
 
-	ok := New(config)
-
-	if contract, err := ok.Future.GetContract(Pair{BTC, USD}, THIS_WEEK_CONTRACT); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log(*contract)
-	}
+	var board = GetRealContractTypeBoard()
+	fmt.Println(board)
 }

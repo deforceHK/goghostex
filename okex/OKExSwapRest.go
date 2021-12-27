@@ -1,6 +1,7 @@
 package okex
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,7 +18,8 @@ type Swap struct {
 	*OKEx
 	sync.Locker
 	swapContracts SwapContracts
-	uTime         time.Time
+
+	nextUpdateContractTime time.Time // 下一次更新交易所contract信息
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
@@ -633,9 +635,9 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 func (swap *Swap) getContract(pair Pair) *SwapContract {
 	defer swap.Unlock()
 	swap.Lock()
-	now := time.Now().In(swap.config.Location)
-	//第一次调用或者
-	if swap.uTime.IsZero() || now.After(swap.uTime.AddDate(0, 0, 1)) {
+
+	var now = time.Now().In(swap.config.Location)
+	if now.After(swap.nextUpdateContractTime) {
 		_, err := swap.updateContracts()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
@@ -643,7 +645,7 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 			_, err = swap.updateContracts()
 		}
 		// 初次启动必须可以吧。
-		if swap.uTime.IsZero() && err != nil {
+		if swap.nextUpdateContractTime.IsZero() && err != nil {
 			panic(err)
 		}
 
@@ -711,9 +713,23 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 		swapContracts.ContractNameKV[stdContractName] = &contract
 	}
-	var uTime = time.Now().In(swap.config.Location)
-	swap.uTime = uTime
+
+	// setting next update time.
+	var nowTime = time.Now().In(swap.config.Location)
+	var nextUpdateTime = time.Date(
+		nowTime.Year(), nowTime.Month(), nowTime.Day(),
+		16, 0, 0, 0, swap.config.Location,
+	)
+	if nowTime.Hour() >= 16 {
+		nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
+	}
+
+	swap.nextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
+
+	var scbody, _ = json.Marshal(swapContracts)
+	fmt.Println(string(scbody)) //debug online
+	fmt.Println(nextUpdateTime) //debug online
 	return resp, nil
 }
 
