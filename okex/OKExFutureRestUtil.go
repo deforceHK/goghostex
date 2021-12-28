@@ -162,10 +162,10 @@ func GetRealContractTypeBoard() map[string][]string {
 func GetDueTimestamp(timestamp int64) (flag int, dueTimestamp map[string]int64) {
 	flag = int((timestamp - okTimestampFlags[0]) / (7 * 24 * 60 * 60 * 1000))
 	dueTimestamp = map[string]int64{
-		THIS_WEEK_CONTRACT : okDueTimestampBoard[THIS_WEEK_CONTRACT][flag],
-		NEXT_WEEK_CONTRACT : okDueTimestampBoard[NEXT_WEEK_CONTRACT][flag],
-		QUARTER_CONTRACT : okDueTimestampBoard[QUARTER_CONTRACT][flag],
-		NEXT_QUARTER_CONTRACT : okDueTimestampBoard[NEXT_QUARTER_CONTRACT][flag],
+		THIS_WEEK_CONTRACT:    okDueTimestampBoard[THIS_WEEK_CONTRACT][flag],
+		NEXT_WEEK_CONTRACT:    okDueTimestampBoard[NEXT_WEEK_CONTRACT][flag],
+		QUARTER_CONTRACT:      okDueTimestampBoard[QUARTER_CONTRACT][flag],
+		NEXT_QUARTER_CONTRACT: okDueTimestampBoard[NEXT_QUARTER_CONTRACT][flag],
 	}
 	return flag, dueTimestamp
 }

@@ -109,6 +109,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 		KLINE_PERIOD_1MIN,
 		10,
 		int(time.Now().Add(-2*24*time.Hour).UnixNano()),
+		//int(time.Now().Add(-1*time.Hour).UnixNano()),
 	); err != nil {
 		t.Error(err)
 		return

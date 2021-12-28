@@ -46,13 +46,13 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 		contractType = QUARTER_CONTRACT
 	}
 
-	contract, err := future.GetContract(pair, contractType)
+	var contract, err = future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	params := url.Values{}
-	params.Add("symbol", contract.ContractName)
+	var params = url.Values{}
+	params.Add("symbol", future.getBNSymbol(contract.ContractName))
 
 	response := make([]struct {
 		Symbol     string  `json:"symbol"`
@@ -76,7 +76,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	}
 
 	for _, item := range response {
-		if item.Symbol == contract.ContractName {
+		if item.Symbol == future.getBNSymbol(contract.ContractName) {
 			nowTime := time.Now()
 			return &FutureTicker{
 				Ticker: Ticker{
@@ -106,13 +106,13 @@ func (future *Future) GetDepth(pair Pair, contractType string, size int) (*Futur
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
 		contractType = QUARTER_CONTRACT
 	}
-	contract, err := future.GetContract(pair, contractType)
+	var contract, err = future.GetContract(pair, contractType)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	params := url.Values{}
-	params.Add("symbol", contract.ContractName)
+	var params = url.Values{}
+	params.Add("symbol", future.getBNSymbol(contract.ContractName))
 	params.Add("limit", fmt.Sprintf("%d", size))
 
 	response := struct {
@@ -160,27 +160,28 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 		contractType = QUARTER_CONTRACT
 	}
 
-	contract, err := future.GetContract(pair, contractType)
+	var contract, err = future.GetContract(pair, contractType)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	response := make([]struct {
+	var bnSymbol = future.getBNSymbol(contract.ContractName)
+	var response = make([]struct {
 		Symbol string  `json:"symbol"`
 		Price  float64 `json:"price,string"`
 	}, 0)
 
+	//todo 需要修改 这里是mark price
 	if _, err := future.DoRequest(
 		http.MethodGet,
-		fmt.Sprintf("/dapi/v1/ticker/price?symbol=%s", contract.ContractName),
+		fmt.Sprintf("/dapi/v1/ticker/price?symbol=%s", bnSymbol),
 		"",
 		&response,
 	); err != nil {
 		return 0, 0, nil
 	}
-
 	for _, item := range response {
-		if item.Symbol == contract.ContractName {
+		if item.Symbol == bnSymbol {
 			highLimit := item.Price * contract.MaxScalePriceLimit
 			lowLimit := item.Price * contract.MinScalePriceLimit
 			return highLimit, lowLimit, nil
@@ -225,7 +226,7 @@ func (future *Future) GetKlineRecords(
 	}
 
 	params := url.Values{}
-	params.Set("symbol", contract.ContractName)
+	params.Set("symbol", future.getBNSymbol(contract.ContractName))
 	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
 	params.Set("startTime", startTimeFmt)
 	params.Set("endTime", endTimeFmt)
@@ -273,7 +274,7 @@ func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byt
 	}
 
 	params := url.Values{}
-	params.Set("symbol", contract.ContractName)
+	params.Set("symbol", future.getBNSymbol(contract.ContractName))
 
 	uri := FUTURE_TRADE_URI + params.Encode()
 	response := make([]struct {
@@ -396,7 +397,7 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	param := url.Values{}
-	param.Set("symbol", contract.ContractName)
+	param.Set("symbol", future.getBNSymbol(contract.ContractName))
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
@@ -469,7 +470,7 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	param := url.Values{}
-	param.Set("symbol", contract.ContractName)
+	param.Set("symbol", future.getBNSymbol(contract.ContractName))
 	if order.OrderId != "" {
 		param.Set("orderId", order.OrderId)
 	} else {
@@ -518,8 +519,8 @@ func (future *Future) GetOrders(pair Pair, contractType string) ([]*FutureOrder,
 		return nil, nil, err
 	}
 
-	param := url.Values{}
-	param.Set("symbol", contract.ContractName)
+	var param = url.Values{}
+	param.Set("symbol", future.getBNSymbol(contract.ContractName))
 
 	if err := future.buildParamsSigned(&param); err != nil {
 		return nil, nil, err
@@ -593,14 +594,15 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 		return nil, err
 	}
 
-	param := url.Values{}
-	param.Set("symbol", contract.ContractName)
+	var params = url.Values{}
+	params.Add("symbol", future.getBNSymbol(contract.ContractName))
+
 	if order.OrderId != "" {
-		param.Set("orderId", order.OrderId)
+		params.Set("orderId", order.OrderId)
 	} else {
-		param.Set("origClientOrderId", order.Cid)
+		params.Set("origClientOrderId", order.Cid)
 	}
-	if err := future.buildParamsSigned(&param); err != nil {
+	if err := future.buildParamsSigned(&params); err != nil {
 		return nil, err
 	}
 
@@ -619,7 +621,7 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	now := time.Now()
-	resp, err := future.DoRequest(http.MethodGet, FUTURE_GET_ORDER_URI+param.Encode(), "", &response)
+	resp, err := future.DoRequest(http.MethodGet, FUTURE_GET_ORDER_URI+params.Encode(), "", &response)
 	if err != nil {
 		return nil, err
 	}
@@ -703,30 +705,28 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 	return cf, nil
 }
 
-type binanceContractInfo struct {
-	Symbol      string `json:"symbol"`
-	Pair        string `json:"pair"`
-	BaseAsset   string `json:"baseAsset"`
-	QuoteAsset  string `json:"quoteAsset"`
-	MarginAsset string `json:"marginAsset"`
-
-	ContractType      string `json:"contractType"`
-	DeliveryDate      int64  `json:"deliveryDate"`
-	OnboardDate       int64  `json:"onboardDate"`
-	ContractStatus    string `json:"contractStatus"`
-	ContractSize      int64  `json:"contractSize"`
-	PricePrecision    int64  `json:"pricePrecision"`
-	QuantityPrecision int64  `json:"quantityPrecision"`
-
-	Filters []map[string]interface{} `json:"filters"`
-}
-
 // update the future contracts info.
 func (future *Future) updateFutureContracts() ([]byte, error) {
 
 	response := struct {
-		Symbols    []*binanceContractInfo `json:"symbols"`
-		ServerTime int64                  `json:"serverTime"`
+		Symbols []struct {
+			Symbol      string `json:"symbol"`
+			Pair        string `json:"pair"`
+			BaseAsset   string `json:"baseAsset"`
+			QuoteAsset  string `json:"quoteAsset"`
+			MarginAsset string `json:"marginAsset"`
+
+			ContractType      string  `json:"contractType"`
+			DeliveryDate      int64   `json:"deliveryDate"`
+			OnboardDate       int64   `json:"onboardDate"`
+			ContractStatus    string  `json:"contractStatus"`
+			ContractSize      float64 `json:"contractSize"`
+			PricePrecision    int64   `json:"pricePrecision"`
+			QuantityPrecision int64   `json:"quantityPrecision"`
+
+			Filters []map[string]interface{} `json:"filters"`
+		} `json:"symbols"`
+		ServerTime int64 `json:"serverTime"`
 	}{}
 
 	resp, err := future.DoRequest(
@@ -783,12 +783,13 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			Counter: NewCurrency(item.QuoteAsset, ""),
 		}
 
+		var contractNameInfo = strings.Split(item.Symbol, "_")
 		contract := &FutureContract{
 			Pair:         pair,
 			Symbol:       pair.ToSymbol("_", false),
 			Exchange:     BINANCE,
 			ContractType: contractType,
-			ContractName: item.Symbol,
+			ContractName: pair.ToSymbol("-", true) + "-" + contractNameInfo[1],
 
 			SettleMode:    settleMode,
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
@@ -796,7 +797,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
 			DueDate:       dueTime.Format(GO_BIRTHDAY),
 
-			UnitAmount:      ToFloat64(item.ContractSize),
+			UnitAmount:      item.ContractSize,
 			PricePrecision:  item.PricePrecision,
 			AmountPrecision: item.QuantityPrecision,
 
@@ -834,4 +835,10 @@ func (future *Future) getFutureType(side, sidePosition string) FutureType {
 		panic("input error, do not use BOTH. ")
 	}
 
+}
+
+// return the binance style symbol
+func (future *Future) getBNSymbol(contractName string) string {
+	var infos = strings.Split(contractName, "-")
+	return infos[0] + infos[1] + "_" + infos[2]
 }
