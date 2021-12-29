@@ -21,7 +21,7 @@ const (
 	FUTURE_EXCHANGE_INFO_URI = "/dapi/v1/exchangeInfo"
 
 	FUTURE_DEPTH_URI = "/dapi/v1/depth?"
-	FUTURE_KLINE_URI = "/dapi/v1/klines?"
+	FUTURE_KLINE_URI = "/dapi/v1/continuousKlines?"
 	FUTURE_TRADE_URI = "/dapi/v1/trades?"
 
 	FUTURE_INCOME_URI       = "/dapi/v1/income?"
@@ -204,32 +204,27 @@ func (future *Future) GetKlineRecords(
 	period, size, since int,
 ) ([]*FutureKline, []byte, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
-		contractType = QUARTER_CONTRACT
+		return nil, nil, errors.New("binance have not the this_week next_week contract. ")
 	}
 
-	contract, err := future.GetContract(pair, contractType)
-	if err != nil {
-		return nil, nil, err
+	var endTimestamp = since + size*_INERNAL_KLINE_SECOND_CONVERTER[period]
+	if endTimestamp > since+200*24*60*60*1000 {
+		endTimestamp = since + 200*24*60*60*1000
 	}
-
-	startTimeFmt, endTimeFmt := fmt.Sprintf("%d", since), fmt.Sprintf("%d", time.Now().UnixNano())
-	if len(startTimeFmt) > 13 {
-		startTimeFmt = startTimeFmt[0:13]
+	if endTimestamp > int(time.Now().Unix()*1000) {
+		endTimestamp = int(time.Now().Unix() * 1000)
 	}
-
-	if len(endTimeFmt) > 13 {
-		endTimeFmt = endTimeFmt[0:13]
-	}
-
-	if size > 1500 {
-		size = 1500
+	var paramContractType = "CURRENT_QUARTER"
+	if contractType == NEXT_QUARTER_CONTRACT {
+		paramContractType = "NEXT_QUARTER"
 	}
 
 	params := url.Values{}
-	params.Set("symbol", future.getBNSymbol(contract.ContractName))
+	params.Set("pair", pair.ToSymbol("", true))
+	params.Set("contractType", paramContractType)
 	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", startTimeFmt)
-	params.Set("endTime", endTimeFmt)
+	params.Set("startTime", fmt.Sprintf("%d", since))
+	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
 	params.Set("limit", fmt.Sprintf("%d", size))
 
 	uri := FUTURE_KLINE_URI + params.Encode()
@@ -241,8 +236,11 @@ func (future *Future) GetKlineRecords(
 
 	var list []*FutureKline
 	for _, k := range klines {
-		timestamp := ToInt64(k[0])
-		r := &FutureKline{
+		var timestamp = ToInt64(k[0])
+		var _, dueBoard = GetDueTimestamp(timestamp)
+		var dueTimestamp = dueBoard[contractType]
+		var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+		var r = &FutureKline{
 			Kline: Kline{
 				Pair:      pair,
 				Exchange:  BINANCE,
@@ -252,11 +250,12 @@ func (future *Future) GetKlineRecords(
 				High:      ToFloat64(k[2]),
 				Low:       ToFloat64(k[3]),
 				Close:     ToFloat64(k[4]),
-				Vol:       ToFloat64(k[5]),
+				Vol:       ToFloat64(k[7]),
 			},
-			DueTimestamp: contract.DueTimestamp,
-			DueDate:      contract.DueDate,
-			Vol2:         ToFloat64(k[7]),
+			ContractType: contractType,
+			DueTimestamp: dueTimestamp,
+			DueDate:      dueDate,
+			Vol2:         ToFloat64(k[5]),
 		}
 		list = append(list, r)
 	}

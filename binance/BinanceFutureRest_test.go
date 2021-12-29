@@ -2,6 +2,7 @@ package binance
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -66,11 +67,11 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if klineList, resp, err := bn.Future.GetKlineRecords(
-		NEXT_QUARTER_CONTRACT,
+		QUARTER_CONTRACT,
 		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		200,
-		1604221200000,
+		1632469800000,
 	); err != nil {
 		t.Error(err)
 		return
@@ -80,16 +81,23 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	if trades, _, err := bn.Future.GetTrades(
-		Pair{Basis: BTC, Counter: USD},
-		NEXT_QUARTER_CONTRACT,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		stdTrades, _ := json.Marshal(trades)
-		t.Log(string(stdTrades))
-	}
+	//if trades, _, err := bn.Future.GetTrades(
+	//	Pair{Basis: BTC, Counter: USD},
+	//	NEXT_QUARTER_CONTRACT,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	stdTrades, _ := json.Marshal(trades)
+	//	t.Log(string(stdTrades))
+	//}
+	//
+	//if contract, err := bn.Future.GetContract(Pair{BTC, USD}, NEXT_QUARTER_CONTRACT); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(contract)
+	//}
 
 }
 
@@ -217,4 +225,9 @@ func TestFuture_TradeAPI(t *testing.T) {
 		}
 
 	}
+}
+
+func TestFuture_Init(t *testing.T) {
+	var quarters = getLastFridayQuarter()
+	fmt.Println(quarters)
 }
