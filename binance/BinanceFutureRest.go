@@ -43,18 +43,17 @@ type Future struct {
 
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
-		contractType = QUARTER_CONTRACT
+		return nil, nil, errors.New("binance have not this_week next_week contract. ")
 	}
 
-	var contract, err = future.GetContract(pair, contractType)
-	if err != nil {
-		return nil, nil, err
+	var contract, errContract = future.GetContract(pair, contractType)
+	if errContract != nil {
+		return nil, nil, errContract
 	}
-
 	var params = url.Values{}
 	params.Add("symbol", future.getBNSymbol(contract.ContractName))
 
-	response := make([]struct {
+	var response = make([]struct {
 		Symbol     string  `json:"symbol"`
 		Pair       string  `json:"pair"`
 		LastPrice  float64 `json:"lastPrice,string"`
@@ -65,7 +64,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 		BaseVolume float64 `json:"baseVolume,string"`
 	}, 0)
 
-	resp, err := future.DoRequest(
+	var resp, err = future.DoRequest(
 		http.MethodGet,
 		FUTURE_TICKER_URI+params.Encode(),
 		"",
@@ -74,37 +73,35 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	if err != nil {
 		return nil, nil, err
 	}
-
-	for _, item := range response {
-		if item.Symbol == future.getBNSymbol(contract.ContractName) {
-			nowTime := time.Now()
-			return &FutureTicker{
-				Ticker: Ticker{
-					Pair:      pair,
-					Last:      item.LastPrice,
-					Buy:       item.LastPrice,
-					Sell:      item.LastPrice,
-					High:      item.HighPrice,
-					Low:       item.LowPrice,
-					Vol:       item.BaseVolume,
-					Timestamp: nowTime.UnixNano() / int64(time.Millisecond),
-					Date:      nowTime.Format(GO_BIRTHDAY),
-				},
-				ContractType: contract.ContractType,
-				ContractName: contract.ContractName,
-			}, resp, nil
-		}
+	if len(response) == 0 {
+		return nil, nil, errors.New("Can not find the pair. ")
 	}
 
-	return nil, nil, errors.New("Can not find the contract type. " + contractType)
+	var nowTime = time.Now()
+	return &FutureTicker{
+		Ticker: Ticker{
+			Pair:      pair,
+			Last:      response[0].LastPrice,
+			Buy:       response[0].LastPrice,
+			Sell:      response[0].LastPrice,
+			High:      response[0].HighPrice,
+			Low:       response[0].LowPrice,
+			Vol:       response[0].BaseVolume,
+			Timestamp: nowTime.UnixNano() / int64(time.Millisecond),
+			Date:      nowTime.Format(GO_BIRTHDAY),
+		},
+		ContractType: contract.ContractType,
+		ContractName: contract.ContractName,
+	}, resp, nil
 }
+
 func (future *Future) GetContract(pair Pair, contractType string) (*FutureContract, error) {
 	return future.getFutureContract(pair, contractType)
 }
 
 func (future *Future) GetDepth(pair Pair, contractType string, size int) (*FutureDepth, []byte, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
-		contractType = QUARTER_CONTRACT
+		return nil, nil, errors.New("binance have not this_week next_week contract. ")
 	}
 	var contract, err = future.GetContract(pair, contractType)
 	if err != nil {
@@ -157,7 +154,7 @@ func (future *Future) GetDepth(pair Pair, contractType string, size int) (*Futur
 
 func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
-		contractType = QUARTER_CONTRACT
+		return 0, 0, errors.New("binance have not this_week next_week contract. ")
 	}
 
 	var contract, err = future.GetContract(pair, contractType)
@@ -168,26 +165,24 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 	var bnSymbol = future.getBNSymbol(contract.ContractName)
 	var response = make([]struct {
 		Symbol string  `json:"symbol"`
-		Price  float64 `json:"price,string"`
+		Price  float64 `json:"markPrice,string"` //  mark price
 	}, 0)
 
-	//todo 需要修改 这里是mark price
 	if _, err := future.DoRequest(
 		http.MethodGet,
-		fmt.Sprintf("/dapi/v1/ticker/price?symbol=%s", bnSymbol),
+		fmt.Sprintf("/dapi/v1/premiumIndex?symbol=%s", bnSymbol),
 		"",
 		&response,
 	); err != nil {
-		return 0, 0, nil
+		return 0, 0, err
 	}
-	for _, item := range response {
-		if item.Symbol == bnSymbol {
-			highLimit := item.Price * contract.MaxScalePriceLimit
-			lowLimit := item.Price * contract.MinScalePriceLimit
-			return highLimit, lowLimit, nil
-		}
+	if len(response) == 0 {
+		return 0, 0, errors.New("the remote return no data. ")
 	}
-	return 0, 0, errors.New("Can not find the contract. ")
+
+	var highLimit = response[0].Price * contract.MaxScalePriceLimit
+	var lowLimit = response[0].Price * contract.MinScalePriceLimit
+	return highLimit, lowLimit, nil
 }
 
 func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {
@@ -195,7 +190,32 @@ func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {
 }
 
 func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, error) {
-	panic("implement me")
+	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
+		return 0, nil, errors.New("binance have not this_week next_week contract. ")
+	}
+	var contract, errContract = future.GetContract(pair, contractType)
+	if errContract != nil {
+		return 0, nil, errContract
+	}
+
+	var bnSymbol = future.getBNSymbol(contract.ContractName)
+	var response = make([]struct {
+		Symbol string  `json:"symbol"`
+		Price  float64 `json:"markPrice,string"` //  mark price
+	}, 0)
+	var resp, err = future.DoRequest(
+		http.MethodGet,
+		fmt.Sprintf("/dapi/v1/premiumIndex?symbol=%s", bnSymbol),
+		"",
+		&response,
+	)
+	if err != nil {
+		return 0, resp, err
+	}
+	if len(response) == 0 {
+		return 0, resp, errors.New("the remote return no data. ")
+	}
+	return response[0].Price, resp, nil
 }
 
 func (future *Future) GetKlineRecords(
@@ -264,7 +284,7 @@ func (future *Future) GetKlineRecords(
 
 func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byte, error) {
 	if contractType == THIS_WEEK_CONTRACT || contractType == NEXT_WEEK_CONTRACT {
-		contractType = QUARTER_CONTRACT
+		return nil, nil, errors.New("binance have not this_week next_week contract. ")
 	}
 
 	contract, err := future.GetContract(pair, contractType)
@@ -640,6 +660,54 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
+func (future *Future) GetPairFLow(pair Pair) ([]*FutureAccountItem, []byte, error) {
+
+	//var params = url.Values{}
+	//if err := future.buildParamsSigned(&params); err != nil {
+	//	return nil, nil, err
+	//}
+	//
+	//var responses = make([]*struct {
+	//	Symbol     string  `json:"symbol"`
+	//	IncomeType string  `json:"incomeType"`
+	//	Income     float64 `json:"income,string"`
+	//	Asset      string  `json:"asset"`
+	//	Info       string  `json:"info"`
+	//	Time       int64   `json:"time"`
+	//}, 0)
+	//
+	//var resp, err = future.DoRequest(
+	//	http.MethodGet,
+	//	FUTURE_INCOME_URI+params.Encode(),
+	//	"",
+	//	&responses,
+	//)
+	//if err != nil {
+	//	return nil, resp, err
+	//}
+	//
+	//items := make([]*FutureAccountItem, 0)
+	//for i := len(responses) - 1; i >= 0; i-- {
+	//	r := responses[i]
+	//	dateTime := time.Unix(r.Time/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+	//	sai := &FutureAccountItem{
+	//		Pair:           pair,
+	//		Exchange:       BINANCE,
+	//		Subject:        swap.transferSubject(r.Income, r.IncomeType),
+	//		SettleMode:     SETTLE_MODE_BASIS,
+	//		SettleCurrency: NewCurrency(r.Asset, ""),
+	//		Amount:         r.Income,
+	//		Timestamp:      r.Time,
+	//		DateTime:       dateTime,
+	//		Info:           r.Info,
+	//	}
+	//	items = append(items, sai)
+	//}
+	//
+	//return items, resp, nil
+	return nil, nil, nil
+}
+
 func (future *Future) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	// last timestamp in 5s, no need to keep alive
@@ -745,7 +813,6 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	}
 
 	for _, item := range response.Symbols {
-
 		// it is not future , it's swap in this project.
 		if item.ContractType == "PERPETUAL" {
 			continue

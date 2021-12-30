@@ -189,6 +189,18 @@ type FutureContracts struct {
 	ContractTypeKV map[string]*FutureContract `json:"contract_type_kv"`
 	ContractNameKV map[string]*FutureContract `json:"contract_name_kv"`
 	DueTimestampKV map[string]*FutureContract `json:"due_timestamp_kv"`
+}
 
-	//SyncTime time.Time // sync from remote service time
+type FutureAccountItem struct {
+	Pair         Pair
+	ContractName string
+	Exchange     string
+	Subject      string
+
+	SettleMode     int64 // 1: basis 2: counter
+	SettleCurrency Currency
+	Amount         float64
+	Timestamp      int64
+	DateTime       string
+	Info           string
 }

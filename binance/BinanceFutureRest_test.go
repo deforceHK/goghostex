@@ -136,13 +136,13 @@ func TestFuture_TradeAPI(t *testing.T) {
 
 		r, _ := json.Marshal(account.SubAccount[BNB])
 		t.Log(string(r))
-		if account.SubAccount[BNB].Margin <= 1/20 {
+		if account.SubAccount[BTC].Margin <= 0.01 {
 			t.Error("There is no enough bnb to continue. ")
 		}
 	}
 
-	bnbusd := Pair{BNB, USD}
-	if ticker, _, err := bn.Future.GetTicker(bnbusd, QUARTER_CONTRACT); err != nil {
+	pair := Pair{BTC, USD}
+	if ticker, _, err := bn.Future.GetTicker(pair, QUARTER_CONTRACT); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -153,7 +153,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 			PlaceType:    NORMAL,
 			Type:         OPEN_LONG,
 			LeverRate:    20,
-			Pair:         bnbusd,
+			Pair:         pair,
 			ContractType: QUARTER_CONTRACT,
 			Exchange:     BINANCE,
 		}
@@ -185,7 +185,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 			PlaceType:    NORMAL,
 			Type:         OPEN_LONG,
 			LeverRate:    20,
-			Pair:         bnbusd,
+			Pair:         pair,
 			ContractType: QUARTER_CONTRACT,
 			Exchange:     BINANCE,
 		}
@@ -208,7 +208,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 			PlaceType:    NORMAL,
 			Type:         LIQUIDATE_LONG,
 			LeverRate:    20,
-			Pair:         bnbusd,
+			Pair:         pair,
 			ContractType: QUARTER_CONTRACT,
 			Exchange:     BINANCE,
 		}
