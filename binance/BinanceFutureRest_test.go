@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	FUTURE_API_KEY       = "bFmM9w6iYe43sQlFactYoM6H5kfvwz033cZhYK7V7p1T3Wj2ZiSu3L9QE6USHXcl"
-	FUTURE_API_SECRETKEY = "kaGzKYngfrKJTjjvI4rJuUace2Es3xEq666mZd2b0kBf1zVzCH2tVpiqkSKrJa8k"
+	FUTURE_API_KEY       = ""
+	FUTURE_API_SECRETKEY = ""
 	FUTURE_PROXY_URL     = "socks5://127.0.0.1:1090"
 )
 
@@ -67,11 +67,11 @@ func TestFuture_MarketAPI(t *testing.T) {
 	}
 
 	if klineList, resp, err := bn.Future.GetKlineRecords(
-		QUARTER_CONTRACT,
-		Pair{Basis: BTC, Counter: USD},
+		NEXT_QUARTER_CONTRACT,
+		Pair{Basis: ETH, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		200,
-		1632469800000,
+		1609430400000,
 	); err != nil {
 		t.Error(err)
 		return

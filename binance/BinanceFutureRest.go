@@ -707,7 +707,7 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 // update the future contracts info.
 func (future *Future) updateFutureContracts() ([]byte, error) {
 
-	response := struct {
+	var response = struct {
 		Symbols []struct {
 			Symbol      string `json:"symbol"`
 			Pair        string `json:"pair"`
@@ -728,14 +728,17 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		ServerTime int64 `json:"serverTime"`
 	}{}
 
-	resp, err := future.DoRequest(
-		http.MethodGet, FUTURE_EXCHANGE_INFO_URI, "", &response,
+	var resp, err = future.DoRequest(
+		http.MethodGet,
+		FUTURE_EXCHANGE_INFO_URI,
+		"",
+		&response,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	contracts := FutureContracts{
+	var contracts = FutureContracts{
 		ContractTypeKV: make(map[string]*FutureContract, 0),
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
@@ -752,7 +755,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			continue
 		}
 
-		contractType := ""
+		var contractType = ""
 		if item.ContractType == "CURRENT_QUARTER" {
 			contractType = QUARTER_CONTRACT
 		} else if item.ContractType == "NEXT_QUARTER" {
@@ -815,8 +818,15 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 	}
 
 	future.Contracts = contracts
-	// todo binance 也需要准确的更新合约信息shijian.
-	var nextUpdateTime = time.Now().AddDate(0, 0, 1)
+	// setting next update time.
+	var nowTime = time.Now().In(future.config.Location)
+	var nextUpdateTime = time.Date(
+		nowTime.Year(), nowTime.Month(), nowTime.Day(),
+		16, 0, 0, 0, future.config.Location,
+	)
+	if nowTime.Hour() >= 16 {
+		nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
+	}
 	future.nextUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
