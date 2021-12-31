@@ -1139,13 +1139,6 @@ func (swap *Swap) transferSubject(income float64, remoteSubject string) string {
 		return SUBJECT_TRANSFER_OUT
 	}
 
-	if remoteSubject == "CROSS_COLLATERAL_TRANSFER" {
-		if income > 0 {
-			return SUBJECT_COLLATERAL_TRANSFER_IN
-		}
-		return SUBJECT_COLLATERAL_TRANSFER_OUT
-	}
-
 	if subject, exist := subjectKV[remoteSubject]; exist {
 		return subject
 	} else {
