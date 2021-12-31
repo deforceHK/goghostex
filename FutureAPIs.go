@@ -19,6 +19,7 @@ type FutureRestAPI interface {
 	CancelOrder(order *FutureOrder) ([]byte, error)
 	GetOrders(pair Pair, contractType string) ([]*FutureOrder, []byte, error)
 	GetOrder(order *FutureOrder) ([]byte, error)
+	GetPairFlow(pair Pair) ([]*FutureAccountItem, []byte, error)
 
 	// util api
 	KeepAlive()
