@@ -56,6 +56,11 @@ var (
 	ADA  = Currency{"ADA", ""}
 	DOT  = Currency{"DOT", ""}
 	FIL  = Currency{"FIL", ""}
+	SOL  = Currency{"SOL", ""}
+	ATOM = Currency{"ATOM", ""}
+	AVAX = Currency{"AVAX", ""}
+	ALGO = Currency{"ALGO", ""}
+	AR   = Currency{"AR", ""}
 
 	UNI   = Currency{"UNI", ""}
 	SUSHI = Currency{"SUSHI", ""}
