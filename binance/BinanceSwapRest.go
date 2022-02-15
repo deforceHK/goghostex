@@ -1427,6 +1427,11 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
+		var pp = c.PricePrecision
+		if stdSymbol == "btc_usdt" {
+			pp = 1
+		}
+
 		contract := SwapContract{
 			Pair:            pair,
 			Symbol:          stdSymbol,
@@ -1434,7 +1439,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      1,
-			PricePrecision:  c.PricePrecision,
+			PricePrecision:  pp,
 			AmountPrecision: c.QuantityPrecision,
 		}
 
