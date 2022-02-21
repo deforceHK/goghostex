@@ -178,6 +178,7 @@ type FutureContract struct {
 	DueDate       string `json:"due_date"`
 
 	UnitAmount      float64 `json:"unit_amount"`
+	TickSize        float64 `json:"tick_size"`
 	PricePrecision  int64   `json:"price_precision"`
 	AmountPrecision int64   `json:"amount_precision"`
 

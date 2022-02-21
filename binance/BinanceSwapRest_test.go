@@ -16,6 +16,12 @@ const (
 	SWAP_PROXY_URL     = "socks5://127.0.0.1:1090"
 )
 
+/**
+* unit test cmd
+* go test -v ./binance/... -count=1 -run=TestSwap_MarketAPI_Counter
+*
+**/
+
 func TestSwap_MarketAPI_Counter(t *testing.T) {
 
 	config := &APIConfig{
