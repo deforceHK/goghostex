@@ -532,8 +532,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", FloatToString(order.Price, contract.PricePrecision))
-	param.Set("quantity", FloatToString(order.Amount, contract.AmountPrecision))
+	param.Set("price", swap.normalPrice(order.Price, order.Pair))
+	param.Set("quantity", swap.normalAmount(order.Amount, order.Pair))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
 	// "FOK": 无法全部立即成交就撤销。
@@ -1427,9 +1427,16 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
-		var pp = c.PricePrecision
-		if stdSymbol == "btc_usdt" {
-			pp = 1
+		var tickSize = float64(-1)
+		for _, f := range c.Filters {
+			var ft, isFt = f["filterType"]
+			if !isFt || ft != "PRICE_FILTER" {
+				continue
+			}
+			var ts, isTs = f["tickSize"]
+			if isTs {
+				tickSize = ToFloat64(ts)
+			}
 		}
 
 		contract := SwapContract{
@@ -1439,7 +1446,8 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      1,
-			PricePrecision:  pp,
+			TickSize:        tickSize,
+			PricePrecision:  c.PricePrecision,
 			AmountPrecision: c.QuantityPrecision,
 		}
 
@@ -1461,6 +1469,18 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
+		var tickSize = float64(-1)
+		for _, f := range c.Filters {
+			var ft, isFt = f["filterType"]
+			if !isFt || ft != "PRICE_FILTER" {
+				continue
+			}
+			var ts, isTs = f["tickSize"]
+			if isTs {
+				tickSize = ToFloat64(ts)
+			}
+		}
+
 		contract := SwapContract{
 			Pair:            pair,
 			Symbol:          stdSymbol,
@@ -1468,6 +1488,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      c.ContractSize,
+			TickSize:        tickSize,
 			PricePrecision:  c.PricePrecision,
 			AmountPrecision: c.QuantityPrecision,
 		}
@@ -1507,7 +1528,7 @@ func (swap *Swap) getFutureType(side, sidePosition string) FutureType {
 // standard the price
 func (swap *Swap) normalPrice(price float64, pair Pair) string {
 	contract := swap.getContract(pair)
-	return FloatToString(price, contract.PricePrecision)
+	return FloatToPrice(price, contract.PricePrecision, contract.TickSize)
 }
 
 // standard the amount

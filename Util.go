@@ -100,6 +100,14 @@ func FloatToString(v float64, n int64) string {
 	return strconv.FormatFloat(ToFloat64(ret), 'f', -1, 64) //StripTrailingZeros
 }
 
+//n :保留的小数点位数,去除末尾多余的0(StripTrailingZeros)，并加入ticksize
+func FloatToPrice(v float64, n int64, tickSize float64) string {
+	v = float64(int64(v/tickSize)) * tickSize
+	var theN = int(n)
+	var ret = strconv.FormatFloat(v, 'f', theN, 64)
+	return strconv.FormatFloat(ToFloat64(ret), 'f', -1, 64) //StripTrailingZeros
+}
+
 func ValuesToJson(v url.Values) ([]byte, error) {
 	parammap := make(map[string]interface{})
 	for k, vv := range v {
