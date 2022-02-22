@@ -2,7 +2,6 @@ package okex
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -11,6 +10,17 @@ import (
 	. "github.com/strengthening/goghostex"
 )
 
+const (
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
+	SWAP_API_PASSPHRASE = ""
+)
+
+/**
+* unit test cmd
+* go test -v ./okex/... -count=1 -run=TestSwap_MarketAPI
+*
+**/
 func TestSwap_MarketAPI(t *testing.T) {
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
@@ -40,23 +50,23 @@ func TestSwap_MarketAPI(t *testing.T) {
 	//	fmt.Println(string(raw))
 	//}
 
-	if depth, resp, err := ok.Swap.GetDepth(
-		Pair{Basis: BTC, Counter: USDT},
-		200,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		fmt.Println(depth)
-		fmt.Println(string(resp))
-	}
-
-	if high, low, err := ok.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		fmt.Println(high, low)
-	}
+	//if depth, resp, err := ok.Swap.GetDepth(
+	//	Pair{Basis: BTC, Counter: USDT},
+	//	200,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	fmt.Println(depth)
+	//	fmt.Println(string(resp))
+	//}
+	//
+	//if high, low, err := ok.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	fmt.Println(high, low)
+	//}
 
 	//if klines, resp, err := ok.Swap.GetKline(
 	//	Pair{Basis: BTC, Counter: USD},
@@ -72,16 +82,20 @@ func TestSwap_MarketAPI(t *testing.T) {
 	//	fmt.Println(string(raw))
 	//	fmt.Println(string(resp))
 	//}
+
+	contract := ok.Swap.GetContract(Pair{BTC, USDT})
+	content, _ := json.Marshal(contract)
+	t.Log(string(content))
+
 }
 
-const (
-	SWAP_API_KEY        = ""
-	SWAP_API_SECRETKEY  = ""
-	SWAP_API_PASSPHRASE = ""
-)
-
-// must set both
-// place the order ---> get the order info ---> cancel the order -> get the order info
+/**
+* place the order ---> get the order info ---> cancel the order -> get the order info
+*
+* unit test cmd
+* go test -v ./okex/... -count=1 -run=TestSwap_TradeAPI
+*
+**/
 func TestSwap_TradeAPI(t *testing.T) {
 
 	config := &APIConfig{
@@ -198,7 +212,13 @@ func TestSwap_TradeAPI(t *testing.T) {
 
 }
 
-// 真实成交
+/**
+* place the order ---> get the order info
+*
+* unit test cmd
+* go test -v ./okex/... -count=1 -run=TestSwap_DealAPI
+*
+**/
 func TestSwap_DealAPI(t *testing.T) {
 
 	config := &APIConfig{

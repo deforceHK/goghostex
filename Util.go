@@ -93,18 +93,21 @@ func ToInt64(v interface{}) int64 {
 	}
 }
 
-//n :保留的小数点位数,去除末尾多余的0(StripTrailingZeros)
+// FloatToString n :保留的小数点位数,去除末尾多余的0(StripTrailingZeros)
 func FloatToString(v float64, n int64) string {
 	theN := int(n)
 	ret := strconv.FormatFloat(v, 'f', theN, 64)
 	return strconv.FormatFloat(ToFloat64(ret), 'f', -1, 64) //StripTrailingZeros
 }
 
-//n :保留的小数点位数,去除末尾多余的0(StripTrailingZeros)，并加入ticksize
+// FloatToPrice n :保留的小数点位数,去除末尾多余的0(StripTrailingZeros)，并加入ticksize
 func FloatToPrice(v float64, n int64, tickSize float64) string {
-	v = float64(int64(v/tickSize)) * tickSize
-	var theN = int(n)
-	var ret = strconv.FormatFloat(v, 'f', theN, 64)
+	if tickSize <= 0 {
+		return FloatToString(v, n)
+	}
+	var intPart = float64(int64(v))
+	var floatPart = float64(int64((v-intPart)/tickSize)) * tickSize
+	var ret = strconv.FormatFloat(intPart+floatPart, 'f', int(n), 64)
 	return strconv.FormatFloat(ToFloat64(ret), 'f', -1, 64) //StripTrailingZeros
 }
 

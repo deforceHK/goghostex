@@ -6,6 +6,6 @@ import (
 )
 
 func TestUtil(t *testing.T) {
-	var result = FloatToString1(50000.88, 2, 0.10)
+	var result = FloatToPrice(487.7777, 2, 0.05)
 	fmt.Println(result)
 }

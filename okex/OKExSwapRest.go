@@ -1,7 +1,6 @@
 package okex
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -296,7 +295,7 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	placeInfo, _ := _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER[order.PlaceType]
 	request.OrdType = placeInfo
 	request.Sz = FloatToString(order.Amount, contract.AmountPrecision)
-	request.Px = FloatToString(order.Price, contract.PricePrecision)
+	request.Px = FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize)
 	request.ClOrdId = order.Cid
 
 	var response = struct {
@@ -701,12 +700,14 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 		}
 
 		var contract = SwapContract{
-			Pair:            pair,
-			Symbol:          pair.ToSymbol("_", false),
-			Exchange:        OKEX,
-			ContractName:    stdContractName,
-			SettleMode:      settleMode,
+			Pair:         pair,
+			Symbol:       pair.ToSymbol("_", false),
+			Exchange:     OKEX,
+			ContractName: stdContractName,
+			SettleMode:   settleMode,
+
 			UnitAmount:      ToFloat64(item.CtVal),
+			TickSize:        ToFloat64(item.TickSz),
 			PricePrecision:  GetPrecisionInt64(ToFloat64(item.TickSz)),
 			AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
 		}
@@ -726,10 +727,6 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 
 	swap.nextUpdateContractTime = nextUpdateTime
 	swap.swapContracts = swapContracts
-
-	var scbody, _ = json.Marshal(swapContracts)
-	fmt.Println(string(scbody)) //debug online
-	fmt.Println(nextUpdateTime) //debug online
 	return resp, nil
 }
 
