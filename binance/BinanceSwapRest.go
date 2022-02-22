@@ -532,8 +532,8 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", swap.normalPrice(order.Price, order.Pair))
-	param.Set("quantity", swap.normalAmount(order.Amount, order.Pair))
+	param.Set("price", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
+	param.Set("quantity", FloatToString(order.Amount, contract.AmountPrecision))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
 	// "FOK": 无法全部立即成交就撤销。
@@ -1436,6 +1436,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			var ts, isTs = f["tickSize"]
 			if isTs {
 				tickSize = ToFloat64(ts)
+				break
 			}
 		}
 
@@ -1478,6 +1479,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			var ts, isTs = f["tickSize"]
 			if isTs {
 				tickSize = ToFloat64(ts)
+				break
 			}
 		}
 
@@ -1523,16 +1525,4 @@ func (swap *Swap) getFutureType(side, sidePosition string) FutureType {
 	} else {
 		panic("input error, do not use BOTH. ")
 	}
-}
-
-// standard the price
-func (swap *Swap) normalPrice(price float64, pair Pair) string {
-	contract := swap.getContract(pair)
-	return FloatToPrice(price, contract.PricePrecision, contract.TickSize)
-}
-
-// standard the amount
-func (swap *Swap) normalAmount(amount float64, pair Pair) string {
-	contract := swap.getContract(pair)
-	return FloatToString(amount, contract.AmountPrecision)
 }

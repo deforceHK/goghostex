@@ -420,7 +420,7 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", FloatToString(order.Price, contract.PricePrecision))
+	param.Set("price", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
 	param.Set("quantity", fmt.Sprintf("%d", order.Amount))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
@@ -845,11 +845,16 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
-		priceMaxScale, priceMinScale := float64(1.2), float64(0.8)
+		var priceMaxScale, priceMinScale = float64(1.2), float64(0.8)
+		var tickSize = float64(-1)
 		for _, filter := range item.Filters {
 			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
 				priceMaxScale = ToFloat64(filter["multiplierUp"])
 				priceMinScale = ToFloat64(filter["multiplierDown"])
+			}
+
+			if value, ok := filter["filterType"].(string); ok && value == "PRICE_FILTER" {
+				tickSize = ToFloat64(filter["tickSize"])
 			}
 		}
 
@@ -876,6 +881,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			DueDate:       dueTime.Format(GO_BIRTHDAY),
 
 			UnitAmount:      item.ContractSize,
+			TickSize:        tickSize,
 			PricePrecision:  item.PricePrecision,
 			AmountPrecision: item.QuantityPrecision,
 

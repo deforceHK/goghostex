@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	FUTURE_API_KEY       = ""
-	FUTURE_API_SECRETKEY = ""
-	FUTURE_PROXY_URL     = "socks5://127.0.0.1:1090"
+	FUTURE_API_KEY        = ""
+	FUTURE_API_SECRETKEY  = ""
+	FUTURE_API_PASSPHRASE = ""
+	FUTURE_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
 
 /**
@@ -35,7 +36,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		},
 		ApiKey:        FUTURE_API_KEY,
 		ApiSecretKey:  FUTURE_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: FUTURE_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -80,23 +81,23 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	//if trades, _, err := bn.Future.GetTrades(
-	//	Pair{Basis: BTC, Counter: USD},
-	//	NEXT_QUARTER_CONTRACT,
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	stdTrades, _ := json.Marshal(trades)
-	//	t.Log(string(stdTrades))
-	//}
-	//
-	//if contract, err := bn.Future.GetContract(Pair{BTC, USD}, NEXT_QUARTER_CONTRACT); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	t.Log(contract)
-	//}
+	if trades, _, err := bn.Future.GetTrades(
+		Pair{Basis: BTC, Counter: USD},
+		NEXT_QUARTER_CONTRACT,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdTrades, _ := json.Marshal(trades)
+		t.Log(string(stdTrades))
+	}
+
+	if contract, err := bn.Future.GetContract(Pair{ETH, USD}, NEXT_QUARTER_CONTRACT); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(contract)
+	}
 
 }
 
@@ -121,7 +122,7 @@ func TestFuture_TradeAPI(t *testing.T) {
 		},
 		ApiKey:        FUTURE_API_KEY,
 		ApiSecretKey:  FUTURE_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: FUTURE_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -245,7 +246,7 @@ func TestFuture_AccountAPI(t *testing.T) {
 		},
 		ApiKey:        FUTURE_API_KEY,
 		ApiSecretKey:  FUTURE_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: FUTURE_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
