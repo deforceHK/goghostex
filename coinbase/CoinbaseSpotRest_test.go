@@ -2,7 +2,6 @@ package coinbase
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -19,6 +18,10 @@ const (
 	SPOT_PROXY_URL = "socks5://127.0.0.1:1090"
 )
 
+/**
+go test -v ./coinbase/... -count=1 -run=TestSpot_GetKlineRecords
+
+**/
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	config := &APIConfig{
@@ -30,18 +33,18 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 				},
 			},
 		},
-		//ApiKey:        SPOT_API_KEY,
-		//ApiSecretKey:  SPOT_API_SECRETKEY,
-		//ApiPassphrase: SPOT_API_PASSPHRASE,
-		Location: time.Now().Location(),
+		ApiKey:        SPOT_API_KEY,
+		ApiSecretKey:  SPOT_API_SECRETKEY,
+		ApiPassphrase: SPOT_API_PASSPHRASE,
+		Location:      time.Now().Location(),
 	}
 
-	cb := New(config)
-	klines, _, err := cb.Spot.GetKlineRecords(
+	var cb = New(config)
+	var klines, _, err = cb.Spot.GetKlineRecords(
 		Pair{Basis: BTC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		300,
-		1546898760000,
+		1645571700000,
 	)
 
 	if err != nil {
@@ -49,13 +52,20 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 		return
 	}
 
-	raw, err := json.Marshal(klines)
+	raw, err := json.Marshal(klines[0])
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	fmt.Println(string(raw))
-	//fmt.Println(string(resp))
+	t.Log(string(raw))
+
+	if rule, raw, err := cb.Spot.GetExchangeRule(Pair{BTC, USD}); err != nil {
+		t.Error(err)
+		return
+	} else {
+		t.Log(string(raw))
+		t.Log(rule)
+	}
 
 }
