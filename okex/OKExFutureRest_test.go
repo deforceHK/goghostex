@@ -24,6 +24,8 @@ const (
  * 2. Get the BTC_USD this_week depth and the later depth's sequence is bigger
  * 3. Get the BTC_USD this_week 1d 1m kline
  *
+ * go test -v ./okex/... -count=1 -run=TestFuture_MarketAPI
+ *
  **/
 
 func TestFuture_MarketAPI(t *testing.T) {
@@ -201,14 +203,17 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(resp))
 	//}
 
-	//Contracts, err := ok.Future.GetContract(
-	//	Pair{Basis: BTC, Counter: USD},
-	//	NEXT_WEEK_CONTRACT,
-	//)
-	//if err != nil {
-	//	t.Error(err)
-	//	return
-	//}
+	Contracts, err := ok.Future.GetContract(
+		Pair{Basis: BTC, Counter: USDT},
+		NEXT_WEEK_CONTRACT,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	content, _ := json.Marshal(*Contracts)
+	t.Log(string(content))
 
 	//ContractName := ok.Future.GetInstrumentId(
 	//	Pair{Basis: BTC, Counter: USD},
@@ -238,6 +243,8 @@ func TestFuture_MarketAPI(t *testing.T) {
  * 4. Get the order info.
  * 5. Cancel the open_long Order
  *
+ * unit test cmd
+ * go test -v ./okex/... -count=1 -run=TestFuture_TradeAPI
  **/
 
 func TestFuture_TradeAPI(t *testing.T) {
@@ -436,6 +443,13 @@ func TestFuture_TradeAPI(t *testing.T) {
 	//}
 
 }
+
+/**
+ *
+ * unit test cmd
+ * go test -v ./okex/... -count=1 -run=TestFuture_DealAPI
+ *
+ **/
 
 func TestFuture_DealAPI(t *testing.T) {
 

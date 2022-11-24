@@ -532,7 +532,7 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
-	param.Set("price", FloatToString(order.Price, contract.PricePrecision))
+	param.Set("price", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
 	param.Set("quantity", FloatToString(order.Amount, contract.AmountPrecision))
 	// "GTC": 成交为止, 一直有效。
 	// "IOC": 无法立即成交(吃单)的部分就撤销。
@@ -1427,9 +1427,17 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
-		var pp = c.PricePrecision
-		if stdSymbol == "btc_usdt" {
-			pp = 1
+		var tickSize = float64(-1)
+		for _, f := range c.Filters {
+			var ft, isFt = f["filterType"]
+			if !isFt || ft != "PRICE_FILTER" {
+				continue
+			}
+			var ts, isTs = f["tickSize"]
+			if isTs {
+				tickSize = ToFloat64(ts)
+				break
+			}
 		}
 
 		contract := SwapContract{
@@ -1439,7 +1447,8 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      1,
-			PricePrecision:  pp,
+			TickSize:        tickSize,
+			PricePrecision:  c.PricePrecision,
 			AmountPrecision: c.QuantityPrecision,
 		}
 
@@ -1461,6 +1470,19 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
+		var tickSize = float64(-1)
+		for _, f := range c.Filters {
+			var ft, isFt = f["filterType"]
+			if !isFt || ft != "PRICE_FILTER" {
+				continue
+			}
+			var ts, isTs = f["tickSize"]
+			if isTs {
+				tickSize = ToFloat64(ts)
+				break
+			}
+		}
+
 		contract := SwapContract{
 			Pair:            pair,
 			Symbol:          stdSymbol,
@@ -1468,6 +1490,7 @@ func (swap *Swap) updateContracts() ([]byte, error) {
 			ContractName:    stdContractName,
 			SettleMode:      settleMode,
 			UnitAmount:      c.ContractSize,
+			TickSize:        tickSize,
 			PricePrecision:  c.PricePrecision,
 			AmountPrecision: c.QuantityPrecision,
 		}
@@ -1502,16 +1525,4 @@ func (swap *Swap) getFutureType(side, sidePosition string) FutureType {
 	} else {
 		panic("input error, do not use BOTH. ")
 	}
-}
-
-// standard the price
-func (swap *Swap) normalPrice(price float64, pair Pair) string {
-	contract := swap.getContract(pair)
-	return FloatToString(price, contract.PricePrecision)
-}
-
-// standard the amount
-func (swap *Swap) normalAmount(amount float64, pair Pair) string {
-	contract := swap.getContract(pair)
-	return FloatToString(amount, contract.AmountPrecision)
 }

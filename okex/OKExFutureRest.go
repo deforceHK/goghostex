@@ -120,18 +120,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
-		pricePrecision, amountPrecision := int64(0), int64(0)
-		for i := int64(0); item.TickSz < 1.0; i++ {
-			item.TickSz *= 10
-			pricePrecision += 1
-		}
-
-		for i := int64(0); item.LotSz < 1.0; i++ {
-			item.LotSz *= 10
-			amountPrecision += 1
-		}
-
-		contract := &FutureContract{
+		var contract = &FutureContract{
 			Pair:         pair,
 			Symbol:       pair.ToSymbol("_", false),
 			Exchange:     OKEX,
@@ -146,8 +135,9 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			DueDate:      dueTime.Format(GO_BIRTHDAY),
 
 			UnitAmount:      item.CtVal,
-			PricePrecision:  pricePrecision,
-			AmountPrecision: amountPrecision,
+			TickSize:        ToFloat64(item.TickSz),
+			PricePrecision:  GetPrecisionInt64(item.TickSz),
+			AmountPrecision: GetPrecisionInt64(item.LotSz),
 		}
 
 		currencies := strings.Split(contract.Symbol, "_")
@@ -600,6 +590,11 @@ func (future *Future) GetAccount() (*FutureAccount, []byte, error) {
 }
 
 func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
+	contract, err := future.GetContract(order.Pair, order.ContractType)
+	if err != nil {
+		return nil, err
+	}
+
 	if order == nil {
 		return nil, errors.New("ord param is nil")
 	}
@@ -625,7 +620,7 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 		sideInfo[1],
 		placeInfo,
 		strconv.FormatInt(order.Amount, 10),
-		strconv.FormatFloat(order.Price, 'f', -1, 64),
+		FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize),
 		order.Cid,
 	}
 

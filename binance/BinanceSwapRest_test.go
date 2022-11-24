@@ -11,10 +11,17 @@ import (
 )
 
 const (
-	SWAP_API_KEY       = ""
-	SWAP_API_SECRETKEY = ""
-	SWAP_PROXY_URL     = "socks5://127.0.0.1:1090"
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
+	SWAP_API_PASSPHRASE = ""
+	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
+
+/**
+* unit test cmd
+* go test -v ./binance/... -count=1 -run=TestSwap_MarketAPI_Counter
+*
+**/
 
 func TestSwap_MarketAPI_Counter(t *testing.T) {
 
@@ -29,7 +36,7 @@ func TestSwap_MarketAPI_Counter(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -160,102 +167,103 @@ func TestSwap_MarketAPI_Basis(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
 	var bn = New(config)
-	var contract = bn.Swap.GetContract(Pair{Basis: BTC, Counter: USD})
-	t.Log(*contract)
+	var contract = bn.Swap.GetContract(Pair{Basis: ETH, Counter: USD})
+	content, _ := json.Marshal(*contract)
+	t.Log(string(content))
 
 	// ticker unit test
-	if ticker, resp, err := bn.Swap.GetTicker(
-		Pair{Basis: BTC, Counter: USDT},
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		standard, err := json.Marshal(ticker)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		t.Log("Ticker standard struct: ")
-		t.Log(string(standard))
-		t.Log("Ticker remote api response: ")
-		t.Log(string(resp))
-	}
-
-	// depth unit test
-	if depth, resp, err := bn.Swap.GetDepth(
-		Pair{Basis: BTC, Counter: USD},
-		100,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		standard, err := json.Marshal(depth)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		t.Log("Depth standard struct:")
-		t.Log(string(standard))
-		t.Log("Depth remote api response: ")
-		t.Log(string(resp))
-
-		// make sure the later request get bigger sequence
-		depth1, _, _ := bn.Swap.GetDepth(
-			Pair{Basis: BTC, Counter: USD},
-			20,
-		)
-
-		if depth1.Sequence < depth.Sequence {
-			t.Error("later request get smaller sequence!!")
-			return
-		}
-
-		if err := depth.Verify(); err != nil {
-			t.Error(err)
-			return
-		}
-
-		if err := depth1.Verify(); err != nil {
-			t.Error(err)
-			return
-		}
-	}
-
-	if price, err := bn.Swap.GetMark(Pair{Basis: BTC, Counter: USD}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log("mark price: ", price)
-	}
-
-	if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log("highest:", highest)
-		t.Log("lowest:", lowest)
-	}
-
-	if klines, resp, err := bn.Swap.GetKline(
-		Pair{Basis: BTC, Counter: USD},
-		KLINE_PERIOD_1MIN,
-		20,
-		1638288000000,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		klineRaw, _ := json.Marshal(klines)
-		t.Log(string(klineRaw))
-		t.Log(string(resp))
-	}
+	//if ticker, resp, err := bn.Swap.GetTicker(
+	//	Pair{Basis: BTC, Counter: USDT},
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(ticker)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("Ticker standard struct: ")
+	//	t.Log(string(standard))
+	//	t.Log("Ticker remote api response: ")
+	//	t.Log(string(resp))
+	//}
+	//
+	//// depth unit test
+	//if depth, resp, err := bn.Swap.GetDepth(
+	//	Pair{Basis: BTC, Counter: USD},
+	//	100,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(depth)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("Depth standard struct:")
+	//	t.Log(string(standard))
+	//	t.Log("Depth remote api response: ")
+	//	t.Log(string(resp))
+	//
+	//	// make sure the later request get bigger sequence
+	//	depth1, _, _ := bn.Swap.GetDepth(
+	//		Pair{Basis: BTC, Counter: USD},
+	//		20,
+	//	)
+	//
+	//	if depth1.Sequence < depth.Sequence {
+	//		t.Error("later request get smaller sequence!!")
+	//		return
+	//	}
+	//
+	//	if err := depth.Verify(); err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	if err := depth1.Verify(); err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//}
+	//
+	//if price, err := bn.Swap.GetMark(Pair{Basis: BTC, Counter: USD}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log("mark price: ", price)
+	//}
+	//
+	//if highest, lowest, err := bn.Swap.GetLimit(Pair{Basis: BTC, Counter: USD}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log("highest:", highest)
+	//	t.Log("lowest:", lowest)
+	//}
+	//
+	//if klines, resp, err := bn.Swap.GetKline(
+	//	Pair{Basis: BTC, Counter: USD},
+	//	KLINE_PERIOD_1MIN,
+	//	20,
+	//	1638288000000,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	klineRaw, _ := json.Marshal(klines)
+	//	t.Log(string(klineRaw))
+	//	t.Log(string(resp))
+	//}
 
 	//if openAmount, timestamp, _, err := bn.Swap.GetOpenAmount(Pair{Basis: BTC, Counter: USDT}); err != nil {
 	//	t.Error(err)
@@ -289,7 +297,7 @@ func TestSwap_Account_COUNTER(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -330,7 +338,7 @@ func TestSwap_Account_Basis(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -349,6 +357,8 @@ func TestSwap_Account_Basis(t *testing.T) {
 
 // must set both
 // place the order ---> get the order info ---> cancel the order -> get the order info
+// go test -v ./binance/... -count=1 -run=TestSwap_TradeAPI_COUNTER
+
 func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 
 	config := &APIConfig{
@@ -362,7 +372,7 @@ func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -487,6 +497,7 @@ func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 }
 
 // place the order ---> get the order info ---> deal
+// go test -v ./binance/... -count=1 -run=TestSwap_DEALAPI_COUNTER
 func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 
 	config := &APIConfig{
@@ -500,7 +511,7 @@ func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
@@ -629,7 +640,7 @@ func TestSwap_TradeAPI_BASIS(t *testing.T) {
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
