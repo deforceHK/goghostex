@@ -21,4 +21,7 @@ type SpotRestAPI interface {
 
 	// util api
 	KeepAlive()
+
+	// v2 API
+	GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error)
 }

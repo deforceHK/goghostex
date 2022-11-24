@@ -150,7 +150,7 @@ func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 
 	var klineRecords []*Kline
 	for _, record := range klines {
-		r := Kline{Pair: pair}
+		r := Kline{Pair: pair, Exchange: BINANCE}
 		for i, e := range record {
 			switch i {
 			case 0:
@@ -474,4 +474,8 @@ func (spot *Spot) KeepAlive() {
 		return
 	}
 	_, _, _ = spot.GetTicker(Pair{Basis: BNB, Counter: BTC})
+}
+
+func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error) {
+	panic("implement me")
 }

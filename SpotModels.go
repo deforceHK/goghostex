@@ -38,6 +38,18 @@ type Kline struct {
 	Vol       float64 `json:"vol"`
 }
 
+type OHLC struct {
+	Symbol    string  `json:"symbol"`
+	Exchange  string  `json:"exchange"`
+	Timestamp int64   `json:"timestamp"`
+	Date      string  `json:"date"`
+	Open      float64 `json:"open"`
+	Close     float64 `json:"close"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Vol       float64 `json:"vol"`
+}
+
 type Ticker struct {
 	Pair      Pair    `json:"-"`
 	Last      float64 `json:"last"`
