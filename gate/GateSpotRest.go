@@ -55,3 +55,7 @@ func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
 func (spot *Spot) KeepAlive() {
 	panic("implement me")
 }
+
+func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error) {
+	panic("implement me")
+}

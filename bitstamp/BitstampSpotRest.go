@@ -201,3 +201,7 @@ func (spot *Spot) KeepAlive() {
 	}
 	_, _, _ = spot.GetTicker(Pair{Basis: BTC, Counter: USD})
 }
+
+func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error) {
+	panic("implement me")
+}

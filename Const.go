@@ -91,12 +91,11 @@ const (
 //exchanges const
 const (
 	OKEX     = "okex"
-	BITFINEX = "bitfinex"
 	BINANCE  = "binance"
-	BITMEX   = "bitmex"
 	COINBASE = "coinbase"
 	BITSTAMP = "bitstamp"
 	GATE     = "gate"
+	KRAKEN   = "kraken"
 )
 
 var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}
