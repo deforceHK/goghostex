@@ -58,6 +58,7 @@ var (
 	FIL  = Currency{"FIL", ""}
 	SOL  = Currency{"SOL", ""}
 	ATOM = Currency{"ATOM", ""}
+	MATIC = Currency{"MATIC", ""}
 	AVAX = Currency{"AVAX", ""}
 	ALGO = Currency{"ALGO", ""}
 	AR   = Currency{"AR", ""}
