@@ -30,7 +30,7 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 
 	var kraken = New(config)
 	klines, _, err := kraken.Spot.GetKlineRecords(
-		Pair{Basis: ETH, Counter: USD},
+		Pair{Basis: MATIC, Counter: USD},
 		KLINE_PERIOD_1MIN,
 		300,
 		1546898760000,
