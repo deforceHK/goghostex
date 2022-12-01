@@ -71,7 +71,7 @@ func (s *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []
 		for i, e := range record {
 			switch i {
 			case 0:
-				r.Timestamp = int64(e.(float64)*1000)
+				r.Timestamp = int64(e.(float64) * 1000)
 				r.Date = time.Unix(
 					r.Timestamp/1000,
 					0,
