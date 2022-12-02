@@ -60,7 +60,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 			Alias    string  `json:"alias"`
 			CtVal    float64 `json:"ctVal,string"`
 			CtValCcy string  `json:"ctValCcy"`
-			ExpTime  int64   `json:"expTime,string"`
+			//ExpTime  int64   `json:"expTime,string"`
 			InstId   string  `json:"instId"`
 			//ListTime  int64   `json:"listTime,string"`
 			SettleCcy string  `json:"settleCcy"`
