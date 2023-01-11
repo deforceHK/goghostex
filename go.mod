@@ -7,4 +7,4 @@ require (
 	github.com/gorilla/websocket v1.5.0
 )
 
-replace github.com/strengthening/goghostex v1.0.1 => ./
+replace github.com/strengthening/goghostex v1.0.2 => ./
