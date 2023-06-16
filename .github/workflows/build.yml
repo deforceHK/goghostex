@@ -20,7 +20,7 @@ on:
 #        uses: actions/checkout@v1
 #        with:
 #          fetch-depth: 1
-#          path: go/src/github.com/strengthening/goghostex
+#          path: go/src/github.com/deforceHK/goghostex
 #
 #      - name: Get dependencies
 #        run: |
@@ -53,7 +53,7 @@ on:
 #        uses: actions/checkout@v1
 #        with:
 #          fetch-depth: 1
-#          path: go/src/github.com/strengthening/goghostex
+#          path: go/src/github.com/deforceHK/goghostex
 #
 #      - name: Login the Docker service
 #        uses: azure/docker-login@v1
@@ -64,7 +64,7 @@ on:
 #
 #      - name: Ready to release, and update the gobuild lastest image
 #        run: |
-#          cd /home/runner/work/goghostex/go/src/github.com/strengthening/goghostex
+#          cd /home/runner/work/goghostex/go/src/github.com/deforceHK/goghostex
 #          docker build --rm -t registry.cn-hongkong.aliyuncs.com/strengthening/goghostex .
 #          docker push registry.cn-hongkong.aliyuncs.com/strengthening/goghostex
 #

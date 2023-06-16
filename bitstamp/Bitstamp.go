@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 var (

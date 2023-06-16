@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 type Spot struct {

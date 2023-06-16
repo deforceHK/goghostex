@@ -1,9 +1,9 @@
 # goghostex
 
-[![Workflow](https://github.com/strengthening/goghostex/workflows/build/badge.svg)](https://github.com/strengthening/goghostex)
+[![Workflow](https://github.com/deforceHK/goghostex/workflows/build/badge.svg)](https://github.com/deforceHK/goghostex)
 [![License](https://img.shields.io/badge/license-BSD-blue)](https://img.shields.io/badge/license-BSD-blue)
 
-README: [English](https://github.com/strengthening/goghostex/blob/master/README.md) | [中文](https://github.com/strengthening/goghostex/blob/master/README-zh.md)
+README: [English](https://github.com/deforceHK/goghostex/blob/master/README.md) | [中文](https://github.com/deforceHK/goghostex/blob/master/README-zh.md)
 
 Goghostex是一个开源的头部数字货币交易所API。您可以直接用来搜集数据和交易程序。
 
@@ -11,15 +11,15 @@ Goghostex是一个开源的头部数字货币交易所API。您可以直接用�
 
 goghostex支持的交易所API。如下：
 
-| |现货|杠杠|交割合约|永续合约|
-|:---|:---|:---|:---|:---
+||现货|杠杠|交割合约|永续合约|
+|:---|:---|:---|:---|:---|
 |OKEX|YES|YES|YES|NO|
-|BINANCE|YES|NO|NO|NO
+|BINANCE|YES|NO|NO|NO|
 
 ## Clone
 
 ```
-git clone https://github.com/strengthening/goghostex.git
+git clone https://github.com/deforceHK/goghostex.git
 ```
 
 ## 安装 

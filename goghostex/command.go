@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/strengthening/goghostex/binance"
-	"github.com/strengthening/goghostex/coinbase"
-	"github.com/strengthening/goghostex/okex"
+	"github.com/deforceHK/goghostex/binance"
+	"github.com/deforceHK/goghostex/coinbase"
+	"github.com/deforceHK/goghostex/okex"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 var okexClient *okex.OKEx

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 const (

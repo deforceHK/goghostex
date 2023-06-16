@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 func TestSwap_GetExchangeRule(t *testing.T) {

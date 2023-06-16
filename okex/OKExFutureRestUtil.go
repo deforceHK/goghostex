@@ -3,7 +3,7 @@ package okex
 import (
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 /*

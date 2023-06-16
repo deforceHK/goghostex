@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 type BinanceWebsocket struct {
