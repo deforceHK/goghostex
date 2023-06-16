@@ -2,7 +2,6 @@ package goghostex
 
 import (
 	"errors"
-	"fmt"
 )
 
 /**
@@ -52,25 +51,6 @@ type FutureTicker struct {
 	ContractName string `json:"contract_name"`
 }
 
-type FutureDepthRecords []FutureDepthRecord
-
-type FutureDepthRecord struct {
-	Price  float64
-	Amount int64
-}
-
-func (dr FutureDepthRecords) Len() int {
-	return len(dr)
-}
-
-func (dr FutureDepthRecords) Swap(i, j int) {
-	dr[i], dr[j] = dr[j], dr[i]
-}
-
-func (dr FutureDepthRecords) Less(i, j int) bool {
-	return dr[i].Price < dr[j].Price
-}
-
 type FutureDepth struct {
 	ContractType string // for future
 	ContractName string // for future
@@ -80,8 +60,8 @@ type FutureDepth struct {
 	// The increasing sequence, cause the http return sequence is not sure.
 	Sequence int64
 	Date     string
-	AskList  FutureDepthRecords // Ascending order
-	BidList  FutureDepthRecords // Descending order
+	AskList  DepthRecords // Ascending order
+	BidList  DepthRecords // Descending order
 }
 
 // Do not trust the data from exchange, just verify it.
@@ -113,76 +93,9 @@ func (fd FutureDepth) Verify() error {
 	return nil
 }
 
-type FutureStdDepthRecords []FutureStdDepthRecord
-
-type FutureStdDepthRecord struct {
-	Price  int64
-	Amount int64
-}
-
-func (dr FutureStdDepthRecords) Len() int {
-	return len(dr)
-}
-
-func (dr FutureStdDepthRecords) Swap(i, j int) {
-	dr[i], dr[j] = dr[j], dr[i]
-}
-
-func (dr FutureStdDepthRecords) Less(i, j int) bool {
-	return dr[i].Price < dr[j].Price
-}
-
-type FutureStdDepth struct {
-	ContractType string // for future
-	ContractName string // for future
-	Pair         Pair
-	Timestamp    int64
-	DueTimestamp int64
-
-	// The increasing sequence, cause the http return sequence is not sure.
-	Sequence int64
-	Date     string
-	AskList  FutureStdDepthRecords // Ascending order
-	BidList  FutureStdDepthRecords // Descending order
-}
-
-// Do not trust the data from exchange, just verify it.
-func (fd FutureStdDepth) Verify() error {
-
-	AskCount := len(fd.AskList)
-	BidCount := len(fd.BidList)
-
-	if BidCount < 5 || AskCount < 5 {
-		return errors.New(
-			fmt.Sprintf(
-				"%s , %s currency pair ask_list or bid_list not enough! ",
-				fd.Pair.ToSymbol("_", false),
-				fd.ContractType,
-			),
-		)
-	}
-
-	for i := 1; i < AskCount; i++ {
-		pre := fd.AskList[i-1]
-		last := fd.AskList[i]
-		if pre.Price >= last.Price {
-			return errors.New("The ask_list is not ascending ordered! ")
-		}
-	}
-
-	for i := 1; i < BidCount; i++ {
-		pre := fd.BidList[i-1]
-		last := fd.BidList[i]
-		if pre.Price <= last.Price {
-			return errors.New("The bid_list is not descending ordered! ")
-		}
-	}
-
-	return nil
-}
-
 type FutureKline struct {
 	Kline        `json:",-"` // 按照kline中的字段进行解析。
+	ContractType string      `json:"contract_type"`
 	DueTimestamp int64       `json:"due_timestamp"`
 	DueDate      string      `json:"due_date"`
 	Vol2         float64     `json:"vol_2"` //个数
@@ -204,8 +117,8 @@ type FutureOrder struct {
 	DealAmount     int64
 	PlaceTimestamp int64
 	PlaceDatetime  string
-	OrderTimestamp int64 // unit: ms
-	OrderDate      string
+	DealTimestamp  int64 // unit: ms
+	DealDatetime   string
 	Status         TradeStatus
 	PlaceType      PlaceType  // place order type 0：NORMAL 1：MAKER_ONLY 2：FOK 3：IOC
 	Type           FutureType // type 1：OPEN_LONG 2：OPEN_SHORT 3：LIQUIDATE_LONG 4： LIQUIDATE_SHORT
@@ -215,26 +128,25 @@ type FutureOrder struct {
 	ContractType   string
 	ContractName   string // for future
 	Exchange       string
-	MatchPrice     int64 // some exchange need
 }
 
 type FuturePosition struct {
-	BuyAmount      float64
-	BuyAvailable   float64
-	BuyPriceAvg    float64
-	BuyPriceCost   float64
-	BuyProfitReal  float64
-	CreateDate     int64
-	LeverRate      int
-	SellAmount     float64
-	SellAvailable  float64
-	SellPriceAvg   float64
-	SellPriceCost  float64
-	SellProfitReal float64
-	Symbol         Pair //btc_usd:比特币,ltc_usd:莱特币
-	ContractType   string
-	ContractId     int64
-	ForceLiquPrice float64 //预估爆仓价
+	BuyAmount           float64
+	BuyAvailable        float64
+	BuyPriceAvg         float64
+	BuyPriceCost        float64
+	BuyProfitReal       float64
+	CreateDate          int64
+	LeverRate           int
+	SellAmount          float64
+	SellAvailable       float64
+	SellPriceAvg        float64
+	SellPriceCost       float64
+	SellProfitReal      float64
+	Symbol              Pair //btc_usd:比特币,ltc_usd:莱特币
+	ContractType        string
+	ContractId          int64
+	ForceLiquidatePrice float64 //预估爆仓价
 }
 
 /**
@@ -250,4 +162,46 @@ type FutureAPIConfig struct {
 type FutureRule struct {
 	Rule        `json:",-"` // 按照Rule里面的规则进行。
 	ContractVal float64     `json:"contract_val"` //合约一手价格
+}
+
+type FutureContract struct {
+	Pair         Pair   `json:"-"`
+	Symbol       string `json:"symbol"`
+	Exchange     string `json:"exchange"`
+	ContractType string `json:"contract_type"` // eg: this_week next_week quarter next_quarter
+	ContractName string `json:"contract_name"` // eg: BTC-USD-201025
+	SettleMode   int64  `json:"settle_mode"`   // 1: BASIS 2: COUNTER
+
+	OpenTimestamp int64  `json:"open_timestamp"`
+	OpenDate      string `json:"open_date"`
+	DueTimestamp  int64  `json:"due_timestamp"`
+	DueDate       string `json:"due_date"`
+
+	UnitAmount      float64 `json:"unit_amount"`
+	TickSize        float64 `json:"tick_size"`
+	PricePrecision  int64   `json:"price_precision"`
+	AmountPrecision int64   `json:"amount_precision"`
+
+	MaxScalePriceLimit float64 `json:"max_scale_price_limit"`
+	MinScalePriceLimit float64 `json:"min_scale_price_limit"`
+}
+
+type FutureContracts struct {
+	ContractTypeKV map[string]*FutureContract `json:"contract_type_kv"`
+	ContractNameKV map[string]*FutureContract `json:"contract_name_kv"`
+	DueTimestampKV map[string]*FutureContract `json:"due_timestamp_kv"`
+}
+
+type FutureAccountItem struct {
+	Pair         Pair
+	ContractName string
+	Exchange     string
+	Subject      string
+
+	SettleMode     int64 // 1: basis 2: counter
+	SettleCurrency Currency
+	Amount         float64
+	Timestamp      int64
+	DateTime       string
+	Info           string
 }

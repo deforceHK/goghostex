@@ -1,9 +1,10 @@
 package goghostex
 
-import "errors"
+import (
+	"errors"
+)
 
 type SwapTicker struct {
-	//Ticker        `json:",-"` // 按照kline中的字段进行解析。
 	Pair      Pair    `json:"-"`
 	Last      float64 `json:"last"`
 	Buy       float64 `json:"buy"`
@@ -15,32 +16,13 @@ type SwapTicker struct {
 	Date      string  `json:"date"`      // date: format yyyy-mm-dd HH:MM:SS, the timezone define in apiconfig
 }
 
-type DepthItem struct {
-	Price  float64
-	Amount float64
-}
-
-type DepthItems []DepthItem
-
-func (dr DepthItems) Len() int {
-	return len(dr)
-}
-
-func (dr DepthItems) Swap(i, j int) {
-	dr[i], dr[j] = dr[j], dr[i]
-}
-
-func (dr DepthItems) Less(i, j int) bool {
-	return dr[i].Price < dr[j].Price
-}
-
 type SwapDepth struct {
 	Pair      Pair
 	Timestamp int64
 	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
 	Date      string
-	AskList   DepthItems // Ascending order
-	BidList   DepthItems // Descending order
+	AskList   DepthRecords // Ascending order
+	BidList   DepthRecords // Descending order
 }
 
 // Verify the depth data is right
@@ -71,65 +53,8 @@ func (depth *SwapDepth) Verify() error {
 	return nil
 }
 
-type DepthStdItem struct {
-	Price  int64
-	Amount float64
-}
-
-type DepthStdItems []DepthStdItem
-
-func (dsi DepthStdItems) Len() int {
-	return len(dsi)
-}
-
-func (dsi DepthStdItems) Swap(i, j int) {
-	dsi[i], dsi[j] = dsi[j], dsi[i]
-}
-
-func (dsi DepthStdItems) Less(i, j int) bool {
-	return dsi[i].Price < dsi[j].Price
-}
-
-type SwapStdDepth struct {
-	Pair      Pair
-	Timestamp int64
-	Sequence  int64 // The increasing sequence, cause the http return sequence is not sure.
-	Date      string
-	AskList   DepthStdItems // Ascending order
-	BidList   DepthStdItems // Descending order
-}
-
-// Verify the depth data is right
-func (depth *SwapStdDepth) Verify() error {
-	AskCount := len(depth.AskList)
-	BidCount := len(depth.BidList)
-
-	if BidCount < 10 || AskCount < 10 {
-		return errors.New("The ask_list or bid_list not enough! ")
-	}
-
-	for i := 1; i < AskCount; i++ {
-		pre := depth.AskList[i-1]
-		last := depth.AskList[i]
-		if pre.Price >= last.Price {
-			return errors.New("The ask_list is not ascending ordered! ")
-		}
-	}
-
-	for i := 1; i < BidCount; i++ {
-		pre := depth.BidList[i-1]
-		last := depth.BidList[i]
-		if pre.Price <= last.Price {
-			return errors.New("The bid_list is not descending ordered! ")
-		}
-	}
-
-	return nil
-}
-
 type SwapKline struct {
-	//Kline `json:",-"` // 按照kline中的字段进行解析。
-	Pair      Pair    `json:"symbol"`
+	Pair      Pair    `json:"-"`
 	Exchange  string  `json:"exchange"`
 	Timestamp int64   `json:"timestamp"`
 	Date      string  `json:"date"`
@@ -215,7 +140,20 @@ type SwapAccountItem struct {
 	Info           string
 }
 
-type SwapRule struct {
-	Rule        Rule    `json:",-"`           // 按照Rule里面的规则进行。
-	ContractVal float64 `json:"contract_val"` //合约一手价格
+type SwapContracts struct {
+	// 按照合约到期日期查找，以ok的命名规则为准吧 BTC-USD-SWAP BTC-USDT-SWAP
+	ContractNameKV map[string]*SwapContract `json:"contract_name_kv"`
+}
+
+type SwapContract struct {
+	Pair         Pair   `json:"-"`
+	Symbol       string `json:"symbol"`
+	Exchange     string `json:"exchange"`
+	ContractName string `json:"contract_name"` // 标准contract_name和具体交易所无关，以ok的规则为准。
+	SettleMode   int64  `json:"settle_mode"`   // 1: BASIS 币本位 2: COUNTER U本位
+
+	UnitAmount      float64 `json:"unit_amount"`
+	TickSize        float64 `json:"tick_size"`
+	PricePrecision  int64   `json:"price_precision"`
+	AmountPrecision int64   `json:"amount_precision"`
 }

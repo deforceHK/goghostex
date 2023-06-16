@@ -15,42 +15,7 @@ type Spot struct {
 	*Coinbase
 }
 
-func (*Spot) LimitBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) LimitSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) MarketBuy(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) MarketSell(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) CancelOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetOneOrder(*Order) ([]byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetUnFinishOrders(pair Pair) ([]Order, []byte, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetHistoryOrders(pair Pair, currentPage, pageSize int) ([]Order, error) {
-	panic("implement me")
-}
-
-func (*Spot) GetAccount() (*Account, []byte, error) {
-	panic("implement me")
-}
-
+// public api
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	t := struct {
 		Volume float64 `json:"volume,string"`
@@ -107,11 +72,11 @@ func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	return ticker, tickerResp, nil
 }
 
-func (*Spot) GetDepth(size int, pair Pair) (*Depth, []byte, error) {
+func (*Spot) GetDepth(pair Pair, size int) (*Depth, []byte, error) {
 	panic("implement me")
 }
 
-func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, []byte, error) {
+func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline, []byte, error) {
 	if size > 300 {
 		return nil, nil, errors.New("Can not request more than 300. ")
 	}
@@ -156,10 +121,10 @@ func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		return nil, nil, err
 	}
 
-	var klines []Kline
+	var klines []*Kline
 	for _, item := range response {
 		t := time.Unix(ToInt64(item[0]), 0)
-		klines = append(klines, Kline{
+		klines = append(klines, &Kline{
 			Exchange:  COINBASE,
 			Timestamp: t.UnixNano() / int64(time.Millisecond),
 			Date:      t.In(spot.config.Location).Format(GO_BIRTHDAY),
@@ -172,10 +137,10 @@ func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]Kline, 
 		)
 	}
 
-	return klines, resp, nil
+	return GetAscKline(klines), resp, nil
 }
 
-func (*Spot) GetTrades(pair Pair, since int64) ([]Trade, error) {
+func (*Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
@@ -211,4 +176,42 @@ func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	}
 
 	return &rule, resp, nil
+}
+
+// private api
+func (*Spot) PlaceOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) CancelOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetOrder(*Order) ([]byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetOrders(pair Pair) ([]*Order, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
+	panic("implement me")
+}
+
+func (*Spot) GetAccount() (*Account, []byte, error) {
+	panic("implement me")
+}
+
+// util api
+func (spot *Spot) KeepAlive() {
+	nowTimestamp := time.Now().Unix() * 1000
+	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
+		return
+	}
+	_, _, _ = spot.GetExchangeRule(Pair{Basis: BTC, Counter: USD})
+}
+
+func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error) {
+	panic("implement me")
 }

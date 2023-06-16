@@ -3,6 +3,7 @@ package okex
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestWallet_GetAccount(t *testing.T) {
 		return
 	}
 
-	ltcAcc, exist := acc.SubAccounts[currency]
+	ltcAcc, exist := acc.SubAccounts[strings.ToUpper(currency.Symbol)]
 	if !exist || ltcAcc.Amount < 1 {
 		t.Error("不能继续测试下去了。")
 		return

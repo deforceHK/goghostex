@@ -64,8 +64,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// depth unit test
 	if depth, resp, err := bn.Spot.GetDepth(
-		20,
 		Pair{Basis: BTC, Counter: USDT},
+		20,
 	); err != nil {
 		t.Error(err)
 		return
@@ -83,8 +83,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 		// make sure the later request get bigger sequence
 		depth1, _, _ := bn.Spot.GetDepth(
-			20,
 			Pair{Basis: BTC, Counter: USDT},
+			20,
 		)
 
 		if depth1.Sequence < depth.Sequence {
@@ -109,6 +109,7 @@ func TestSpot_MarketAPI(t *testing.T) {
 		KLINE_PERIOD_1MIN,
 		10,
 		int(time.Now().Add(-2*24*time.Hour).UnixNano()),
+		//int(time.Now().Add(-1*time.Hour).UnixNano()),
 	); err != nil {
 		t.Error(err)
 		return
@@ -194,7 +195,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		return
 	} else {
 		for currency, subAccount := range account.SubAccounts {
-			if currency == BNB && subAccount.Amount < 1 {
+			if currency == BNB.Symbol && subAccount.Amount < 1 {
 				t.Error("You don not has 1 BNB to order. ")
 				return
 			}
@@ -220,7 +221,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: NORMAL,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&normalOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -236,7 +237,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if resp, err := bn.Spot.GetOneOrder(&normalOrder); err != nil {
+		if resp, err := bn.Spot.GetOrder(&normalOrder); err != nil {
 			t.Error(err)
 			return
 		} else if i == 0 {
@@ -292,7 +293,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: FOK,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&fokOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&fokOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -315,7 +316,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: IOC,
 	}
 
-	if resp, err := bn.Spot.LimitSell(&iocOrder); err != nil {
+	if resp, err := bn.Spot.PlaceOrder(&iocOrder); err != nil {
 		t.Error(err)
 		return
 	} else {

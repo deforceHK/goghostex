@@ -66,8 +66,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 	// depth unit test
 	if depth, resp, err := ok.Spot.GetDepth(
-		20,
 		Pair{Basis: BTC, Counter: USDT},
+		20,
 	); err != nil {
 		t.Error(err)
 		return
@@ -85,8 +85,8 @@ func TestSpot_MarketAPI(t *testing.T) {
 
 		// make sure the later request get bigger sequence
 		depth1, _, _ := ok.Spot.GetDepth(
-			20,
 			Pair{Basis: BTC, Counter: USDT},
+			20,
 		)
 
 		if depth1.Sequence <= depth.Sequence {
@@ -200,7 +200,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		t.Log(string(resp))
 
 		for currency, subAccount := range account.SubAccounts {
-			if currency == BTC && subAccount.Amount < 0.005 {
+			if currency == BTC.Symbol && subAccount.Amount < 0.005 {
 				t.Error("You don not has 0.005 BTC to order. ")
 				return
 			}
@@ -226,7 +226,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		OrderType: NORMAL,
 	}
 
-	if resp, err := ok.Spot.LimitSell(&normalOrder); err != nil {
+	if resp, err := ok.Spot.PlaceOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -242,7 +242,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		if resp, err := ok.Spot.GetOneOrder(&normalOrder); err != nil {
+		if resp, err := ok.Spot.GetOrder(&normalOrder); err != nil {
 			t.Error(err)
 			return
 		} else if i == 0 {

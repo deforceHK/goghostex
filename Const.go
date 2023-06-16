@@ -7,7 +7,7 @@ const (
 type TradeSide int64
 
 const (
-	BUY = 1 + iota
+	BUY TradeSide = 1 + iota
 	SELL
 	BUY_MARKET
 	SELL_MARKET
@@ -67,6 +67,24 @@ const (
 	KLINE_PERIOD_1YEAR
 )
 
+var PeriodMillisecond = map[int]int64{
+	KLINE_PERIOD_1MIN:  60 * 1000,
+	KLINE_PERIOD_3MIN:  3 * 60 * 1000,
+	KLINE_PERIOD_5MIN:  5 * 60 * 1000,
+	KLINE_PERIOD_15MIN: 15 * 60 * 1000,
+	KLINE_PERIOD_30MIN: 30 * 60 * 1000,
+	KLINE_PERIOD_60MIN: 60 * 60 * 1000,
+	KLINE_PERIOD_1H:    60 * 60 * 1000,
+	KLINE_PERIOD_2H:    2 * 60 * 60 * 1000,
+	KLINE_PERIOD_4H:    4 * 60 * 60 * 1000,
+	KLINE_PERIOD_6H:    6 * 60 * 60 * 1000,
+	KLINE_PERIOD_8H:    8 * 60 * 60 * 1000,
+	KLINE_PERIOD_12H:   12 * 60 * 60 * 1000,
+	KLINE_PERIOD_1DAY:  24 * 60 * 60 * 1000,
+	KLINE_PERIOD_3DAY:  3 * 24 * 60 * 60 * 1000,
+	KLINE_PERIOD_1WEEK: 7 * 24 * 60 * 60 * 1000,
+}
+
 const (
 	THIS_WEEK_CONTRACT    = "this_week"    //周合约
 	NEXT_WEEK_CONTRACT    = "next_week"    //次周合约
@@ -90,16 +108,12 @@ const (
 
 //exchanges const
 const (
-	OKEX      = "okex"
-	OKEX_SWAP = "okex.com_swap"
-	HUOBI     = "huobi.com"
-	HUOBI_PRO = "huobi.pro"
-	BITFINEX  = "bitfinex"
-	BINANCE   = "binance"
-	BITMEX    = "bitmex.com"
-	HBDM      = "hbdm.com"
-	COINBASE  = "coinbase"
-	BITSTAMP  = "bitstamp"
+	OKEX     = "okex"
+	BINANCE  = "binance"
+	COINBASE = "coinbase"
+	BITSTAMP = "bitstamp"
+	GATE     = "gate"
+	KRAKEN   = "kraken"
 )
 
 var orderTypeSymbol = [...]string{"NORMAL", "ONLY_MAKER", "FOK", "IOC"}
@@ -135,4 +149,16 @@ func (ft FutureType) String() string {
 const (
 	CROSS    = "cross"
 	ISOLATED = "isolated"
+)
+
+const (
+	TRADE_TYPE_FUTURE = "future"
+	TRADE_TYPE_SPOT   = "spot"
+	TRADE_TYPE_SWAP   = "swap"
+	TRADE_TYPE_MARGIN = "margin"
+)
+
+const (
+	SETTLE_MODE_BASIS   int64 = 1
+	SETTLE_MODE_COUNTER int64 = 2
 )

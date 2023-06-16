@@ -3,6 +3,7 @@ package binance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -34,6 +35,13 @@ var _INTERNAL_ORDER_STATUS_REVERSE_CONVERTER = map[string]TradeStatus{
 	"EXPIRED":          ORDER_FAIL,
 }
 
+var _INTERNAL_PLACE_TYPE_REVERSE_CONVERTER = map[string]PlaceType{
+	"GTC": NORMAL,
+	"GTX": ONLY_MAKER,
+	"FOK": FOK,
+	"IOC": IOC,
+}
+
 var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1MIN:   "1m",
 	KLINE_PERIOD_3MIN:   "3m",
@@ -52,16 +60,38 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 	KLINE_PERIOD_1MONTH: "1M",
 }
 
+var _INERNAL_KLINE_SECOND_CONVERTER = map[int]int{
+	KLINE_PERIOD_1MIN:   60 * 1000,
+	KLINE_PERIOD_3MIN:   3 * 60 * 1000,
+	KLINE_PERIOD_5MIN:   5 * 60 * 1000,
+	KLINE_PERIOD_15MIN:  15 * 60 * 1000,
+	KLINE_PERIOD_30MIN:  30 * 60 * 1000,
+	KLINE_PERIOD_60MIN:  60 * 60 * 1000,
+	KLINE_PERIOD_2H:     2 * 60 * 60 * 1000,
+	KLINE_PERIOD_4H:     4 * 60 * 60 * 1000,
+	KLINE_PERIOD_6H:     6 * 60 * 60 * 1000,
+	KLINE_PERIOD_8H:     8 * 60 * 60 * 1000,
+	KLINE_PERIOD_12H:    12 * 60 * 60 * 1000,
+	KLINE_PERIOD_1DAY:   24 * 60 * 60 * 1000,
+	KLINE_PERIOD_3DAY:   3 * 24 * 60 * 60 * 1000,
+	KLINE_PERIOD_1WEEK:  7 * 24 * 60 * 60 * 1000,
+	KLINE_PERIOD_1MONTH: 30.5 * 24 * 60 * 60 * 1000,
+}
+
 func New(config *APIConfig) *Binance {
 	binance := &Binance{config: config}
 	binance.Spot = &Spot{Binance: binance}
+	binance.Margin = &Margin{
+		Binance: binance,
+	}
 	binance.Swap = &Swap{
 		Binance:       binance,
 		Locker:        new(sync.Mutex),
 		swapContracts: SwapContracts{},
 	}
-	binance.Margin = &Margin{
+	binance.Future = &Future{
 		Binance: binance,
+		Locker:  new(sync.Mutex),
 	}
 	return binance
 }
@@ -69,8 +99,9 @@ func New(config *APIConfig) *Binance {
 type Binance struct {
 	config *APIConfig
 	Spot   *Spot
-	Swap   *Swap
 	Margin *Margin
+	Swap   *Swap
+	Future *Future
 }
 
 func (this *Binance) GetExchangeName() string {
@@ -101,6 +132,10 @@ func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interfa
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if this.config.LastTimestamp < nowTimestamp {
+			this.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }
@@ -108,7 +143,7 @@ func (this *Binance) DoRequest(httpMethod, uri, reqBody string, response interfa
 func (this *Binance) ExchangeInfo() ([]byte, error) {
 
 	body, err := this.DoRequest(
-		"GET",
+		http.MethodGet,
 		API_V3+"exchangeInfo",
 		"",
 		nil,

@@ -13,14 +13,13 @@ type Account struct {
 	Exchange    string
 	Asset       float64 //总资产
 	NetAsset    float64 //净资产
-	SubAccounts map[Currency]SubAccount
+	SubAccounts map[string]SubAccount
 }
 
 type SubAccount struct {
 	Currency     Currency
 	Amount       float64
-	ForzenAmount float64
-	LoanAmount   float64
+	AmountFrozen float64
 }
 
 /**
@@ -29,6 +28,18 @@ type SubAccount struct {
 
 type Kline struct {
 	Pair      Pair    `json:"symbol"`
+	Exchange  string  `json:"exchange"`
+	Timestamp int64   `json:"timestamp"`
+	Date      string  `json:"date"`
+	Open      float64 `json:"open"`
+	Close     float64 `json:"close"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Vol       float64 `json:"vol"`
+}
+
+type OHLC struct {
+	Symbol    string  `json:"symbol"`
 	Exchange  string  `json:"exchange"`
 	Timestamp int64   `json:"timestamp"`
 	Date      string  `json:"date"`
@@ -58,7 +69,7 @@ type Trade struct {
 	Amount    float64   `json:"amount,string"`
 	Price     float64   `json:"price,string"`
 	Timestamp int64     `json:"timestamp"`
-	Pair      Pair      `json:"omitempty"`
+	Pair      Pair      `json:"-"`
 }
 
 type DepthRecord struct {
@@ -147,6 +158,7 @@ type Order struct {
  **/
 type APIConfig struct {
 	HttpClient    *http.Client
+	LastTimestamp int64
 	Endpoint      string
 	ApiKey        string
 	ApiSecretKey  string

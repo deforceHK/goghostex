@@ -3,6 +3,7 @@ package okex
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/strengthening/goghostex"
@@ -71,14 +72,14 @@ func (ok *Wallet) GetAccount() (*Account, []byte, error) {
 	}
 
 	var acc Account
-	acc.SubAccounts = make(map[Currency]SubAccount, 0)
+	acc.SubAccounts = make(map[string]SubAccount, 0)
 	acc.Exchange = OKEX
 	for _, itm := range response {
 		currency := NewCurrency(itm.Currency, "")
-		acc.SubAccounts[currency] = SubAccount{
+		acc.SubAccounts[strings.ToUpper(itm.Currency)] = SubAccount{
 			Currency:     currency,
 			Amount:       itm.Balance,
-			ForzenAmount: itm.Hold,
+			AmountFrozen: itm.Hold,
 		}
 	}
 	return &acc, resp, nil

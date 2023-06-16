@@ -25,6 +25,8 @@ var (
 	CNY = Currency{"CNY", ""}
 	KRW = Currency{"KRW", ""}
 	JPY = Currency{"JPY", ""}
+	SGD = Currency{"SGD", ""}
+	HKD = Currency{"HKD", ""}
 
 	USDT = Currency{"USDT", ""}
 	USDC = Currency{"USDC", "https://www.centre.io/"}
@@ -32,52 +34,51 @@ var (
 	DAI  = Currency{"DAI", ""}
 	BUSD = Currency{"BUSD", ""}
 
-	BTC  = Currency{"BTC", "https://bitcoin.org/"}
-	XBT  = Currency{"XBT", ""}
-	BCC  = Currency{"BCC", ""}
-	BCH  = Currency{"BCH", ""}
-	LTC  = Currency{"LTC", ""}
-	ETH  = Currency{"ETH", ""}
-	ETC  = Currency{"ETC", ""}
-	EOS  = Currency{"EOS", ""}
-	BTS  = Currency{"BTS", ""}
-	QTUM = Currency{"QTUM", ""}
-	SC   = Currency{"SC", ""}
-	ANS  = Currency{"ANS", ""}
-	ZEC  = Currency{"ZEC", ""}
-	DCR  = Currency{"DCR", ""}
-	XRP  = Currency{"XRP", ""}
-	BTG  = Currency{"BTG", ""}
-	BCD  = Currency{"BCD", ""}
-	NEO  = Currency{"NEO", ""}
-	HSR  = Currency{"HSR", ""}
-	BSV  = Currency{"BSV", ""}
-	LINK = Currency{"LINK", ""}
-	XTZ  = Currency{"XTZ", ""}
-	DASH = Currency{"DASH", ""}
-	ADA  = Currency{"ADA", ""}
+	BTC   = Currency{"BTC", "https://bitcoin.org/"}
+	XBT   = Currency{"XBT", ""}
+	BCH   = Currency{"BCH", ""}
+	LTC   = Currency{"LTC", ""}
+	ETH   = Currency{"ETH", ""}
+	ETC   = Currency{"ETC", ""}
+	EOS   = Currency{"EOS", ""}
+	BTS   = Currency{"BTS", ""}
+	QTUM  = Currency{"QTUM", ""}
+	SC    = Currency{"SC", ""}
+	ANS   = Currency{"ANS", ""}
+	ZEC   = Currency{"ZEC", ""}
+	DCR   = Currency{"DCR", ""}
+	XRP   = Currency{"XRP", ""}
+	NEO   = Currency{"NEO", ""}
+	BSV   = Currency{"BSV", ""}
+	LINK  = Currency{"LINK", ""}
+	XTZ   = Currency{"XTZ", ""}
+	DASH  = Currency{"DASH", ""}
+	ADA   = Currency{"ADA", ""}
+	DOT   = Currency{"DOT", ""}
+	FIL   = Currency{"FIL", ""}
+	SOL   = Currency{"SOL", ""}
+	ATOM  = Currency{"ATOM", ""}
+	MATIC = Currency{"MATIC", ""}
+	AVAX  = Currency{"AVAX", ""}
+	ALGO  = Currency{"ALGO", ""}
+	AR    = Currency{"AR", ""}
 
-	OKB = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation"}
-	HT  = Currency{"HT", "HuoBi Token"}
-	BNB = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance."}
+	UNI   = Currency{"UNI", ""}
+	SUSHI = Currency{"SUSHI", ""}
+	AAVE  = Currency{"AAVE", ""}
+	COMP  = Currency{"COMP", ""}
+	YFI   = Currency{"YFI", ""}
+	YFII  = Currency{"YFII", ""}
+
+	OKB = Currency{"OKB", "OKB is a global utility token issued by OK Blockchain Foundation. "}
+	HT  = Currency{"HT", "HuoBi Token. "}
+	BNB = Currency{"BNB", "BNB, or Binance Coin, is a cryptocurrency created by Binance. "}
+
+	SHIT = Currency{"SHIT", "SHIT, There are some many shit coin in the market, we make the currency for dev."}
 )
 
-func (c Currency) AdaptBchToBcc() Currency {
-	if c.Symbol == "BCH" || c.Symbol == "bch" {
-		return BCC
-	}
-	return c
-}
-
-func (c Currency) AdaptBccToBch() Currency {
-	if c.Symbol == "BCC" || c.Symbol == "bcc" {
-		return BCH
-	}
-	return c
-}
-
 var currencyRelation = map[string]Currency{
-	//fiat currency
+	// fiat currency
 	"usd": USD,
 	"USD": USD,
 	"eur": EUR,
@@ -88,8 +89,12 @@ var currencyRelation = map[string]Currency{
 	"JPY": JPY,
 	"krw": KRW,
 	"KRW": KRW,
+	"hkd": HKD,
+	"HKD": HKD,
+	"sgd": SGD,
+	"SGD": SGD,
 
-	//stable coin
+	// stable coin
 	"usdt": USDT,
 	"USDT": USDT,
 	"usdc": USDC,
@@ -101,7 +106,7 @@ var currencyRelation = map[string]Currency{
 	"busd": BUSD,
 	"BUSD": BUSD,
 
-	//crypto currency
+	// crypto currency
 	"btc":  BTC,
 	"BTC":  BTC,
 	"xbt":  XBT,
@@ -112,6 +117,8 @@ var currencyRelation = map[string]Currency{
 	"EOS":  EOS,
 	"bch":  BCH,
 	"BCH":  BCH,
+	"bsv":  BSV,
+	"BSV":  BSV,
 	"ltc":  LTC,
 	"LTC":  LTC,
 	"ans":  ANS,
@@ -120,14 +127,38 @@ var currencyRelation = map[string]Currency{
 	"NEO":  NEO,
 	"link": LINK,
 	"LINK": LINK,
+	"dot":  DOT,
+	"DOT":  DOT,
+	"ada":  ADA,
+	"ADA":  ADA,
+	"fil":  FIL,
+	"FIL":  FIL,
 
-	//exchange coin
+	// defi coin
+	"uni":   UNI,
+	"UNI":   UNI,
+	"sushi": SUSHI,
+	"SUSHI": SUSHI,
+	"aave":  AAVE,
+	"AAVE":  AAVE,
+	"comp":  COMP,
+	"COMP":  COMP,
+	"YFI":   YFI,
+	"yfi":   YFI,
+	"YFII":  YFII,
+	"yfii":  YFII,
+
+	// exchange coin
 	"okb": OKB,
 	"OKB": OKB,
 	"ht":  HT,
 	"HT":  HT,
 	"bnb": BNB,
 	"BNB": BNB,
+
+	// shit coin
+	"shit": SHIT,
+	"SHIT": SHIT,
 }
 
 func NewCurrency(symbol, desc string) Currency {

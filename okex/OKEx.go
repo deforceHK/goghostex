@@ -70,7 +70,7 @@ const (
 	XRP_USD_SWAP = "XRP-USD-SWAP"
 
 	/*Rest Endpoint*/
-	ENDPOINT              = "https://www.okex.com"
+	ENDPOINT              = "https://www.okx.com"
 	GET_ACCOUNTS          = "/api/swap/v3/accounts"
 	PLACE_ORDER           = "/api/swap/v3/order"
 	CANCEL_ORDER          = "/api/swap/v3/cancel_order/%s/%s"
@@ -97,6 +97,22 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]int{
 	KLINE_PERIOD_1WEEK: 604800,
 }
 
+var _INERNAL_V5_CANDLE_PERIOD_CONVERTER = map[int]string{
+	KLINE_PERIOD_1MIN:  "1m",
+	KLINE_PERIOD_3MIN:  "3m",
+	KLINE_PERIOD_5MIN:  "5m",
+	KLINE_PERIOD_15MIN: "15m",
+	KLINE_PERIOD_30MIN: "30m",
+	KLINE_PERIOD_60MIN: "1H",
+	KLINE_PERIOD_1H:    "1H",
+	KLINE_PERIOD_2H:    "2H",
+	KLINE_PERIOD_4H:    "4H",
+	KLINE_PERIOD_6H:    "6H",
+	KLINE_PERIOD_12H:   "12H",
+	KLINE_PERIOD_1DAY:  "1D",
+	KLINE_PERIOD_1WEEK: "1W",
+}
+
 var _INTERNAL_ORDER_TYPE_CONVERTER = map[PlaceType]int{
 	NORMAL:     0,
 	ONLY_MAKER: 1,
@@ -116,9 +132,16 @@ type OKEx struct {
 func New(config *APIConfig) *OKEx {
 	okex := &OKEx{config: config}
 	okex.Spot = &Spot{okex}
-	okex.Swap = &Swap{okex}
+	okex.Swap = &Swap{
+		OKEx:          okex,
+		Locker:        new(sync.Mutex),
+		swapContracts: SwapContracts{},
+	}
 	okex.Margin = &Margin{okex}
-	okex.Future = &Future{OKEx: okex, Locker: new(sync.Mutex)}
+	okex.Future = &Future{
+		OKEx:   okex,
+		Locker: new(sync.Mutex),
+	}
 	okex.Wallet = &Wallet{okex}
 	return okex
 }
@@ -136,9 +159,8 @@ func (ok *OKEx) DoRequest(
 	url := ok.config.Endpoint + uri
 	sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
 	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
-		CONTENT_TYPE: APPLICATION_JSON_UTF8,
-		ACCEPT:       APPLICATION_JSON,
-		//COOKIE:               LOCALE + "en_US",
+		CONTENT_TYPE:         APPLICATION_JSON_UTF8,
+		ACCEPT:               APPLICATION_JSON,
 		OK_ACCESS_KEY:        ok.config.ApiKey,
 		OK_ACCESS_PASSPHRASE: ok.config.ApiPassphrase,
 		OK_ACCESS_SIGN:       sign,
@@ -146,6 +168,33 @@ func (ok *OKEx) DoRequest(
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > ok.config.LastTimestamp {
+			ok.config.LastTimestamp = nowTimestamp
+		}
+		return resp, json.Unmarshal(resp, &response)
+	}
+}
+
+func (ok *OKEx) DoRequestMarket(
+	httpMethod,
+	uri,
+	reqBody string,
+	response interface{},
+) ([]byte, error) {
+	url := ok.config.Endpoint + uri
+	//sign, timestamp := ok.doParamSign(httpMethod, uri, reqBody)
+	resp, err := NewHttpRequest(ok.config.HttpClient, httpMethod, url, reqBody, map[string]string{
+		CONTENT_TYPE: APPLICATION_JSON_UTF8,
+		ACCEPT:       APPLICATION_JSON,
+	})
+	if err != nil {
+		return nil, err
+	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > ok.config.LastTimestamp {
+			ok.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }
@@ -192,7 +241,6 @@ func (ok *OKEx) BuildRequestBody(params interface{}) (string, *bytes.Reader, err
 func (ok *OKEx) doParamSign(httpMethod, uri, requestBody string) (string, string) {
 	timestamp := ok.IsoTime()
 	preText := fmt.Sprintf("%s%s%s%s", timestamp, strings.ToUpper(httpMethod), uri, requestBody)
-	//log.Println("preHash", preText)
 	sign, _ := GetParamHmacSHA256Base64Sign(ok.config.ApiSecretKey, preText)
 	return sign, timestamp
 }

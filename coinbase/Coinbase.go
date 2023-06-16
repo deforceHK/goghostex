@@ -2,18 +2,20 @@ package coinbase
 
 import (
 	"encoding/json"
+	"time"
 
 	. "github.com/strengthening/goghostex"
 )
 
 const (
-	ACCEPT       = "Accept"
-	CONTENT_TYPE = "Content-Type"
+	ACCEPT        = "Accept"
+	CONTENT_TYPE  = "Content-Type"
+	CACHE_CONTROL = "Cache-control"
 
 	APPLICATION_JSON      = "application/json"
 	APPLICATION_JSON_UTF8 = "application/json; charset=UTF-8"
 
-	ENDPOINT = "https://api.pro.coinbase.com"
+	ENDPOINT = "https://api.exchange.coinbase.com"
 )
 
 type Coinbase struct {
@@ -53,14 +55,19 @@ func (coinbase *Coinbase) DoRequest(
 		url,
 		reqBody,
 		map[string]string{
-			CONTENT_TYPE: APPLICATION_JSON_UTF8,
-			ACCEPT:       APPLICATION_JSON,
+			CONTENT_TYPE:  APPLICATION_JSON_UTF8,
+			ACCEPT:        APPLICATION_JSON,
+			CACHE_CONTROL: "no-store", // test to not use cached for coinbase
 		},
 	)
 
 	if err != nil {
 		return nil, err
 	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > coinbase.config.LastTimestamp {
+			coinbase.config.LastTimestamp = nowTimestamp
+		}
 		return resp, json.Unmarshal(resp, &response)
 	}
 }

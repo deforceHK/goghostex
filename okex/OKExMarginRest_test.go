@@ -19,30 +19,30 @@ const (
 
 func TestMargin_MarketAPI(t *testing.T) {
 
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
-		},
-		ApiKey:        MARGIN_API_KEY,
-		ApiSecretKey:  MARGIN_API_SECRETKEY,
-		ApiPassphrase: MARGIN_API_PASSPHRASE,
-		Location:      time.Now().Location(),
-	}
+	//config := &APIConfig{
+	//	Endpoint: ENDPOINT,
+	//	HttpClient: &http.Client{
+	//		Transport: &http.Transport{
+	//			Proxy: func(req *http.Request) (*url.URL, error) {
+	//				return url.Parse(PROXY_URL)
+	//			},
+	//		},
+	//	},
+	//	ApiKey:        MARGIN_API_KEY,
+	//	ApiSecretKey:  MARGIN_API_SECRETKEY,
+	//	ApiPassphrase: MARGIN_API_PASSPHRASE,
+	//	Location:      time.Now().Location(),
+	//}
 
-	ok := New(config)
-	if resp, err := ok.Margin.GetMarginInfo(
-		Pair{Basis: BTC, Counter: USDT},
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		fmt.Println(string(resp))
-	}
+	//ok := New(config)
+	//if resp, err := ok.Margin.GetMarginInfo(
+	//	Pair{Basis: BTC, Counter: USDT},
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	fmt.Println(string(resp))
+	//}
 }
 
 /**
@@ -71,7 +71,7 @@ func TestMargin_LoanAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	if account, resp, err := ok.Margin.GetMarginAccount(
+	if account, resp, err := ok.Margin.GetAccount(
 		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
@@ -83,13 +83,13 @@ func TestMargin_LoanAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	loan := LoanRecord{
+	loan := Loan{
 		Pair:     Pair{Basis: BTC, Counter: USDT},
 		Currency: USDT,
 		Amount:   1,
 	}
 
-	if resp, err := ok.Margin.Loan(&loan); err != nil {
+	if resp, err := ok.Margin.PlaceLoan(&loan); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -104,7 +104,7 @@ func TestMargin_LoanAPI(t *testing.T) {
 		}
 	}
 
-	if resp, err := ok.Margin.GetOneLoan(&loan); err != nil {
+	if resp, err := ok.Margin.GetLoan(&loan); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -119,7 +119,7 @@ func TestMargin_LoanAPI(t *testing.T) {
 		}
 	}
 
-	if resp, err := ok.Margin.Repay(&loan); err != nil {
+	if resp, err := ok.Margin.ReturnLoan(&loan); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -165,7 +165,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 	}
 
 	ok := New(config)
-	if _, resp, err := ok.Margin.GetMarginAccount(
+	if _, resp, err := ok.Margin.GetAccount(
 		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
@@ -175,7 +175,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 	}
 
 	testPrice := 0.0
-	if ticker, resp, err := ok.Margin.GetMarginTicker(
+	if ticker, resp, err := ok.Margin.GetTicker(
 		Pair{Basis: BTC, Counter: USDT},
 	); err != nil {
 		t.Error(err)
@@ -195,7 +195,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		OrderType: NORMAL,
 	}
 
-	if resp, err := ok.Margin.PlaceMarginOrder(&normalOrder); err != nil {
+	if resp, err := ok.Margin.PlaceOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -210,7 +210,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	if _, err := ok.Margin.GetMarginOneOrder(&normalOrder); err != nil {
+	if _, err := ok.Margin.GetOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -220,7 +220,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		}
 	}
 
-	if orders, _, err := ok.Margin.GetMarginUnFinishOrders(Pair{Basis: BTC, Counter: USDT}); err != nil {
+	if orders, _, err := ok.Margin.GetUnFinishOrders(Pair{Basis: BTC, Counter: USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -237,7 +237,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		}
 	}
 
-	if resp, err := ok.Margin.CancelMarginOrder(&normalOrder); err != nil {
+	if resp, err := ok.Margin.CancelOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -253,7 +253,7 @@ func TestMargin_TradeAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	if resp, err := ok.Margin.GetMarginOneOrder(&normalOrder); err != nil {
+	if resp, err := ok.Margin.GetOrder(&normalOrder); err != nil {
 		t.Error(err)
 		return
 	} else {

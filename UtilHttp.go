@@ -27,7 +27,8 @@ func NewHttpRequest(
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Set(
 			"User-Agent",
-			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36")
+			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36",
+		)
 	}
 	if requstHeaders != nil {
 		for k, v := range requstHeaders {
@@ -47,7 +48,13 @@ func NewHttpRequest(
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 {
+	successCode := map[int]string{
+		200: "成功",
+		201: "创建",
+		202: "已接受",
+	}
+
+	if _, exist := successCode[resp.StatusCode]; !exist {
 		return nil, errors.New(fmt.Sprintf(
 			"HttpStatusCode: %d, HttpMethod: %s, Response: %s, Request: %s, Url: %s",
 			resp.StatusCode,
