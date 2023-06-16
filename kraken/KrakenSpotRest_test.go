@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 func TestSpot_GetKlineRecords(t *testing.T) {

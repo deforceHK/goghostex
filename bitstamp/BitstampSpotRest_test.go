@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 func TestSpot_GetTicker(t *testing.T) {

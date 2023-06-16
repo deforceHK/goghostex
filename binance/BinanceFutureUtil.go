@@ -3,7 +3,7 @@ package binance
 import (
 	"time"
 
-	. "github.com/strengthening/goghostex"
+	. "github.com/deforceHK/goghostex"
 )
 
 var bnTimestampFlags = []int64{

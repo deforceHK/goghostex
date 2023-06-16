@@ -1,9 +1,9 @@
 # goghostex
 
-[![Workflow](https://github.com/strengthening/goghostex/workflows/build/badge.svg)](https://github.com/strengthening/goghostex)
+[![Workflow](https://github.com/deforceHK/goghostex/workflows/build/badge.svg)](https://github.com/deforceHK/goghostex)
 [![License](https://img.shields.io/badge/license-BSD-blue)](https://img.shields.io/badge/license-BSD-blue)
 
-README: [English](https://github.com/strengthening/goghostex/blob/master/README.md) | [中文](https://github.com/strengthening/goghostex/blob/master/README-zh.md)
+README: [English](https://github.com/deforceHK/goghostex/blob/master/README.md) | [中文](https://github.com/deforceHK/goghostex/blob/master/README-zh.md)
 
 Goghostex is a open source API of TOP crypto currency exchanges. You can use it directly for your data collector or trading program.
 
@@ -21,7 +21,7 @@ The list of goghost supported API.As below:
 ## Clone
 
 ```
-git clone https://github.com/strengthening/goghostex.git
+git clone https://github.com/deforceHK/goghostex.git
 ```
 
 ## Install 
