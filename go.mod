@@ -1,4 +1,4 @@
-module github.com/strengthening/goghostex
+module github.com/deforceHK/goghostex
 
 go 1.18
 
@@ -7,4 +7,4 @@ require (
 	github.com/gorilla/websocket v1.5.0
 )
 
-replace github.com/strengthening/goghostex v1.0.2 => ./
+//replace github.com/deforceHK/goghostex v1.0.2 => ./
