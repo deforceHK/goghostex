@@ -1,10 +1,10 @@
-#name: build
-#
-#on:
-#  push:
-#    tags:
-#      - 'release-v*'
-#
+name: build
+
+on:
+  push:
+    tags:
+      - 'release-v*'
+
 #jobs:
 #  build:
 #    name: Build
