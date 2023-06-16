@@ -11,10 +11,10 @@ Goghostex是一个开源的头部数字货币交易所API。您可以直接用�
 
 goghostex支持的交易所API。如下：
 
-| |现货|杠杠|交割合约|永续合约|
-|:---|:---|:---|:---|:---
+||现货|杠杠|交割合约|永续合约|
+|:---|:---|:---|:---|:---|
 |OKEX|YES|YES|YES|NO|
-|BINANCE|YES|NO|NO|NO
+|BINANCE|YES|NO|NO|NO|
 
 ## Clone
 

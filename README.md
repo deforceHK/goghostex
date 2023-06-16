@@ -12,10 +12,10 @@ Goghostex is a open source API of TOP crypto currency exchanges. You can use it 
 The list of goghost supported API.As below:
 
 
-| |SPOT|MARGIN|FUTURE|SWAP|
-|:---|:---|:---|:---|:---
+||SPOT|MARGIN|FUTURE|SWAP|
+|:---|:---|:---|:---|:---|
 |OKEX|YES|YES|YES|NO|
-|BINANCE|YES|NO|NO|NO
+|BINANCE|YES|NO|NO|NO|
 
 
 ## Clone
