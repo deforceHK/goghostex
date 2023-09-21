@@ -26,15 +26,11 @@ type FutureRestAPI interface {
 }
 
 type FutureWebsocketAPI interface {
-	Init()
+	Subscribe(v interface{})
 
-	//Login(config *APIConfig) error
-
-	Subscribe(channel string) error
-
-	//Unsubscribe(channel string) error
+	Unsubscribe(v interface{})
 
 	Start()
 
-	Close()
+	Stop()
 }

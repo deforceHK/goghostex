@@ -11,119 +11,176 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
-type OKExWSArg struct {
-	Channel string `json:"channel"`
-	InstId  string `json:"instId,omitempty"`
-	InstType  string `json:"instType,omitempty"`
+type WSArgOKEx struct {
+	Channel  string `json:"channel"`
+	InstId   string `json:"instId,omitempty"`
+	InstType string `json:"instType,omitempty"`
 }
 
-type OKExWSOp struct {
-	Op   string   `json:"op"`
-	Args []*OKExWSArg `json:"args"`
+type WSOpOKEx struct {
+	Op   string              `json:"op"`
+	Args []map[string]string `json:"args"`
 }
 
-
-type OKExWSRes struct {
-	Event string `json:"event"`
-	Arg *OKExWSArg `json:"arg,omitempty"`
-	Code string `json:"code,omitempty"`
-	Msg string `json:"msg,omitempty"`
-	Data json.RawMessage `json:"data,omitempty"`
-
+type WSResOKEx struct {
+	Event string          `json:"event"`
+	Arg   *WSArgOKEx      `json:"arg,omitempty"`
+	Code  string          `json:"code,omitempty"`
+	Msg   string          `json:"msg,omitempty"`
+	Data  json.RawMessage `json:"data,omitempty"`
 }
 
-//type OKExTradeWebSocket struct {
-//	WS *okexWebSocket
-//}
-//
-//type OKExMarketWebSocket struct {
-//	*okexWebSocket
-//}
+type WSTradeOKEx struct {
+	config     *APIConfig
+	conn       *websocket.Conn
+	lastPingTS int64
 
-type OKExTradeWebSocket struct {
-	ws       *WsConn
-	proxyUrl string
+	stopPingSign chan bool
+	stopRecvSign chan bool
 
-	msg     chan []byte
-	receive func([]byte) error
+	RecvHandler  func(string)
+	ErrorHandler func(error)
 }
 
-func (this *OKExTradeWebSocket) Init() {
-	// the default buffer channel
-	if this.msg == nil {
-		this.msg = make(chan []byte, 10)
+func (this *WSTradeOKEx) Subscribe(v interface{}) {
+	this.conn.WriteJSON(v)
+}
+
+func (this *WSTradeOKEx) Unsubscribe(v interface{}) {
+	this.conn.WriteJSON(v)
+}
+
+func (this *WSTradeOKEx) Start() {
+	if this.RecvHandler == nil {
+		this.RecvHandler = func(msg string) {
+			log.Println(msg)
+		}
 	}
-
-	if this.receive == nil {
-		this.receive = func(data []byte) error {
-			log.Println(string(data))
-			return nil
+	if this.ErrorHandler == nil {
+		this.ErrorHandler = func(err error) {
+			log.Fatalln(err)
 		}
 	}
 
-	this.ws = NewWsBuilder().WsUrl(
-		"wss://ws.okx.com:8443/ws/v5/public",
-	).ProxyUrl(
-		this.proxyUrl,
-	).Heartbeat(
-		[]byte("ping"),
-		websocket.TextMessage,
-		5*time.Second,
-	).UnCompressFunc(
-		FlateUnCompress,
-	).ProtoHandleFunc(func(data []byte) error {
-		this.ws.UpdateActiveTime()
-		this.msg <- data
-		return nil
-	}).Build()
-
-}
-
-func (this *OKExTradeWebSocket) Login(config *APIConfig) error {
-
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
-	sign, err := GetParamHmacSHA256Base64Sign(
-		config.ApiSecretKey,
-		fmt.Sprintf("%sGET/users/self/verify", timestamp),
+	var conn, _, err = websocket.DefaultDialer.Dial(
+		"wss://ws.okx.com:8443/ws/v5/private",
+		nil,
 	)
-
 	if err != nil {
-		return err
+		this.ErrorHandler(err)
+		return
+	}
+	this.conn = conn
+
+	var ts = fmt.Sprintf("%d", time.Now().Unix())
+	var sign, _ = GetParamHmacSHA256Base64Sign(
+		this.config.ApiSecretKey,
+		fmt.Sprintf("%sGET/users/self/verify", ts),
+	)
+	var login = WSOpOKEx{
+		Op: "login",
+		Args: []map[string]string{
+			{
+				"apiKey":     this.config.ApiKey,
+				"passphrase": this.config.ApiPassphrase,
+				"timestamp":  ts,
+				"sign":       sign,
+			},
+		},
 	}
 
-	param := struct {
-		Op   string   `json:"op"`
-		Args []string `json:"args"`
-	}{Op: "login", Args: []string{config.ApiKey, config.ApiPassphrase, timestamp, sign}}
-
-	req, err := json.Marshal(param)
-	if err != nil {
-		return err
+	this.conn.WriteJSON(login)
+	var messageType, p, readErr = this.conn.ReadMessage()
+	if readErr != nil {
+		this.ErrorHandler(readErr)
+		return
+	}
+	if messageType != websocket.TextMessage {
+		this.ErrorHandler(fmt.Errorf("message type error"))
+		return
 	}
 
-	return this.ws.WriteMessage(websocket.TextMessage, req)
+	var result = struct {
+		Event string `json:"event"`
+		Code  string `json:"code"`
+		Msg   string `json:"msg"`
+	}{}
+
+	var jsonErr = json.Unmarshal(p, &result)
+	if jsonErr != nil {
+		this.ErrorHandler(jsonErr)
+		return
+	}
+	if result.Code != "0" {
+		this.ErrorHandler(fmt.Errorf("login error: %s", result.Msg))
+		return
+	}
+
+	go this.pingRoutine()
+	go this.recvRoutine()
+	log.Println("okex trade websocket start")
+
 }
 
-func (this *OKExTradeWebSocket) Subscribe(channel string) error {
-	return this.ws.WriteMessage(websocket.TextMessage, []byte(channel))
-}
+func (this *WSTradeOKEx) pingRoutine() {
+	this.stopPingSign = make(chan bool, 1)
+	var ticker = time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
 
-func (this *OKExTradeWebSocket) Unsubscribe(channel string) error {
-	return this.ws.WriteMessage(websocket.TextMessage, []byte(channel))
-}
-
-func (this *OKExTradeWebSocket) Start() {
-	this.ws.ReceiveMessage()
 	for {
-		data := <-this.msg
-		if err := this.receive(data); err != nil {
-			log.Fatal(err)
-			this.Close()
+		select {
+		case <-ticker.C:
+			if err := this.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				this.ErrorHandler(err)
+				this.Stop()
+			}
+		case <-this.stopPingSign:
 			return
 		}
 	}
 }
 
-func (this *OKExTradeWebSocket) Close() {
-	this.ws.CloseWs()
+func (this *WSTradeOKEx) recvRoutine() {
+	this.stopRecvSign = make(chan bool, 1)
+	var ticker = time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// 超过5分钟没有收到消息，关闭连接
+			if time.Now().Unix()-this.lastPingTS > 5*60 {
+				this.ErrorHandler(fmt.Errorf("ping timeout"))
+				this.Stop()
+			}
+		case <-this.stopRecvSign:
+			return
+		default:
+			var msgType, msg, readErr = this.conn.ReadMessage()
+			if readErr != nil {
+				this.ErrorHandler(readErr)
+				this.Stop()
+			}
+
+			if msgType != websocket.TextMessage {
+				continue
+			}
+
+			this.lastPingTS = time.Now().Unix()
+			var msgStr = string(msg)
+			if msgStr != "pong" {
+				this.RecvHandler(msgStr)
+			}
+		}
+	}
+
+}
+
+func (this *WSTradeOKEx) Stop() {
+	this.stopPingSign <- true
+	this.stopRecvSign <- true
+	this.conn.Close()
+
+	close(this.stopPingSign)
+	close(this.stopRecvSign)
 }
