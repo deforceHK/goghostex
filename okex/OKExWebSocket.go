@@ -31,15 +31,15 @@ type WSResOKEx struct {
 }
 
 type WSTradeOKEx struct {
-	config     *APIConfig
+	RecvHandler  func(string)
+	ErrorHandler func(error)
+	Config     *APIConfig
+
 	conn       *websocket.Conn
 	lastPingTS int64
 
 	stopPingSign chan bool
 	stopRecvSign chan bool
-
-	RecvHandler  func(string)
-	ErrorHandler func(error)
 }
 
 func (this *WSTradeOKEx) Subscribe(v interface{}) {
@@ -74,15 +74,15 @@ func (this *WSTradeOKEx) Start() {
 
 	var ts = fmt.Sprintf("%d", time.Now().Unix())
 	var sign, _ = GetParamHmacSHA256Base64Sign(
-		this.config.ApiSecretKey,
+		this.Config.ApiSecretKey,
 		fmt.Sprintf("%sGET/users/self/verify", ts),
 	)
 	var login = WSOpOKEx{
 		Op: "login",
 		Args: []map[string]string{
 			{
-				"apiKey":     this.config.ApiKey,
-				"passphrase": this.config.ApiPassphrase,
+				"apiKey":     this.Config.ApiKey,
+				"passphrase": this.Config.ApiPassphrase,
 				"timestamp":  ts,
 				"sign":       sign,
 			},

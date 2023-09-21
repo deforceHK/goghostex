@@ -17,7 +17,7 @@ const (
 func Test_OKExWebSocket(t *testing.T) {
 
 	var ws = WSTradeOKEx{
-		config: &APIConfig{
+		Config: &APIConfig{
 			Endpoint:      ENDPOINT,
 			HttpClient:    nil,
 			ApiKey:        WEBSOCKET_API_KEY,
