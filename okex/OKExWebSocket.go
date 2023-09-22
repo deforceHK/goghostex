@@ -99,6 +99,8 @@ func (this *WSTradeOKEx) Start() {
 	if readErr != nil {
 		// CloseError mean the server close the connection
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			this.ErrorHandler(readErr)
+			this.ErrorHandler(fmt.Errorf("websocket restart"))
 			this.Restart()
 		} else {
 			this.ErrorHandler(readErr)
@@ -133,7 +135,7 @@ func (this *WSTradeOKEx) Start() {
 }
 
 func (this *WSTradeOKEx) pingRoutine() {
-	this.stopPingSign = make(chan bool, 1)
+	this.stopPingSign = make(chan bool, 5)
 	var ticker = time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -151,7 +153,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 }
 
 func (this *WSTradeOKEx) recvRoutine() {
-	this.stopRecvSign = make(chan bool, 1)
+	this.stopRecvSign = make(chan bool, 5)
 	var ticker = time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -169,7 +171,12 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgType, msg, readErr = this.conn.ReadMessage()
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				this.Stop()
+				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					this.ErrorHandler(fmt.Errorf("websocket restart"))
+					this.Restart()
+				} else {
+					this.Stop()
+				}
 			}
 
 			if msgType != websocket.TextMessage {
