@@ -133,7 +133,7 @@ func (this *WSTradeOKEx) Start() {
 }
 
 func (this *WSTradeOKEx) pingRoutine() {
-	this.stopPingSign = make(chan bool, 1)
+	this.stopPingSign = make(chan bool, 5)
 	var ticker = time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -151,7 +151,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 }
 
 func (this *WSTradeOKEx) recvRoutine() {
-	this.stopRecvSign = make(chan bool, 1)
+	this.stopRecvSign = make(chan bool, 5)
 	var ticker = time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -169,7 +169,12 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgType, msg, readErr = this.conn.ReadMessage()
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				this.Stop()
+				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					this.Restart()
+				} else {
+					this.Stop()
+				}
+				continue
 			}
 
 			if msgType != websocket.TextMessage {
