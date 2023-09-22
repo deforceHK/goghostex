@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	WEBSOCKET_API_KEY        = ""
-	WEBSOCKET_API_SECRETKEY  = ""
-	WEBSOCKET_API_PASSPHRASE = ""
+	WEBSOCKET_API_KEY        = "9fede76c-10a9-4cf1-bae0-c9fe26bf3585"
+	WEBSOCKET_API_SECRETKEY  = "75E16B5A88B136449F18016858DE03EC"
+	WEBSOCKET_API_PASSPHRASE = "Test@okx1"
 )
 
 func Test_OKExWebSocket(t *testing.T) {

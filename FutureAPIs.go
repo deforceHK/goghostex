@@ -33,4 +33,6 @@ type FutureWebsocketAPI interface {
 	Start()
 
 	Stop()
+
+	Restart()
 }
