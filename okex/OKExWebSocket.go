@@ -33,20 +33,25 @@ type WSResOKEx struct {
 type WSTradeOKEx struct {
 	RecvHandler  func(string)
 	ErrorHandler func(error)
-	Config     *APIConfig
+	Config       *APIConfig
 
 	conn       *websocket.Conn
-	lastPingTS int64
+	subscribed []interface{}
+
+	lastPingTS    int64
+	lastRestartTS int64
 
 	stopPingSign chan bool
 	stopRecvSign chan bool
 }
 
 func (this *WSTradeOKEx) Subscribe(v interface{}) {
+	this.subscribed = append(this.subscribed, v)
 	this.conn.WriteJSON(v)
 }
 
 func (this *WSTradeOKEx) Unsubscribe(v interface{}) {
+	this.subscribed = append(this.subscribed, v)
 	this.conn.WriteJSON(v)
 }
 
@@ -92,7 +97,12 @@ func (this *WSTradeOKEx) Start() {
 	this.conn.WriteJSON(login)
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
-		this.ErrorHandler(readErr)
+		// CloseError mean the server close the connection
+		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			this.Restart()
+		} else {
+			this.ErrorHandler(readErr)
+		}
 		return
 	}
 	if messageType != websocket.TextMessage {
@@ -183,4 +193,24 @@ func (this *WSTradeOKEx) Stop() {
 
 	close(this.stopPingSign)
 	close(this.stopRecvSign)
+}
+
+func (this *WSTradeOKEx) Restart() {
+	this.Stop()
+
+	var nowTS = time.Now().Unix()
+	if this.lastRestartTS == 0 {
+		time.Sleep(60 * time.Second)
+	} else if nowTS-this.lastRestartTS < 60 {
+		var waitSec = 60 - nowTS + this.lastRestartTS
+		time.Sleep(time.Duration(waitSec) * time.Second)
+	}
+	this.lastRestartTS = time.Now().Unix()
+	this.Start()
+
+	// subscribe unsubscribe the channel
+	for _, v := range this.subscribed {
+		this.conn.WriteJSON(v)
+	}
+
 }
