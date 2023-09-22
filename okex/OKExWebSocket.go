@@ -99,6 +99,8 @@ func (this *WSTradeOKEx) Start() {
 	if readErr != nil {
 		// CloseError mean the server close the connection
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			this.ErrorHandler(readErr)
+			this.ErrorHandler(fmt.Errorf("websocket will be restart"))
 			this.Restart()
 		} else {
 			this.ErrorHandler(readErr)
@@ -170,6 +172,7 @@ func (this *WSTradeOKEx) recvRoutine() {
 			if readErr != nil {
 				this.ErrorHandler(readErr)
 				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					this.ErrorHandler(fmt.Errorf("websocket will be restart"))
 					this.Restart()
 				} else {
 					this.Stop()
