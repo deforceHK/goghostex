@@ -98,13 +98,13 @@ func (this *WSTradeOKEx) Start() {
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
 		// CloseError mean the server close the connection
-		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-			this.ErrorHandler(readErr)
-			this.ErrorHandler(fmt.Errorf("websocket will be restart"))
-			this.Restart()
-		} else {
-			this.ErrorHandler(readErr)
-		}
+		//if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+		this.ErrorHandler(readErr)
+		this.ErrorHandler(fmt.Errorf("websocket will be restart"))
+		this.Restart()
+		//} else {
+		//	this.ErrorHandler(readErr)
+		//}
 		return
 	}
 	if messageType != websocket.TextMessage {
@@ -171,12 +171,12 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgType, msg, readErr = this.conn.ReadMessage()
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					this.ErrorHandler(fmt.Errorf("websocket will be restart"))
-					this.Restart()
-				} else {
-					this.Stop()
-				}
+				//if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				this.ErrorHandler(fmt.Errorf("websocket will be restart"))
+				this.Restart()
+				//} else {
+				//	this.Stop()
+				//}
 				continue
 			}
 
