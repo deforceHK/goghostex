@@ -143,6 +143,10 @@ func (this *WSTradeOKEx) pingRoutine() {
 		select {
 		case <-ticker.C:
 			if err := this.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Println("catched ping routine!")
+				}
+				log.Println("error ping routine!")
 				this.ErrorHandler(err)
 				this.Stop()
 			}
@@ -220,5 +224,36 @@ func (this *WSTradeOKEx) Restart() {
 	for _, v := range this.subscribed {
 		this.conn.WriteJSON(v)
 	}
+
+}
+
+type WSMarketOKEx struct {
+	*WSTradeOKEx
+}
+
+func (this *WSMarketOKEx) Start() {
+	if this.RecvHandler == nil {
+		this.RecvHandler = func(msg string) {
+			log.Println(msg)
+		}
+	}
+	if this.ErrorHandler == nil {
+		this.ErrorHandler = func(err error) {
+			log.Fatalln(err)
+		}
+	}
+
+	var conn, _, err = websocket.DefaultDialer.Dial(
+		"wss://ws.okx.com:8443/ws/v5/public",
+		nil,
+	)
+	if err != nil {
+		this.ErrorHandler(err)
+		return
+	}
+	this.conn = conn
+
+	go this.pingRoutine()
+	go this.recvRoutine()
 
 }
