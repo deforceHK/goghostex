@@ -199,7 +199,6 @@ func (this *WSTradeOKEx) recvRoutine() {
 			//	continue
 			//}
 
-			log.Println(msgType, "msgStr")
 			this.lastPingTS = time.Now().Unix()
 			var msgStr = string(msg)
 			if msgStr != "pong" {
