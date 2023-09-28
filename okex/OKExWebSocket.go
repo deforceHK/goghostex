@@ -47,12 +47,16 @@ type WSTradeOKEx struct {
 
 func (this *WSTradeOKEx) Subscribe(v interface{}) {
 	this.subscribed = append(this.subscribed, v)
-	this.conn.WriteJSON(v)
+	if err := this.conn.WriteJSON(v); err != nil {
+		this.ErrorHandler(err)
+	}
 }
 
 func (this *WSTradeOKEx) Unsubscribe(v interface{}) {
 	this.subscribed = append(this.subscribed, v)
-	this.conn.WriteJSON(v)
+	if err := this.conn.WriteJSON(v); err != nil {
+		this.ErrorHandler(err)
+	}
 }
 
 func (this *WSTradeOKEx) Start() {
@@ -94,7 +98,14 @@ func (this *WSTradeOKEx) Start() {
 		},
 	}
 
-	this.conn.WriteJSON(login)
+	err = this.conn.WriteJSON(login)
+	if err != nil {
+		this.ErrorHandler(err)
+		this.ErrorHandler(fmt.Errorf("websocket will be restart"))
+		this.Restart()
+		return
+	}
+
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
 		// CloseError mean the server close the connection
@@ -201,7 +212,10 @@ func (this *WSTradeOKEx) recvRoutine() {
 func (this *WSTradeOKEx) Stop() {
 	this.stopPingSign <- true
 	this.stopRecvSign <- true
-	this.conn.Close()
+	var err = this.conn.Close()
+	if err != nil {
+		this.ErrorHandler(err)
+	}
 
 	close(this.stopPingSign)
 	close(this.stopRecvSign)
@@ -222,7 +236,12 @@ func (this *WSTradeOKEx) Restart() {
 
 	// subscribe unsubscribe the channel
 	for _, v := range this.subscribed {
-		this.conn.WriteJSON(v)
+		var err = this.conn.WriteJSON(v)
+		if err != nil {
+			this.ErrorHandler(err)
+			var errmsg, _ = json.Marshal(v)
+			this.ErrorHandler(fmt.Errorf("subscribe error: %s", string(errmsg)))
+		}
 	}
 
 }
