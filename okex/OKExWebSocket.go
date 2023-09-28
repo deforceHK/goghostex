@@ -203,6 +203,8 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgStr = string(msg)
 			if msgStr != "pong" {
 				this.RecvHandler(msgStr)
+			}else{
+				println(msgStr)
 			}
 		}
 	}
@@ -210,15 +212,29 @@ func (this *WSTradeOKEx) recvRoutine() {
 }
 
 func (this *WSTradeOKEx) Stop() {
-	this.stopPingSign <- true
-	this.stopRecvSign <- true
-	var err = this.conn.Close()
-	if err != nil {
-		this.ErrorHandler(err)
+	if this.stopPingSign != nil {
+		this.stopPingSign <- true
 	}
 
-	close(this.stopPingSign)
-	close(this.stopRecvSign)
+	if this.stopRecvSign != nil {
+		this.stopRecvSign <- true
+	}
+
+	if this.conn != nil {
+		var err = this.conn.Close()
+		if err != nil {
+			this.ErrorHandler(err)
+		}
+	}
+
+	if this.stopPingSign != nil {
+		close(this.stopPingSign)
+	}
+
+	if this.stopRecvSign != nil {
+		close(this.stopRecvSign)
+	}
+
 }
 
 func (this *WSTradeOKEx) Restart() {
