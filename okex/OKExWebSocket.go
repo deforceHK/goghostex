@@ -141,7 +141,6 @@ func (this *WSTradeOKEx) Start() {
 
 	go this.pingRoutine()
 	go this.recvRoutine()
-	log.Println("okex trade websocket start")
 
 }
 
@@ -153,13 +152,15 @@ func (this *WSTradeOKEx) pingRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := this.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+			if err := this.conn.WriteMessage(websocket.PingMessage,nil); err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					log.Println("catched ping routine!")
 				}
 				log.Println("error ping routine!")
 				this.ErrorHandler(err)
 				this.Stop()
+			}else{
+				log.Println("ping")
 			}
 		case <-this.stopPingSign:
 			return
@@ -184,6 +185,7 @@ func (this *WSTradeOKEx) recvRoutine() {
 			return
 		default:
 			var msgType, msg, readErr = this.conn.ReadMessage()
+			log.Println(msgType, readErr)
 			if readErr != nil {
 				this.ErrorHandler(readErr)
 				//if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -195,16 +197,15 @@ func (this *WSTradeOKEx) recvRoutine() {
 				continue
 			}
 
-			if msgType != websocket.TextMessage {
-				continue
-			}
+			//if msgType != websocket.TextMessage {
+			//	continue
+			//}
 
+			log.Println(msgType, "msgStr")
 			this.lastPingTS = time.Now().Unix()
 			var msgStr = string(msg)
 			if msgStr != "pong" {
 				this.RecvHandler(msgStr)
-			}else{
-				println(msgStr)
 			}
 		}
 	}
