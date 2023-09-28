@@ -159,8 +159,6 @@ func (this *WSTradeOKEx) pingRoutine() {
 				log.Println("error ping routine!")
 				this.ErrorHandler(err)
 				this.Stop()
-			}else{
-				log.Println("ping")
 			}
 		case <-this.stopPingSign:
 			return
