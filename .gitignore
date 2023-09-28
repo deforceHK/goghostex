@@ -1,3 +1,4 @@
 .idea
+vendor
 goghostex/goghostex
 go.sum
