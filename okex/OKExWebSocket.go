@@ -159,6 +159,8 @@ func (this *WSTradeOKEx) pingRoutine() {
 				log.Println("error ping routine!")
 				this.ErrorHandler(err)
 				this.Stop()
+			}else{
+				log.Println("ping")
 			}
 		case <-this.stopPingSign:
 			return
@@ -199,6 +201,7 @@ func (this *WSTradeOKEx) recvRoutine() {
 			//	continue
 			//}
 
+			log.Println(msgType, "msgStr")
 			this.lastPingTS = time.Now().Unix()
 			var msgStr = string(msg)
 			if msgStr != "pong" {
