@@ -67,7 +67,7 @@ func (this *WSTradeOKEx) Start() {
 	}
 	if this.ErrorHandler == nil {
 		this.ErrorHandler = func(err error) {
-			log.Fatalln(err)
+			log.Println(err)
 		}
 	}
 
@@ -186,12 +186,8 @@ func (this *WSTradeOKEx) recvRoutine() {
 			log.Println(msgType, readErr)
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				//if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				this.ErrorHandler(fmt.Errorf("websocket will be restart"))
 				this.Restart()
-				//} else {
-				//	this.Stop()
-				//}
 				continue
 			}
 
@@ -225,13 +221,13 @@ func (this *WSTradeOKEx) Stop() {
 		}
 	}
 
-	if this.stopPingSign != nil {
-		close(this.stopPingSign)
-	}
-
-	if this.stopRecvSign != nil {
-		close(this.stopRecvSign)
-	}
+	//if this.stopPingSign != nil {
+	//	close(this.stopPingSign)
+	//}
+	//
+	//if this.stopRecvSign != nil {
+	//	close(this.stopRecvSign)
+	//}
 
 }
 
