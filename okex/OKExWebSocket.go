@@ -108,14 +108,9 @@ func (this *WSTradeOKEx) Start() {
 
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
-		// CloseError mean the server close the connection
-		//if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 		this.ErrorHandler(readErr)
 		this.ErrorHandler(fmt.Errorf("websocket will be restart"))
 		this.Restart()
-		//} else {
-		//	this.ErrorHandler(readErr)
-		//}
 		return
 	}
 	if messageType != websocket.TextMessage {
@@ -145,14 +140,15 @@ func (this *WSTradeOKEx) Start() {
 }
 
 func (this *WSTradeOKEx) pingRoutine() {
-	this.stopPingSign = make(chan bool, 5)
+	var pingChn = make(chan bool, 5)
+	this.stopPingSign = pingChn
 	var ticker = time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			if err := this.conn.WriteMessage(websocket.PingMessage,nil); err != nil {
+			if err := this.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					log.Println("catched ping routine!")
 				}
@@ -160,7 +156,8 @@ func (this *WSTradeOKEx) pingRoutine() {
 				this.ErrorHandler(err)
 				this.Stop()
 			}
-		case <-this.stopPingSign:
+		case <-pingChn:
+			close(pingChn)
 			return
 		}
 	}
@@ -183,17 +180,19 @@ func (this *WSTradeOKEx) recvRoutine() {
 			return
 		default:
 			var msgType, msg, readErr = this.conn.ReadMessage()
-			log.Println(msgType, readErr)
 			if readErr != nil {
 				this.ErrorHandler(readErr)
 				this.ErrorHandler(fmt.Errorf("websocket will be restart"))
+				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Println("catched the close error recv routine!")
+				}
 				this.Restart()
 				continue
 			}
 
-			//if msgType != websocket.TextMessage {
-			//	continue
-			//}
+			if msgType != websocket.TextMessage {
+				continue
+			}
 
 			this.lastPingTS = time.Now().Unix()
 			var msgStr = string(msg)
@@ -235,12 +234,14 @@ func (this *WSTradeOKEx) Restart() {
 	this.Stop()
 
 	var nowTS = time.Now().Unix()
+	var waitSec = int64(0)
 	if this.lastRestartTS == 0 {
-		time.Sleep(60 * time.Second)
+		waitSec = 60
 	} else if nowTS-this.lastRestartTS < 60 {
-		var waitSec = 60 - nowTS + this.lastRestartTS
-		time.Sleep(time.Duration(waitSec) * time.Second)
+		waitSec = 60 - nowTS + this.lastRestartTS
 	}
+
+	time.Sleep(time.Duration(waitSec) * time.Second)
 	this.lastRestartTS = time.Now().Unix()
 	this.Start()
 
