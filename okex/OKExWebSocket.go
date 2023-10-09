@@ -140,8 +140,8 @@ func (this *WSTradeOKEx) Start() {
 }
 
 func (this *WSTradeOKEx) pingRoutine() {
-	var pingChn = make(chan bool, 5)
-	this.stopPingSign = pingChn
+	var stopPingChn = make(chan bool, 1)
+	this.stopPingSign = stopPingChn
 	var ticker = time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
@@ -156,15 +156,16 @@ func (this *WSTradeOKEx) pingRoutine() {
 				this.ErrorHandler(err)
 				this.Stop()
 			}
-		case <-pingChn:
-			close(pingChn)
+		case <-stopPingChn:
+			close(stopPingChn)
 			return
 		}
 	}
 }
 
 func (this *WSTradeOKEx) recvRoutine() {
-	this.stopRecvSign = make(chan bool, 5)
+	var stopRecvChn = make(chan bool, 5)
+	this.stopRecvSign = stopRecvChn
 	var ticker = time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -176,7 +177,8 @@ func (this *WSTradeOKEx) recvRoutine() {
 				this.ErrorHandler(fmt.Errorf("ping timeout"))
 				this.Stop()
 			}
-		case <-this.stopRecvSign:
+		case <-stopRecvChn:
+			close(stopRecvChn)
 			return
 		default:
 			var msgType, msg, readErr = this.conn.ReadMessage()
@@ -219,14 +221,6 @@ func (this *WSTradeOKEx) Stop() {
 			this.ErrorHandler(err)
 		}
 	}
-
-	//if this.stopPingSign != nil {
-	//	close(this.stopPingSign)
-	//}
-	//
-	//if this.stopRecvSign != nil {
-	//	close(this.stopRecvSign)
-	//}
 
 }
 
