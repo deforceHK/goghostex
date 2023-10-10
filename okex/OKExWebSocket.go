@@ -173,10 +173,11 @@ func (this *WSTradeOKEx) recvRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			// 超过5分钟没有收到消息，关闭连接
+			// 超过5分钟没有收到消息，重新连接
 			if time.Now().Unix()-this.lastPingTS > 5*60 {
 				this.ErrorHandler(fmt.Errorf("ping timeout"))
-				this.Stop()
+				this.Restart()
+				continue
 			}
 		case <-stopRecvChn:
 			close(stopRecvChn)
@@ -185,7 +186,7 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgType, msg, readErr = this.conn.ReadMessage()
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				this.ErrorHandler(fmt.Errorf("websocket will be restart"))
+				this.ErrorHandler(fmt.Errorf("read err websocket will be restart"))
 				this.Restart()
 				continue
 			}
