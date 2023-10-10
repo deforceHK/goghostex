@@ -77,6 +77,8 @@ func (this *WSTradeOKEx) Start() {
 	)
 	if err != nil {
 		this.ErrorHandler(err)
+		time.Sleep(60 * time.Second)
+		this.Start()
 		return
 	}
 	this.conn = conn
@@ -101,20 +103,22 @@ func (this *WSTradeOKEx) Start() {
 	err = this.conn.WriteJSON(login)
 	if err != nil {
 		this.ErrorHandler(err)
-		this.ErrorHandler(fmt.Errorf("websocket will be restart"))
-		this.Restart()
+		time.Sleep(60 * time.Second)
+		this.Start()
 		return
 	}
 
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
 		this.ErrorHandler(readErr)
-		this.ErrorHandler(fmt.Errorf("websocket will be restart"))
-		this.Restart()
+		time.Sleep(60 * time.Second)
+		this.Start()
 		return
 	}
 	if messageType != websocket.TextMessage {
 		this.ErrorHandler(fmt.Errorf("message type error"))
+		time.Sleep(60 * time.Second)
+		this.Start()
 		return
 	}
 
@@ -149,9 +153,6 @@ func (this *WSTradeOKEx) pingRoutine() {
 		select {
 		case <-ticker.C:
 			if err := this.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Println("catched ping routine!")
-				}
 				log.Println("error ping routine!")
 				this.ErrorHandler(err)
 				this.Stop()
@@ -164,7 +165,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 }
 
 func (this *WSTradeOKEx) recvRoutine() {
-	var stopRecvChn = make(chan bool, 5)
+	var stopRecvChn = make(chan bool, 1)
 	this.stopRecvSign = stopRecvChn
 	var ticker = time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -185,9 +186,6 @@ func (this *WSTradeOKEx) recvRoutine() {
 			if readErr != nil {
 				this.ErrorHandler(readErr)
 				this.ErrorHandler(fmt.Errorf("websocket will be restart"))
-				if websocket.IsUnexpectedCloseError(readErr, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Println("catched the close error recv routine!")
-				}
 				this.Restart()
 				continue
 			}
@@ -263,7 +261,7 @@ func (this *WSMarketOKEx) Start() {
 	}
 	if this.ErrorHandler == nil {
 		this.ErrorHandler = func(err error) {
-			log.Fatalln(err)
+			log.Println(err)
 		}
 	}
 
@@ -273,6 +271,8 @@ func (this *WSMarketOKEx) Start() {
 	)
 	if err != nil {
 		this.ErrorHandler(err)
+		time.Sleep(60 * time.Second)
+		this.Start()
 		return
 	}
 	this.conn = conn
