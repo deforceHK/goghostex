@@ -224,18 +224,14 @@ func (this *WSTradeOKEx) Stop() {
 }
 
 func (this *WSTradeOKEx) Restart() {
-	this.Stop()
 
 	var nowTS = time.Now().Unix()
-	var waitSec = int64(0)
-	if this.lastRestartTS == 0 {
-		waitSec = 60
-	} else if nowTS-this.lastRestartTS < 60 {
-		waitSec = 60 - nowTS + this.lastRestartTS
+	if nowTS-this.lastRestartTS < 60 {
+		return
 	}
 
-	time.Sleep(time.Duration(waitSec) * time.Second)
 	this.lastRestartTS = time.Now().Unix()
+	this.Stop()
 	this.Start()
 
 	// subscribe unsubscribe the channel
