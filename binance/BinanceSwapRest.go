@@ -581,6 +581,9 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		order.AvgPrice = response.CumQuote / response.DealAmount
 		order.DealAmount = response.DealAmount
 	}
+	if response.DealAmount > order.Amount*0.99 {
+		order.Status = ORDER_FINISH
+	}
 	return resp, nil
 }
 
