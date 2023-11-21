@@ -962,47 +962,77 @@ func (swap *Swap) GetPosition(pair Pair, openType FutureType) (*SwapPosition, []
 }
 
 func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
-	params := url.Values{}
+	var params = url.Values{}
+	params.Add(
+		"timestamp",
+		fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond)),
+	)
+
 	if err := swap.buildParamsSigned(&params); err != nil {
 		return nil, nil, err
 	}
 
-	response := struct {
-		// The future margin 期货保证金 == marginFilled+ marginUnFilled
-		Margin float64 `json:"totalInitialMargin,string"`
-		// The future is filled  持有头寸占用的保证金
-		MarginPosition float64 `json:"totalPositionInitialMargin,string"`
-		// The future is unfilled 未成交的挂单占用的保证金
-		MarginOpen float64 `json:"totalOpenOrderInitialMargin,string"`
-		// 保证金率
-		MarginRate float64
-		// 总值
-		BalanceTotal float64 `json:"totalWalletBalance,string"`
-		// 净值
-		// BalanceNet = BalanceTotal + ProfitUnreal + ProfitReal
-		BalanceNet float64
-		// 可提取
-		// BalanceAvail = BalanceNet - Margin
-		BalanceAvail float64 `json:"maxWithdrawAmount,string"`
-		// 未实现盈亏
-		ProfitUnreal float64 `json:"totalUnrealizedProfit,string"`
+	var response = struct {
+		FeeTier      int64 `json:"feeTier"`
+		CanTrade     bool  `json:"canTrade"`
+		CanDeposit   bool  `json:"canDeposit"`
+		CanWithdraw  bool  `json:"canWithdraw"`
+		UpdateTime   int64 `json:"updateTime"`
+		TradeGroupId int64 `json:"tradeGroupId"`
+
+		MultiAssetsMargin bool `json:"multiAssetsMargin"`
+
+		TotalInitialMargin          float64 `json:"totalInitialMargin,string"`
+		TotalMaintMargin            float64 `json:"totalMaintMargin,string"`
+		TotalWalletBalance          float64 `json:"totalWalletBalance,string"`
+		TotalUnrealizedProfit       float64 `json:"totalUnrealizedProfit,string"`
+		TotalMarginBalance          float64 `json:"totalMarginBalance,string"`
+		TotalPositionInitialMargin  float64 `json:"totalPositionInitialMargin,string"`
+		TotalOpenOrderInitialMargin float64 `json:"totalOpenOrderInitialMargin,string"`
+		TotalCrossWalletBalance     float64 `json:"totalCrossWalletBalance,string"`
+		TotalCrossUnPnl             float64 `json:"totalCrossUnPnl,string"`
+		AvailableBalance            float64 `json:"availableBalance,string"`
+		MaxWithdrawAmount           float64 `json:"maxWithdrawAmount,string"`
+
+		Assets []struct {
+			Asset                  string  `json:"asset"`
+			WalletBalance          float64 `json:"walletBalance,string"`
+			UnrealizedProfit       float64 `json:"unrealizedProfit,string"`
+			MarginBalance          float64 `json:"marginBalance,string"`
+			MaintMargin            float64 `json:"maintMargin,string"`
+			InitialMargin          float64 `json:"initialMargin,string"`
+			PositionInitialMargin  float64 `json:"positionInitialMargin,string"`
+			OpenOrderInitialMargin float64 `json:"openOrderInitialMargin,string"`
+			CrossWalletBalance     float64 `json:"crossWalletBalance,string"`
+			CrossUnPnl             float64 `json:"crossUnPnl,string"`
+			AvailableBalance       float64 `json:"availableBalance,string"`
+			MaxWithdrawAmount      float64 `json:"maxWithdrawAmount,string"`
+			MarginAvailable        bool    `json:"marginAvailable"`
+			UpdateTime             int64   `json:"updateTime"`
+		} `json:"assets"`
 
 		Positions []struct {
 			Symbol           string  `json:"symbol"`
-			EntryPrice       float64 `json:"entryPrice,string"`
-			Leverage         int64   `json:"leverage,string"`
+			InitialMargin    float64 `json:"initialMargin,string"`
+			MaintMargin      float64 `json:"maintMargin,string"`
+			UnrealizedProfit float64 `json:"unrealizedProfit,string"`
+			PositionInitial  float64 `json:"positionInitialMargin,string"`
+			OpenOrderInitial float64 `json:"openOrderInitialMargin,string"`
+			Leverage         float64 `json:"leverage,string"`
 			Isolated         bool    `json:"isolated"`
-			Margin           float64 `json:"initialMargin,string"`
-			MarginPosition   float64 `json:"positionInitialMargin,string"`
-			MarginOpen       float64 `json:"openOrderInitialMargin,string"`
-			UnRealizedProfit float64 `json:"unRealizedProfit,string"`
-			PositionSide     string  `json:"positionSide"`
+			EntryPrice       float64 `json:"entryPrice,string"`
+			MaxNotional      float64 `json:"maxNotional,string"`
+			BidNotional      float64 `json:"bidNotional,string"`
+			AskNotional      float64 `json:"askNotional,string"`
+
+			PositionSide string  `json:"positionSide"`
+			PositionAmt  float64 `json:"positionAmt,string"`
 		} `json:"positions"`
 	}{}
 
 	resp, err := swap.DoRequest(
 		http.MethodGet,
-		SWAP_ACCOUNT_URI+params.Encode(),
+		"/fapi/v2/account?"+params.Encode(),
 		"",
 		&response,
 		SETTLE_MODE_COUNTER,
@@ -1011,17 +1041,17 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 		return nil, nil, err
 	}
 
-	account := &SwapAccount{
+	var account = &SwapAccount{
 		Exchange:       BINANCE,
 		Currency:       USDT,
-		Margin:         response.Margin,
-		MarginPosition: response.MarginPosition,
-		MarginOpen:     response.MarginOpen,
-		BalanceTotal:   response.BalanceTotal,
-		BalanceNet:     response.BalanceTotal + response.ProfitUnreal + 0, //总资产+未实现盈利+已实现盈利（binance实时结算为0）
-		BalanceAvail:   response.BalanceAvail,
+		Margin:         response.TotalMaintMargin,
+		MarginPosition: response.TotalPositionInitialMargin,
+		MarginOpen:     response.TotalOpenOrderInitialMargin,
+		BalanceTotal:   response.TotalMarginBalance,
+		BalanceNet:     response.TotalWalletBalance,
+		BalanceAvail:   response.AvailableBalance,
 		ProfitReal:     0,
-		ProfitUnreal:   response.ProfitUnreal,
+		ProfitUnreal:   response.TotalUnrealizedProfit,
 		Positions:      make([]*SwapPosition, 0),
 	}
 
@@ -1031,7 +1061,7 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 			continue
 		}
 		// There don't have position.
-		if p.Margin == 0.0 {
+		if p.InitialMargin == 0.0 {
 			continue
 		}
 
@@ -1050,13 +1080,12 @@ func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 		}
 
 		sp := &SwapPosition{
-			Pair:  pair,
-			Type:  futureType,
-			Price: p.EntryPrice,
-			//Amount:       p.MarginPosition * float64(p.Leverage) / p.EntryPrice,
+			Pair:         pair,
+			Type:         futureType,
+			Price:        p.EntryPrice,
 			MarginType:   marginType,
-			MarginAmount: p.Margin,
-			Leverage:     p.Leverage,
+			MarginAmount: p.InitialMargin,
+			Leverage:     int64(p.Leverage),
 		}
 
 		account.Positions = append(account.Positions, sp)
