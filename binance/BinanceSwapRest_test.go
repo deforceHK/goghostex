@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	SWAP_API_KEY        = ""
-	SWAP_API_SECRETKEY  = ""
+	SWAP_API_KEY        = "mbQD4eeEeseI2g04Myf3pIAQ3ccscTdI4SLbUY6xG8UZNGQ7bRV8RiHwQESPDJa9"
+	SWAP_API_SECRETKEY  = "Us4pSlxBI3JgSrF6hJfOF42SXt3dhU1JunIKBrRfcZE5eC46CcYCMdu9BQqmrWkP"
 	SWAP_API_PASSPHRASE = ""
 	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
@@ -468,32 +468,6 @@ func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 		t.Log(string(stdOrder))
 	}
 
-	//if orders, resp, err := bn.Swap.GetOrders(Pair{LTC, USDT}); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	raw, _ := json.Marshal(orders)
-	//	t.Log(string(raw))
-	//	t.Log(string(resp))
-	//}
-
-	//if orders, resp, err := bn.Swap.GetUnFinishOrders(Pair{LTC, USDT}); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//
-	//	raw, _ := json.Marshal(orders)
-	//	t.Log(string(raw))
-	//	t.Log(string(resp))
-	//}
-	//
-	//if s, resp, err := bn.Swap.GetPosition(Pair{LTC, USDT}, OPEN_LONG); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	t.Log(string(resp))
-	//	t.Log(s)
-	//}
 }
 
 // place the order ---> get the order info ---> deal
