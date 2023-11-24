@@ -104,6 +104,11 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		}
 
 		var contractType = item.Alias
+		// todo 加入本月次月合约情况
+		if contractType == "this_month" || contractType == "next_month" {
+			continue
+		}
+
 		var dueTimestamp = okDueTimestampBoard[contractType][flag]
 		var dueTime = time.Unix(dueTimestamp/1000, 0).In(future.config.Location)
 		var openTimestamp int64
