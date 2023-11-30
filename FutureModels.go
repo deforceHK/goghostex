@@ -171,6 +171,7 @@ type FutureContract struct {
 	ContractType string `json:"contract_type"` // eg: this_week next_week quarter next_quarter
 	ContractName string `json:"contract_name"` // eg: BTC-USD-201025
 	SettleMode   int64  `json:"settle_mode"`   // 1: BASIS 2: COUNTER
+	Status       string `json:"status"`
 
 	OpenTimestamp int64  `json:"open_timestamp"`
 	OpenDate      string `json:"open_date"`

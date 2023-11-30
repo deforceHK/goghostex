@@ -14,11 +14,13 @@ import (
 )
 
 const (
-	FUTURE_ENDPOINT       = "https://dapi.binance.com"
+	FUTURE_CM_ENDPOINT    = "https://dapi.binance.com"
+	FUTURE_UM_ENDPOINT    = "https://fapi.binance.com"
 	FUTURE_KEEP_ALIVE_URI = "/dapi/v1/ping"
 
-	FUTURE_TICKER_URI        = "/dapi/v1/ticker/24hr?"
-	FUTURE_EXCHANGE_INFO_URI = "/dapi/v1/exchangeInfo"
+	FUTURE_TICKER_URI           = "/dapi/v1/ticker/24hr?"
+	FUTURE_EXCHANGE_INFO_URI    = "/dapi/v1/exchangeInfo"
+	FUTURE_UM_EXCHANGE_INFO_URI = "/fapi/v1/exchangeInfo"
 
 	FUTURE_DEPTH_URI = "/dapi/v1/depth?"
 	FUTURE_KLINE_URI = "/dapi/v1/continuousKlines?"
@@ -66,6 +68,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 
 	var resp, err = future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_TICKER_URI+params.Encode(),
 		"",
 		&response,
@@ -95,6 +98,185 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	}, resp, nil
 }
 
+type bnCMContract struct {
+	Symbol      string `json:"symbol"`
+	Pair        string `json:"pair"`
+	BaseAsset   string `json:"baseAsset"`
+	QuoteAsset  string `json:"quoteAsset"`
+	MarginAsset string `json:"marginAsset"`
+
+	ContractType      string  `json:"contractType"`
+	DeliveryDate      int64   `json:"deliveryDate"`
+	OnboardDate       int64   `json:"onboardDate"`
+	ContractStatus    string  `json:"contractStatus"`
+	ContractSize      float64 `json:"contractSize"`
+	PricePrecision    int64   `json:"pricePrecision"`
+	QuantityPrecision int64   `json:"quantityPrecision"`
+
+	Filters []map[string]interface{} `json:"filters"`
+}
+
+type bnUMContract struct {
+	Symbol       string `json:"symbol"`
+	Pair         string `json:"pair"`
+	ContractType string `json:"contractType"`
+	DeliveryDate int64  `json:"deliveryDate"`
+	OnboardDate  int64  `json:"onboardDate"`
+	Status       string `json:"status"`
+	BaseAsset    string `json:"baseAsset"`
+	QuoteAsset   string `json:"quoteAsset"`
+	MarginAsset  string `json:"marginAsset"`
+
+	PricePrecision    int64 `json:"pricePrecision"`
+	QuantityPrecision int64 `json:"quantityPrecision"`
+
+	Filters []map[string]interface{} `json:"filters"`
+}
+
+func (future *Future) GetContracts() ([]*FutureContract, error) {
+	var contracts = make([]*FutureContract, 0)
+
+	var respCm = struct {
+		Symbols    []*bnCMContract `json:"symbols"`
+		ServerTime int64           `json:"serverTime"`
+	}{}
+
+	var _, errCm = future.DoRequest(
+		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
+		FUTURE_EXCHANGE_INFO_URI,
+		"",
+		&respCm,
+	)
+	if errCm != nil {
+		return nil, errCm
+	}
+
+	for _, item := range respCm.Symbols {
+		// it is not future , it's swap in this project.
+		if item.ContractType == "PERPETUAL" {
+			continue
+		}
+
+		var priceMaxScale, priceMinScale = float64(1.2), float64(0.8)
+		var tickSize = float64(-1)
+		for _, filter := range item.Filters {
+			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
+				priceMaxScale = ToFloat64(filter["multiplierUp"])
+				priceMinScale = ToFloat64(filter["multiplierDown"])
+			}
+
+			if value, ok := filter["filterType"].(string); ok && value == "PRICE_FILTER" {
+				tickSize = ToFloat64(filter["tickSize"])
+			}
+		}
+
+		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
+		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
+
+		var pair = Pair{
+			Basis:   NewCurrency(item.BaseAsset, ""),
+			Counter: NewCurrency(item.QuoteAsset, ""),
+		}
+
+		//var contractNameInfo = strings.Split(item.Symbol, "_")
+		var contract = &FutureContract{
+			Pair:         pair,
+			Symbol:       pair.ToSymbol("_", false),
+			Exchange:     BINANCE,
+			ContractType: item.ContractType,
+			ContractName: item.Symbol,
+
+			SettleMode:    SETTLE_MODE_BASIS,
+			Status:        item.ContractStatus,
+			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
+			OpenDate:      openTime.Format(GO_BIRTHDAY),
+			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
+			DueDate:       dueTime.Format(GO_BIRTHDAY),
+
+			UnitAmount:      item.ContractSize,
+			TickSize:        tickSize,
+			PricePrecision:  item.PricePrecision,
+			AmountPrecision: item.QuantityPrecision,
+
+			MaxScalePriceLimit: priceMaxScale,
+			MinScalePriceLimit: priceMinScale,
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	var respUm = struct {
+		Symbols    []*bnUMContract `json:"symbols"`
+		ServerTime int64           `json:"serverTime"`
+	}{}
+
+	var _, errUm = future.DoRequest(
+		http.MethodGet,
+		FUTURE_UM_ENDPOINT,
+		FUTURE_UM_EXCHANGE_INFO_URI,
+		"",
+		&respUm,
+	)
+	if errUm != nil {
+		return nil, errUm
+	}
+
+	for _, item := range respUm.Symbols {
+		if item.ContractType == "PERPETUAL" || item.ContractType == "" {
+			continue
+		}
+
+		var priceMaxScale, priceMinScale = float64(1.2), float64(0.8)
+		var tickSize = float64(-1)
+		for _, filter := range item.Filters {
+			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
+				priceMaxScale = ToFloat64(filter["multiplierUp"])
+				priceMinScale = ToFloat64(filter["multiplierDown"])
+			}
+
+			if value, ok := filter["filterType"].(string); ok && value == "PRICE_FILTER" {
+				tickSize = ToFloat64(filter["tickSize"])
+			}
+		}
+
+		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
+		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
+
+		var pair = Pair{
+			Basis:   NewCurrency(item.BaseAsset, ""),
+			Counter: NewCurrency(item.QuoteAsset, ""),
+		}
+
+		var contract = &FutureContract{
+			Pair:         pair,
+			Symbol:       pair.ToSymbol("_", false),
+			Exchange:     BINANCE,
+			ContractType: item.ContractType,
+			ContractName: item.Symbol,
+
+			SettleMode:    SETTLE_MODE_COUNTER,
+			Status:        item.Status,
+			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
+			OpenDate:      openTime.Format(GO_BIRTHDAY),
+			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
+			DueDate:       dueTime.Format(GO_BIRTHDAY),
+
+			UnitAmount:      1,
+			TickSize:        tickSize,
+			PricePrecision:  item.PricePrecision,
+			AmountPrecision: item.QuantityPrecision,
+
+			MaxScalePriceLimit: priceMaxScale,
+			MinScalePriceLimit: priceMinScale,
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
+}
+
 func (future *Future) GetContract(pair Pair, contractType string) (*FutureContract, error) {
 	return future.getFutureContract(pair, contractType)
 }
@@ -122,6 +304,7 @@ func (future *Future) GetDepth(pair Pair, contractType string, size int) (*Futur
 
 	resp, err := future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_DEPTH_URI+params.Encode(),
 		"",
 		&response,
@@ -170,6 +353,7 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 
 	if _, err := future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		fmt.Sprintf("/dapi/v1/premiumIndex?symbol=%s", bnSymbol),
 		"",
 		&response,
@@ -205,6 +389,7 @@ func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, 
 	}, 0)
 	var resp, err = future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		fmt.Sprintf("/dapi/v1/premiumIndex?symbol=%s", bnSymbol),
 		"",
 		&response,
@@ -249,7 +434,13 @@ func (future *Future) GetKlineRecords(
 
 	uri := FUTURE_KLINE_URI + params.Encode()
 	klines := make([][]interface{}, 0)
-	resp, err := future.DoRequest(http.MethodGet, uri, "", &klines)
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
+		uri,
+		"",
+		&klines,
+	)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -304,7 +495,13 @@ func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byt
 		Time         int64   `json:"time"`
 		IsBuyerMaker bool    `json:"isBuyerMaker"`
 	}, 0)
-	resp, err := future.DoRequest(http.MethodGet, uri, "", &response)
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
+		uri,
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -354,6 +551,7 @@ func (future *Future) GetAccount() (*FutureAccount, []byte, error) {
 
 	resp, err := future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		"/dapi/v1/account?"+params.Encode(),
 		"", &response,
 	)
@@ -448,6 +646,7 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	now := time.Now()
 	resp, err := future.DoRequest(
 		http.MethodPost,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_PLACE_ORDER_URI+param.Encode(),
 		"",
 		&response,
@@ -511,6 +710,7 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	now := time.Now()
 	resp, err := future.DoRequest(
 		http.MethodDelete,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_CANCEL_ORDER_URI+param.Encode(),
 		"",
 		&response,
@@ -564,6 +764,7 @@ func (future *Future) GetOrders(pair Pair, contractType string) ([]*FutureOrder,
 
 	resp, err := future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_GET_ORDERS_URI+param.Encode(),
 		"",
 		&response,
@@ -640,7 +841,13 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	now := time.Now()
-	resp, err := future.DoRequest(http.MethodGet, FUTURE_GET_ORDER_URI+params.Encode(), "", &response)
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
+		FUTURE_GET_ORDER_URI+params.Encode(),
+		"",
+		&response,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -678,6 +885,7 @@ func (future *Future) GetPairFlow(pair Pair) ([]*FutureAccountItem, []byte, erro
 
 	var resp, err = future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_INCOME_URI+params.Encode(),
 		"",
 		&responses,
@@ -724,14 +932,14 @@ func (future *Future) KeepAlive() {
 		return
 	}
 
-	_, _ = future.DoRequest(http.MethodGet, FUTURE_KEEP_ALIVE_URI, "", nil)
+	_, _ = future.DoRequest(http.MethodGet, FUTURE_CM_ENDPOINT, FUTURE_KEEP_ALIVE_URI, "", nil)
 }
 
-func (future *Future) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+func (future *Future) DoRequest(httpMethod, endPoint, uri, reqBody string, response interface{}) ([]byte, error) {
 	resp, err := NewHttpRequest(
 		future.config.HttpClient,
 		httpMethod,
-		FUTURE_ENDPOINT+uri,
+		endPoint+uri,
 		reqBody,
 		map[string]string{
 			"X-MBX-APIKEY": future.config.ApiKey,
@@ -807,6 +1015,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 
 	var resp, err = future.DoRequest(
 		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
 		FUTURE_EXCHANGE_INFO_URI,
 		"",
 		&response,
