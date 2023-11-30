@@ -203,17 +203,16 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(resp))
 	//}
 
-	Contracts, err := ok.Future.GetContract(
+	if Contract, err := ok.Future.GetContract(
 		Pair{Basis: BTC, Counter: USDT},
 		NEXT_WEEK_CONTRACT,
-	)
-	if err != nil {
+	); err != nil {
 		t.Error(err)
 		return
+	} else {
+		content, _ := json.Marshal(*Contract)
+		t.Log(string(content))
 	}
-
-	content, _ := json.Marshal(*Contracts)
-	t.Log(string(content))
 
 	//ContractName := ok.Future.GetInstrumentId(
 	//	Pair{Basis: BTC, Counter: USD},
@@ -231,6 +230,13 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(body))
 	//}
 
+	if contracts, err := ok.Future.GetContracts(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		content, _ := json.Marshal(contracts)
+		t.Log(string(content))
+	}
 }
 
 /**

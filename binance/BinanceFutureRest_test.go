@@ -99,6 +99,14 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(contract)
 	}
 
+	if contracts, err := bn.Future.GetContracts(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		var c, _ = json.Marshal(contracts)
+		t.Log(string(c))
+	}
+
 }
 
 /**
