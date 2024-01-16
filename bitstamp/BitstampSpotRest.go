@@ -193,7 +193,7 @@ func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
-//util api
+// util api
 func (spot *Spot) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {

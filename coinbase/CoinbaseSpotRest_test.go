@@ -18,10 +18,12 @@ const (
 	SPOT_PROXY_URL = "socks5://127.0.0.1:1090"
 )
 
-/**
+/*
+*
 go test -v ./coinbase/... -count=1 -run=TestSpot_GetKlineRecords
 
-**/
+*
+*/
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	config := &APIConfig{

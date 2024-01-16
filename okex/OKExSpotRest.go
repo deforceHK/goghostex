@@ -196,7 +196,7 @@ func (spot *Spot) GetKlineRecords(pair Pair, period, size, since int) ([]*Kline,
 	return GetAscKline(klines), resp, nil
 }
 
-//非个人，整个交易所的交易记录
+// 非个人，整个交易所的交易记录
 func (spot *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("unsupported")
 }
@@ -325,7 +325,7 @@ func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
 	return resp, nil
 }
 
-//orderId can set client oid or orderId
+// orderId can set client oid or orderId
 func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
 	urlPath := "/api/spot/v3/cancel_orders/" + order.OrderId
 	param := struct {
@@ -404,7 +404,7 @@ func (spot *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 	}
 }
 
-//orderId can set client oid or orderId
+// orderId can set client oid or orderId
 func (spot *Spot) GetOrder(order *Order) ([]byte, error) {
 	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Pair.ToSymbol("-", true)
 	var response OrderResponse

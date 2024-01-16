@@ -15,7 +15,7 @@ type Margin struct {
 	*Binance
 }
 
-//public api
+// public api
 func (margin *Margin) GetTicker(pair Pair) (*Ticker, []byte, error) {
 	return margin.Spot.GetTicker(pair)
 }
@@ -343,7 +343,7 @@ func (margin *Margin) ReturnLoan(loan *Loan) ([]byte, error) {
 	return resp, nil
 }
 
-//util api
+// util api
 func (margin *Margin) KeepAlive() {
 
 }

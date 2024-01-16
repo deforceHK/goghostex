@@ -467,7 +467,7 @@ func (spot *Spot) GetExchangeRule(pair Pair) (*Rule, []byte, error) {
 	return nil, resp, errors.New("Can not find the pair in exchange. ")
 }
 
-//util api
+// util api
 func (spot *Spot) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	if (nowTimestamp - spot.config.LastTimestamp) < 5*1000 {
