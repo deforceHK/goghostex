@@ -7,7 +7,7 @@ import (
 )
 
 /*
-	models about account
+models about account
 */
 type Account struct {
 	Exchange    string

@@ -46,7 +46,7 @@ const (
 	ORDER_FAIL
 )
 
-//k线周期
+// k线周期
 const (
 	KLINE_PERIOD_1MIN = 1 + iota
 	KLINE_PERIOD_3MIN
@@ -106,7 +106,7 @@ const (
 	SUBJECT_TRANSFER_OUT            = "transfer_out"
 )
 
-//exchanges const
+// exchanges const
 const (
 	OKEX     = "okex"
 	BINANCE  = "binance"
