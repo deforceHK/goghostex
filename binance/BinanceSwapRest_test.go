@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	SWAP_API_KEY        = "mbQD4eeEeseI2g04Myf3pIAQ3ccscTdI4SLbUY6xG8UZNGQ7bRV8RiHwQESPDJa9"
-	SWAP_API_SECRETKEY  = "Us4pSlxBI3JgSrF6hJfOF42SXt3dhU1JunIKBrRfcZE5eC46CcYCMdu9BQqmrWkP"
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
 	SWAP_API_PASSPHRASE = ""
 	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
+
 )
 
 /**
@@ -402,7 +403,7 @@ func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 	orderShort := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Sell * 1.03,
-		Amount:    0.012,
+		Amount:    0.01,
 		PlaceType: NORMAL,
 		Type:      OPEN_SHORT,
 		LeverRate: 20,
@@ -413,7 +414,7 @@ func TestSwap_TradeAPI_COUNTER(t *testing.T) {
 	orderLong := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Buy * 0.97,
-		Amount:    0.012,
+		Amount:    0.01,
 		PlaceType: NORMAL,
 		Type:      OPEN_LONG,
 		LeverRate: 20,
@@ -601,6 +602,7 @@ func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 }
 
 // place the order ---> get the order info ---> cancel the order -> get the order info
+// go test -v ./binance/... -count=1 -run=TestSwap_TradeAPI_BASIS
 func TestSwap_TradeAPI_BASIS(t *testing.T) {
 
 	config := &APIConfig{
@@ -712,6 +714,7 @@ func TestSwap_TradeAPI_BASIS(t *testing.T) {
 }
 
 // place the order ---> get the order info ---> deal
+// go test -v ./binance/... -count=1 -run=TestSwap_DEALAPI_BASIS
 func TestSwap_DEALAPI_BASIS(t *testing.T) {
 
 	config := &APIConfig{
@@ -797,6 +800,16 @@ func TestSwap_DEALAPI_BASIS(t *testing.T) {
 		t.Error("The open order hasn't deal. ")
 		return
 	}
+
+	// 这里测试了取消已经成交的订单会报什么错误。
+	//if resp, err := bn.Swap.CancelOrder(&openShort);err!=nil{
+	//	t.Error(err)
+	//	t.Error(string(resp))
+	//	return
+	//}
+	// 错误信息
+	//HttpStatusCode: 400, HttpMethod: DELETE, Response: {"code":-2011,"msg":"Unknown order sent."}, Request: , Url: https://dapi.binance.com/dapi/v1/order?orderId=115424246344&recvWindow=60000&signature=4f3a0e6524f93e4f21954c223f02e72f861ce40142b936a933417cd9f0c94299&symbol=BTCUSD_PERP&timestamp=1707296884739
+
 
 	liquidateShort := SwapOrder{
 		Cid:       UUID(),
