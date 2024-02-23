@@ -117,18 +117,48 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(highest, lowest)
 	//}
 	//
-	if minKline, body, err := ok.Future.GetKlineRecords(
-		QUARTER_CONTRACT,
-		Pair{Basis: BTC, Counter: USD},
+	//if minKline, body, err := ok.Future.GetKlineRecords(
+	//	QUARTER_CONTRACT,
+	//	Pair{Basis: BTC, Counter: USD},
+	//	KLINE_PERIOD_1MIN,
+	//	300,
+	//	0,
+	//	//int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(minKline)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("minKline standard struct: ")
+	//	t.Log(string(standard))
+	//
+	//	t.Log("minKline remote api response: ")
+	//	t.Log(string(body))
+	//
+	//	for _, kline := range minKline {
+	//		if kline.Timestamp < 1000000000000 {
+	//			t.Error("The timestamp must be 13 number. ")
+	//			return
+	//		}
+	//	}
+	//}
+
+	if minCandles, body, err := ok.Future.GetCandles(
+		1727424000000,
+		"btc_usd",
 		KLINE_PERIOD_1MIN,
 		300,
 		0,
-		//int(time.Now().Add(-24*time.Hour).UnixNano()/1000000),
 	); err != nil {
 		t.Error(err)
 		return
 	} else {
-		standard, err := json.Marshal(minKline)
+		standard, err := json.Marshal(minCandles)
 		if err != nil {
 			t.Error(err)
 			return
@@ -140,7 +170,7 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log("minKline remote api response: ")
 		t.Log(string(body))
 
-		for _, kline := range minKline {
+		for _, kline := range minCandles {
 			if kline.Timestamp < 1000000000000 {
 				t.Error("The timestamp must be 13 number. ")
 				return
@@ -203,16 +233,16 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(resp))
 	//}
 
-	if Contract, err := ok.Future.GetContract(
-		Pair{Basis: BTC, Counter: USDT},
-		NEXT_WEEK_CONTRACT,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		content, _ := json.Marshal(*Contract)
-		t.Log(string(content))
-	}
+	//if Contract, err := ok.Future.GetContract(
+	//	Pair{Basis: BTC, Counter: USDT},
+	//	NEXT_WEEK_CONTRACT,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	content, _ := json.Marshal(*Contract)
+	//	t.Log(string(content))
+	//}
 
 	//ContractName := ok.Future.GetInstrumentId(
 	//	Pair{Basis: BTC, Counter: USD},
@@ -230,13 +260,13 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(body))
 	//}
 
-	if contracts, err := ok.Future.GetContracts(); err != nil {
-		t.Error(err)
-		return
-	} else {
-		content, _ := json.Marshal(contracts)
-		t.Log(string(content))
-	}
+	//if contracts, err := ok.Future.GetContracts(); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	content, _ := json.Marshal(contracts)
+	//	t.Log(string(content))
+	//}
 }
 
 /**

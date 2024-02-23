@@ -200,6 +200,7 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 			LotSz     float64 `json:"lotSz,string"`
 			Uly       string  `json:"uly"`
 			State     string  `json:"state"`
+			CtType    string  `json:"ctType"`
 		} `json:"data"`
 	}
 	_, err := future.DoRequest(
@@ -225,6 +226,8 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 		var dueTime = time.Unix(dueTimestamp/1000, 0).In(future.config.Location)
 		var openTimestamp = item.ListTime
 		var openTime = time.Unix(openTimestamp/1000, 0).In(future.config.Location)
+		var listTimestamp = item.ListTime
+		var listTime = time.Unix(listTimestamp/1000, 0).In(future.config.Location)
 
 		var pair = NewPair(item.Uly, "-")
 		var settleMode = SETTLE_MODE_BASIS
@@ -240,9 +243,13 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 			ContractName: item.InstId,
 			SettleMode:   settleMode,
 			Status:       item.State,
+			Type:         item.CtType,
 
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
 			OpenDate:      openTime.Format(GO_BIRTHDAY),
+
+			ListTimestamp: listTimestamp,
+			ListDate:      listTime.Format(GO_BIRTHDAY),
 
 			DueTimestamp: dueTime.UnixNano() / int64(time.Millisecond),
 			DueDate:      dueTime.Format(GO_BIRTHDAY),
@@ -551,6 +558,100 @@ func (future *Future) GetKlineRecords(
 	}
 
 	return GetAscFutureKline(klines), resp, nil
+}
+
+func (future *Future) GetCandles(
+	dueTimestamp int64,
+	symbol string,
+	period,
+	size,
+	since int,
+) ([]*FutureCandle, []byte, error) {
+	contracts, err := future.GetContracts()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var instId = ""
+	var ct *FutureContract = nil
+	for _, contract := range contracts {
+		if contract.Pair.ToSymbol("_", false) != symbol {
+			continue
+		}
+		if dueTimestamp != contract.DueTimestamp {
+			continue
+		}
+		ct = contract
+		instId = contract.ContractName
+		break
+	}
+
+	if ct == nil || instId == "" {
+		return nil, nil, errors.New("Can not find the contract by symbol and dueTimestamp. ")
+	}
+
+	if size > 300 {
+		size = 300
+	}
+
+	var uri = "/api/v5/market/candles?"
+	var params = url.Values{}
+	params.Set("instId", instId)
+	params.Set("bar", _INERNAL_V5_CANDLE_PERIOD_CONVERTER[period])
+	params.Set("limit", strconv.Itoa(size))
+
+	if since > 0 {
+		endTime := time.Now()
+		params.Set("before", strconv.Itoa(since))
+		params.Set("after", strconv.Itoa(int(endTime.UnixNano()/1000000)))
+	}
+
+	var response struct {
+		Code string     `json:"code"`
+		Msg  string     `json:"msg"`
+		Data [][]string `json:"data"`
+	}
+	resp, err := future.DoRequestMarket(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if response.Code != "0" {
+		return nil, nil, errors.New(response.Msg)
+	}
+	if len(response.Data) == 0 {
+		return make([]*FutureCandle, 0), resp, nil
+	}
+
+	var candles []*FutureCandle
+	for _, itm := range response.Data {
+		var timestamp = ToInt64(itm[0])
+		if timestamp <= ct.ListTimestamp || timestamp >= ct.DueTimestamp {
+			continue
+		}
+
+		candles = append(candles, &FutureCandle{
+			Symbol:       symbol,
+			Exchange:     OKEX,
+			Timestamp:    timestamp,
+			Date:         time.Unix(timestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY),
+			Open:         ToFloat64(itm[1]),
+			High:         ToFloat64(itm[2]),
+			Low:          ToFloat64(itm[3]),
+			Close:        ToFloat64(itm[4]),
+			Vol:          ToFloat64(itm[6]),
+			Vol2:         ToFloat64(itm[5]),
+			Type:         ct.Type,
+			DueTimestamp: ct.DueTimestamp,
+			DueDate:      ct.DueDate,
+		})
+	}
+
+	return GetAscFutureCandle(candles), resp, nil
 }
 
 func (future *Future) GetIndex(pair Pair) (float64, []byte, error) {

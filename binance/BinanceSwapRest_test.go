@@ -15,7 +15,6 @@ const (
 	SWAP_API_SECRETKEY  = ""
 	SWAP_API_PASSPHRASE = ""
 	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
-
 )
 
 /**
@@ -809,7 +808,6 @@ func TestSwap_DEALAPI_BASIS(t *testing.T) {
 	//}
 	// 错误信息
 	//HttpStatusCode: 400, HttpMethod: DELETE, Response: {"code":-2011,"msg":"Unknown order sent."}, Request: , Url: https://dapi.binance.com/dapi/v1/order?orderId=115424246344&recvWindow=60000&signature=4f3a0e6524f93e4f21954c223f02e72f861ce40142b936a933417cd9f0c94299&symbol=BTCUSD_PERP&timestamp=1707296884739
-
 
 	liquidateShort := SwapOrder{
 		Cid:       UUID(),

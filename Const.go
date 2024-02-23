@@ -162,3 +162,8 @@ const (
 	SETTLE_MODE_BASIS   int64 = 1
 	SETTLE_MODE_COUNTER int64 = 2
 )
+
+const (
+	FUTURE_TYPE_INVERSER = "inverse"
+	FUTURE_TYPE_LINEAR   = "linear"
+)
