@@ -203,6 +203,23 @@ func GetAscFutureKline(klines []*FutureKline) []*FutureKline {
 	return ascKlines
 }
 
+func GetAscFutureCandle(candles []*FutureCandle) []*FutureCandle {
+	if len(candles) <= 1 {
+		return candles
+	}
+
+	// asc seq
+	if candles[0].Timestamp < candles[1].Timestamp {
+		return candles
+	}
+
+	ascCandles := make([]*FutureCandle, 0)
+	for i := len(candles) - 1; i >= 0; i-- {
+		ascCandles = append(ascCandles, candles[i])
+	}
+	return ascCandles
+}
+
 func GetAscSwapKline(klines []*SwapKline) []*SwapKline {
 	if len(klines) <= 1 {
 		return klines

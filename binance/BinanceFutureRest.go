@@ -152,9 +152,11 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 		return nil, errCm
 	}
 
+	var nowTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
 	for _, item := range respCm.Symbols {
 		// it is not future , it's swap in this project.
-		if item.ContractType == "PERPETUAL" {
+		if strings.Contains(item.ContractType, "PERPETUAL") ||
+			item.DeliveryDate > (nowTimestamp+5*365*24*60*60*1000) {
 			continue
 		}
 
@@ -173,6 +175,7 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 
 		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
 		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
+		var listTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
 
 		var pair = Pair{
 			Basis:   NewCurrency(item.BaseAsset, ""),
@@ -186,11 +189,14 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 			Exchange:     BINANCE,
 			ContractType: item.ContractType,
 			ContractName: item.Symbol,
+			Type:         FUTURE_TYPE_INVERSER, // "inverse", "linear
 
 			SettleMode:    SETTLE_MODE_BASIS,
 			Status:        item.ContractStatus,
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
 			OpenDate:      openTime.Format(GO_BIRTHDAY),
+			ListTimestamp: listTime.UnixNano() / int64(time.Millisecond),
+			ListDate:      listTime.Format(GO_BIRTHDAY),
 			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
 			DueDate:       dueTime.Format(GO_BIRTHDAY),
 
@@ -223,12 +229,14 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 	}
 
 	for _, item := range respUm.Symbols {
-		if item.ContractType == "PERPETUAL" || item.ContractType == "" {
+		if strings.Contains(item.ContractType, "PERPETUAL") ||
+			item.ContractType == "" ||
+			item.DeliveryDate > (nowTimestamp+5*365*24*60*60*1000) {
 			continue
 		}
 
-		var priceMaxScale, priceMinScale = float64(1.2), float64(0.8)
-		var tickSize = float64(-1)
+		var priceMaxScale, priceMinScale float64 = 1.2, 0.8
+		var tickSize float64 = -1
 		for _, filter := range item.Filters {
 			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
 				priceMaxScale = ToFloat64(filter["multiplierUp"])
@@ -242,6 +250,7 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 
 		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
 		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
+		var listTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
 
 		var pair = Pair{
 			Basis:   NewCurrency(item.BaseAsset, ""),
@@ -254,11 +263,16 @@ func (future *Future) GetContracts() ([]*FutureContract, error) {
 			Exchange:     BINANCE,
 			ContractType: item.ContractType,
 			ContractName: item.Symbol,
+			Type:         FUTURE_TYPE_LINEAR, // "inverse", "linear
 
-			SettleMode:    SETTLE_MODE_COUNTER,
-			Status:        item.Status,
+			SettleMode: SETTLE_MODE_COUNTER,
+			Status:     item.Status,
+
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
 			OpenDate:      openTime.Format(GO_BIRTHDAY),
+
+			ListTimestamp: listTime.UnixNano() / int64(time.Millisecond),
+			ListDate:      listTime.Format(GO_BIRTHDAY),
 			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
 			DueDate:       dueTime.Format(GO_BIRTHDAY),
 

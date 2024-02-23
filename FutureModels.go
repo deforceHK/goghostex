@@ -101,6 +101,22 @@ type FutureKline struct {
 	Vol2         float64     `json:"vol_2"` //个数
 }
 
+type FutureCandle struct {
+	Symbol       string  `json:"symbol"`
+	Exchange     string  `json:"exchange"`
+	Timestamp    int64   `json:"timestamp"`
+	Date         string  `json:"date"`
+	Open         float64 `json:"open"`
+	Close        float64 `json:"close"`
+	High         float64 `json:"high"`
+	Low          float64 `json:"low"`
+	Vol          float64 `json:"vol"`   // 成交量
+	Vol2         float64 `json:"vol_2"` // 张数
+	Type         string  `json:"type"`
+	DueTimestamp int64   `json:"due_timestamp"`
+	DueDate      string  `json:"due_date"`
+}
+
 /**
  *
  * models about trade
@@ -172,9 +188,12 @@ type FutureContract struct {
 	ContractName string `json:"contract_name"` // eg: BTC-USD-201025
 	SettleMode   int64  `json:"settle_mode"`   // 1: BASIS 2: COUNTER
 	Status       string `json:"status"`
+	Type         string `json:"type"` // linear or inverse
 
 	OpenTimestamp int64  `json:"open_timestamp"`
 	OpenDate      string `json:"open_date"`
+	ListTimestamp int64  `json:"list_timestamp"`
+	ListDate      string `json:"list_date"`
 	DueTimestamp  int64  `json:"due_timestamp"`
 	DueDate       string `json:"due_date"`
 
