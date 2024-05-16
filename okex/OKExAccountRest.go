@@ -44,7 +44,7 @@ type FundingAccountDetail struct {
 	Ccy       string  `json:"ccy"`
 	AvailBal  float64 `json:"availBal,string"`
 	CashBal   float64 `json:"bal,string"`
-	frozenBal float64 `json:"frozenBal,string"`
+	FrozenBal float64 `json:"frozenBal,string"`
 }
 
 type TransferParameter struct {
