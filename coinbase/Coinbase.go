@@ -71,3 +71,36 @@ func (coinbase *Coinbase) DoRequest(
 		return resp, json.Unmarshal(resp, &response)
 	}
 }
+
+// coinbase can request historical candles data from https://api.pro.coinbase.com/
+
+func (coinbase *Coinbase) DoRequestHistorical(
+	httpMethod,
+	uri,
+	reqBody string,
+	response interface{},
+) ([]byte, error) {
+
+	url := "https://api.pro.coinbase.com" + uri
+	resp, err := NewHttpRequest(
+		coinbase.config.HttpClient,
+		httpMethod,
+		url,
+		reqBody,
+		map[string]string{
+			CONTENT_TYPE:  APPLICATION_JSON_UTF8,
+			ACCEPT:        APPLICATION_JSON,
+			CACHE_CONTROL: "no-store", // test to not use cached for coinbase
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		nowTimestamp := time.Now().Unix() * 1000
+		if nowTimestamp > coinbase.config.LastTimestamp {
+			coinbase.config.LastTimestamp = nowTimestamp
+		}
+		return resp, json.Unmarshal(resp, &response)
+	}
+}

@@ -71,3 +71,57 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 	}
 
 }
+
+/*
+*
+go test -v ./coinbase/... -count=1 -run=TestSpot_GetHistoricalCandles
+
+*
+*/
+func TestSpot_GetHistoricalCandles(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint:   ENDPOINT,
+		HttpClient: &http.Client{
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse("socks5://127.0.0.1:1090")
+			//	},
+			//},
+		},
+		ApiKey:        SPOT_API_KEY,
+		ApiSecretKey:  SPOT_API_SECRETKEY,
+		ApiPassphrase: SPOT_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	var cb = New(config)
+	var _, raw, err = cb.Spot.GetHistoricalCandles(
+		Pair{Basis: SOL, Counter: USD},
+		KLINE_PERIOD_1MIN,
+		300,
+		1645571700000,
+	)
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	//raw, err := json.Marshal(klines[0])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log(string(raw))
+
+	//if rule, raw, err := cb.Spot.GetExchangeRule(Pair{BTC, USD}); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(string(raw))
+	//	t.Log(rule)
+	//}
+
+}
