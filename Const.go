@@ -164,6 +164,6 @@ const (
 )
 
 const (
-	FUTURE_TYPE_INVERSER = "inverse"
 	FUTURE_TYPE_LINEAR   = "linear"
+	FUTURE_TYPE_INVERSER = "inverse"
 )

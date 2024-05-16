@@ -110,8 +110,8 @@ type FutureCandle struct {
 	Close        float64 `json:"close"`
 	High         float64 `json:"high"`
 	Low          float64 `json:"low"`
-	Vol          float64 `json:"vol"`   // 成交量
-	Vol2         float64 `json:"vol_2"` // 张数
+	Vol          float64 `json:"vol"`   // BASE 成交量
+	Vol2         float64 `json:"vol_2"` // 张数 OR COUNT 成交量
 	Type         string  `json:"type"`
 	DueTimestamp int64   `json:"due_timestamp"`
 	DueDate      string  `json:"due_date"`
