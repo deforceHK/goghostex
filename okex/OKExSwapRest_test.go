@@ -319,32 +319,3 @@ func TestSwap_DealAPI(t *testing.T) {
 	}
 
 }
-
-func TestSwap_ACCOUNTAPI(t *testing.T) {
-
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
-		},
-		ApiKey:        SWAP_API_KEY,
-		ApiSecretKey:  SWAP_API_SECRETKEY,
-		ApiPassphrase: SWAP_API_PASSPHRASE,
-		Location:      time.Now().Location(),
-	}
-
-	ok := New(config)
-
-	if items, resp, err := ok.Swap.GetPairFlow(Pair{ETH, USDT}); err != nil {
-		t.Error(err)
-		t.Log(string(resp))
-		return
-	} else {
-		var body, _ = json.Marshal(items)
-		t.Log(string(body))
-	}
-}

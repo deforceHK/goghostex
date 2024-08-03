@@ -131,6 +131,7 @@ type SwapAccountItem struct {
 	Pair     Pair
 	Exchange string
 	Subject  string
+	Id       string
 
 	SettleMode     int64 // 1: basis 2: counter
 	SettleCurrency Currency

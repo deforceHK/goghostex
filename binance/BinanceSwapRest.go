@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1109,6 +1110,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 		Asset      string  `json:"asset"`
 		Info       string  `json:"info"`
 		Time       int64   `json:"time"`
+		TranId     int64   `json:"tranId"`
 	}, 0)
 
 	resp, err := swap.DoRequest(
@@ -1143,9 +1145,16 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 		dateTime := time.Unix(r.Time/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
 		sai := &SwapAccountItem{
-			Pair: p, Exchange: BINANCE, Subject: swap.transferSubject(r.Income, r.IncomeType),
-			SettleMode: 2, SettleCurrency: NewCurrency(r.Asset, ""), Amount: r.Income,
-			Timestamp: r.Time, DateTime: dateTime, Info: r.Info,
+			Pair:           p,
+			Exchange:       BINANCE,
+			Subject:        swap.transferSubject(r.Income, r.IncomeType),
+			SettleMode:     2,
+			SettleCurrency: NewCurrency(r.Asset, ""),
+			Amount:         r.Income,
+			Timestamp:      r.Time,
+			DateTime:       dateTime,
+			Info:           r.Info,
+			Id:             strconv.FormatInt(r.TranId, 10),
 		}
 
 		items = append(items, sai)
@@ -1198,6 +1207,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 		Asset      string  `json:"asset"`
 		Info       string  `json:"info"`
 		Time       int64   `json:"time"`
+		TranId     int64   `json:"tranId"`
 	}, 0)
 
 	var resp, err = swap.DoRequest(
@@ -1225,6 +1235,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 			Timestamp:      r.Time,
 			DateTime:       dateTime,
 			Info:           r.Info,
+			Id:             strconv.FormatInt(r.TranId, 10),
 		}
 		items = append(items, sai)
 	}
