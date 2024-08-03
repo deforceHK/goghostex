@@ -476,7 +476,7 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 }
 
 var _INERNAL_V5_FLOW_TYPE_CONVERTER = map[string]string{
-	"2": SUBJECT_COMMISSION,
+	"2": SUBJECT_SETTLE,
 	//"REALIZED_PNL": SUBJECT_SETTLE,
 	"8": SUBJECT_FUNDING_FEE,
 }
@@ -518,7 +518,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 	var items = make([]*SwapAccountItem, 0)
 	for _, item := range response.Data {
-		pairInfo := strings.Split(item.InstId, "-")
+		var pairInfo = strings.Split(item.InstId, "-")
 
 		itemType, exist := _INERNAL_V5_FLOW_TYPE_CONVERTER[item.Type]
 		if !exist {
@@ -530,13 +530,9 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 			settleMode = SETTLE_MODE_COUNTER
 		}
 
-		var amount = ToFloat64(item.Fee)
-		if itemType == SUBJECT_FUNDING_FEE {
-			amount = ToFloat64(item.Pnl)
-		}
+		var amount = ToFloat64(item.Pnl)
 		var datetime = time.Unix(item.Ts/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
-
-		var saItem = SwapAccountItem{
+		items = append(items, &SwapAccountItem{
 			Pair:     NewPair(pairInfo[0]+"-"+pairInfo[1], "-"),
 			Exchange: OKEX,
 			Subject:  itemType,
@@ -547,8 +543,24 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 			Timestamp:      item.Ts,
 			DateTime:       datetime,
 			Info:           "",
+			Id:             item.BillId,
+		})
+
+		if itemType == SUBJECT_SETTLE {
+			items = append(items, &SwapAccountItem{
+				Pair:     NewPair(pairInfo[0]+"-"+pairInfo[1], "-"),
+				Exchange: OKEX,
+				Subject:  SUBJECT_COMMISSION,
+
+				SettleMode:     settleMode, // 1: basis 2: counter
+				SettleCurrency: NewCurrency(item.Ccy, ""),
+				Amount:         ToFloat64(item.Fee),
+				Timestamp:      item.Ts,
+				DateTime:       datetime,
+				Info:           "",
+				Id:             item.BillId,
+			})
 		}
-		items = append(items, &saItem)
 	}
 	return items, resp, nil
 }
@@ -562,6 +574,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 
 	var params = url.Values{}
 	params.Set("instType", "SWAP")
+	params.Set("instId", pair.ToSymbol("-", true)+"-SWAP")
 	params.Set("ccy", marginAsset)
 	var response = struct {
 		Code string `json:"code"`
@@ -608,13 +621,9 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 			continue
 		}
 
-		var amount = ToFloat64(item.Fee)
-		if itemType == SUBJECT_FUNDING_FEE {
-			amount = ToFloat64(item.Pnl)
-		}
+		var amount = ToFloat64(item.Pnl)
 		var datetime = time.Unix(item.Ts/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
-
-		var saItem = SwapAccountItem{
+		items = append(items, &SwapAccountItem{
 			Pair:     pair,
 			Exchange: OKEX,
 			Subject:  itemType,
@@ -625,8 +634,24 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 			Timestamp:      item.Ts,
 			DateTime:       datetime,
 			Info:           "",
+			Id:             item.BillId,
+		})
+
+		if itemType == SUBJECT_SETTLE {
+			items = append(items, &SwapAccountItem{
+				Pair:     pair,
+				Exchange: OKEX,
+				Subject:  SUBJECT_COMMISSION,
+
+				SettleMode:     contract.SettleMode, // 1: basis 2: counter
+				SettleCurrency: NewCurrency(item.Ccy, ""),
+				Amount:         ToFloat64(item.Fee),
+				Timestamp:      item.Ts,
+				DateTime:       datetime,
+				Info:           "",
+				Id:             item.BillId,
+			})
 		}
-		items = append(items, &saItem)
 	}
 	return items, resp, nil
 }

@@ -1037,13 +1037,10 @@ func (future *Future) GetPairFlow(pair Pair) ([]*FutureAccountItem, []byte, erro
 			continue
 		}
 
-		var amount = ToFloat64(item.Fee)
-		if itemType == SUBJECT_FUNDING_FEE {
-			amount = ToFloat64(item.Pnl)
-		}
+		var amount = ToFloat64(item.Pnl)
 		var datetime = time.Unix(item.Ts/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
 
-		var saItem = FutureAccountItem{
+		items = append(items, &FutureAccountItem{
 			Pair:         pair,
 			Exchange:     OKEX,
 			Subject:      itemType,
@@ -1055,8 +1052,23 @@ func (future *Future) GetPairFlow(pair Pair) ([]*FutureAccountItem, []byte, erro
 			Timestamp:      item.Ts,
 			DateTime:       datetime,
 			Info:           "",
+		})
+
+		if itemType == SUBJECT_SETTLE {
+			items = append(items, &FutureAccountItem{
+				Pair:         pair,
+				Exchange:     OKEX,
+				Subject:      SUBJECT_COMMISSION,
+				ContractName: item.InstId,
+
+				SettleMode:     contract.SettleMode, // 1: basis 2: counter
+				SettleCurrency: NewCurrency(item.Ccy, ""),
+				Amount:         ToFloat64(item.Fee),
+				Timestamp:      item.Ts,
+				DateTime:       datetime,
+				Info:           "",
+			})
 		}
-		items = append(items, &saItem)
 	}
 	return items, resp, nil
 }
