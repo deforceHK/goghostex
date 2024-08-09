@@ -475,7 +475,6 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 	panic("implement me")
 }
 
-
 func (swap *Swap) getContract(pair Pair) *SwapContract {
 	defer swap.Unlock()
 	swap.Lock()
