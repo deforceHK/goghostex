@@ -67,7 +67,7 @@ func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 
 		var amount = ToFloat64(item.Pnl)
 		var datetime = time.Unix(item.Ts/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
-		var info,_ = json.Marshal(item)
+		var info, _ = json.Marshal(item)
 		items = append(items, &SwapAccountItem{
 			Pair:     NewPair(pairInfo[0]+"-"+pairInfo[1], "-"),
 			Exchange: OKEX,
@@ -129,7 +129,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 			Ts      int64  `json:"ts,string"`
 		} `json:"data"`
 	}{}
-	var uri = "/api/v5/account/bills?"
+	var uri = "/api/v5/account/bills-archive?"
 	var resp, err = swap.DoRequest(
 		http.MethodGet,
 		uri+params.Encode(),
@@ -159,7 +159,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 
 		var amount = ToFloat64(item.Pnl)
 		var datetime = time.Unix(item.Ts/1000, 0).In(swap.config.Location).Format(GO_BIRTHDAY)
-		var info,_ = json.Marshal(item)
+		var info, _ = json.Marshal(item)
 		items = append(items, &SwapAccountItem{
 			Pair:     pair,
 			Exchange: OKEX,
@@ -192,5 +192,3 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 	}
 	return items, resp, nil
 }
-
-
