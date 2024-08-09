@@ -185,7 +185,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 				Amount:         ToFloat64(item.Fee),
 				Timestamp:      item.Ts,
 				DateTime:       datetime,
-				Info:           "",
+				Info:           string(info),
 				Id:             item.BillId,
 			})
 		}
