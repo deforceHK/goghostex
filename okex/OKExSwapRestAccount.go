@@ -129,7 +129,7 @@ func (swap *Swap) GetPairFlow(pair Pair) ([]*SwapAccountItem, []byte, error) {
 			Ts      int64  `json:"ts,string"`
 		} `json:"data"`
 	}{}
-	var uri = "/api/v5/account/bills-archive?"
+	var uri = "/api/v5/account/bills?"
 	var resp, err = swap.DoRequest(
 		http.MethodGet,
 		uri+params.Encode(),
