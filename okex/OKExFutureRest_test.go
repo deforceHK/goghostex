@@ -264,8 +264,11 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Error(err)
 		return
 	} else {
-		content, _ := json.Marshal(contracts)
-		t.Log(string(content))
+		for _, contract := range contracts {
+			content, _ := json.Marshal(contract)
+			t.Log(string(content))
+		}
+
 		t.Log(string(resp))
 	}
 }
