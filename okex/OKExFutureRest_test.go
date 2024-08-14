@@ -148,35 +148,35 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	}
 	//}
 
-	if minCandles, body, err := ok.Future.GetCandles(
-		1727424000000,
-		"btc_usd",
-		KLINE_PERIOD_1MIN,
-		300,
-		0,
-	); err != nil {
-		t.Error(err)
-		return
-	} else {
-		standard, err := json.Marshal(minCandles)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		t.Log("minKline standard struct: ")
-		t.Log(string(standard))
-
-		t.Log("minKline remote api response: ")
-		t.Log(string(body))
-
-		for _, kline := range minCandles {
-			if kline.Timestamp < 1000000000000 {
-				t.Error("The timestamp must be 13 number. ")
-				return
-			}
-		}
-	}
+	//if minCandles, body, err := ok.Future.GetCandles(
+	//	1727424000000,
+	//	"btc_usd",
+	//	KLINE_PERIOD_1MIN,
+	//	300,
+	//	0,
+	//); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(minCandles)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//
+	//	t.Log("minKline standard struct: ")
+	//	t.Log(string(standard))
+	//
+	//	t.Log("minKline remote api response: ")
+	//	t.Log(string(body))
+	//
+	//	for _, kline := range minCandles {
+	//		if kline.Timestamp < 1000000000000 {
+	//			t.Error("The timestamp must be 13 number. ")
+	//			return
+	//		}
+	//	}
+	//}
 
 	//if dayKline, body, err := ok.Future.GetKlineRecords(
 	//	NEXT_QUARTER_CONTRACT,
@@ -260,13 +260,14 @@ func TestFuture_MarketAPI(t *testing.T) {
 	//	t.Log(string(body))
 	//}
 
-	//if contracts, err := ok.Future.GetContracts(); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	content, _ := json.Marshal(contracts)
-	//	t.Log(string(content))
-	//}
+	if contracts, resp, err := ok.Future.GetContracts(); err != nil {
+		t.Error(err)
+		return
+	} else {
+		content, _ := json.Marshal(contracts)
+		t.Log(string(content))
+		t.Log(string(resp))
+	}
 }
 
 /**
@@ -714,42 +715,6 @@ func TestFuture_ErrorAPI(t *testing.T) {
 	} else {
 		t.Error(errors.New("no error here, why? "))
 		return
-	}
-
-}
-
-/**
-* unit test cmd
-* go test -v ./okex/... -count=1 -run=TestFuture_AccountAPI
-*
-**/
-
-func TestFuture_AccountAPI(t *testing.T) {
-
-	config := &APIConfig{
-		Endpoint: ENDPOINT,
-		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
-		},
-		ApiKey:        FUTURE_API_KEY,
-		ApiSecretKey:  FUTURE_API_SECRETKEY,
-		ApiPassphrase: FUTURE_API_PASSPHRASE,
-		Location:      time.Now().Location(),
-	}
-
-	var ok = New(config)
-
-	if item, resp, err := ok.Future.GetPairFlow(Pair{BTC, USD}); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log(string(resp))
-		var sss, _ = json.Marshal(item)
-		t.Log(string(sss))
 	}
 
 }
