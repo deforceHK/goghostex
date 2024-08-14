@@ -204,6 +204,8 @@ type FutureContract struct {
 
 	MaxScalePriceLimit float64 `json:"max_scale_price_limit"`
 	MinScalePriceLimit float64 `json:"min_scale_price_limit"`
+
+	RawData string `json:"raw_data"`
 }
 
 type FutureContracts struct {

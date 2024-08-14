@@ -103,41 +103,6 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 	}, resp, nil
 }
 
-type bnCMContract struct {
-	Symbol      string `json:"symbol"`
-	Pair        string `json:"pair"`
-	BaseAsset   string `json:"baseAsset"`
-	QuoteAsset  string `json:"quoteAsset"`
-	MarginAsset string `json:"marginAsset"`
-
-	ContractType      string  `json:"contractType"`
-	DeliveryDate      int64   `json:"deliveryDate"`
-	OnboardDate       int64   `json:"onboardDate"`
-	ContractStatus    string  `json:"contractStatus"`
-	ContractSize      float64 `json:"contractSize"`
-	PricePrecision    int64   `json:"pricePrecision"`
-	QuantityPrecision int64   `json:"quantityPrecision"`
-
-	Filters []map[string]interface{} `json:"filters"`
-}
-
-type bnUMContract struct {
-	Symbol       string `json:"symbol"`
-	Pair         string `json:"pair"`
-	ContractType string `json:"contractType"`
-	DeliveryDate int64  `json:"deliveryDate"`
-	OnboardDate  int64  `json:"onboardDate"`
-	Status       string `json:"status"`
-	BaseAsset    string `json:"baseAsset"`
-	QuoteAsset   string `json:"quoteAsset"`
-	MarginAsset  string `json:"marginAsset"`
-
-	PricePrecision    int64 `json:"pricePrecision"`
-	QuantityPrecision int64 `json:"quantityPrecision"`
-
-	Filters []map[string]interface{} `json:"filters"`
-}
-
 func (future *Future) updateContracts() {
 	var nowTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
 	var updateTimestamp = nowTimestamp
@@ -145,7 +110,7 @@ func (future *Future) updateContracts() {
 		return
 	}
 
-	var contracts, err = future.GetContracts()
+	var contracts, _, err = future.GetContracts()
 	if err != nil {
 		future.updateTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
 		return
@@ -166,164 +131,6 @@ func (future *Future) updateContracts() {
 
 	future.FutureContracts = contracts
 	future.updateTimestamp = updateTimestamp
-}
-
-func (future *Future) GetContracts() ([]*FutureContract, error) {
-	var contracts = make([]*FutureContract, 0)
-
-	var respCm = struct {
-		Symbols    []*bnCMContract `json:"symbols"`
-		ServerTime int64           `json:"serverTime"`
-	}{}
-
-	var _, errCm = future.DoRequest(
-		http.MethodGet,
-		FUTURE_CM_ENDPOINT,
-		FUTURE_EXCHANGE_INFO_URI,
-		"",
-		&respCm,
-	)
-	if errCm != nil {
-		return nil, errCm
-	}
-
-	var nowTimestamp = time.Now().UnixNano() / int64(time.Millisecond)
-	for _, item := range respCm.Symbols {
-		// it is not future , it's swap in this project.
-		if strings.Contains(item.ContractType, "PERPETUAL") ||
-			item.DeliveryDate > (nowTimestamp+5*365*24*60*60*1000) {
-			continue
-		}
-
-		var priceMaxScale, priceMinScale = float64(1.2), float64(0.8)
-		var tickSize = float64(-1)
-		for _, filter := range item.Filters {
-			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
-				priceMaxScale = ToFloat64(filter["multiplierUp"])
-				priceMinScale = ToFloat64(filter["multiplierDown"])
-			}
-
-			if value, ok := filter["filterType"].(string); ok && value == "PRICE_FILTER" {
-				tickSize = ToFloat64(filter["tickSize"])
-			}
-		}
-
-		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
-		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
-		var listTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
-
-		var pair = Pair{
-			Basis:   NewCurrency(item.BaseAsset, ""),
-			Counter: NewCurrency(item.QuoteAsset, ""),
-		}
-
-		//var contractNameInfo = strings.Split(item.Symbol, "_")
-		var contract = &FutureContract{
-			Pair:         pair,
-			Symbol:       pair.ToSymbol("_", false),
-			Exchange:     BINANCE,
-			ContractType: item.ContractType,
-			ContractName: item.Symbol,
-			Type:         FUTURE_TYPE_INVERSER, // "inverse", "linear
-
-			SettleMode:    SETTLE_MODE_BASIS,
-			Status:        item.ContractStatus,
-			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
-			OpenDate:      openTime.Format(GO_BIRTHDAY),
-			ListTimestamp: listTime.UnixNano() / int64(time.Millisecond),
-			ListDate:      listTime.Format(GO_BIRTHDAY),
-			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
-			DueDate:       dueTime.Format(GO_BIRTHDAY),
-
-			UnitAmount:      item.ContractSize,
-			TickSize:        tickSize,
-			PricePrecision:  item.PricePrecision,
-			AmountPrecision: item.QuantityPrecision,
-
-			MaxScalePriceLimit: priceMaxScale,
-			MinScalePriceLimit: priceMinScale,
-		}
-
-		contracts = append(contracts, contract)
-	}
-
-	var respUm = struct {
-		Symbols    []*bnUMContract `json:"symbols"`
-		ServerTime int64           `json:"serverTime"`
-	}{}
-
-	var _, errUm = future.DoRequest(
-		http.MethodGet,
-		FUTURE_UM_ENDPOINT,
-		FUTURE_UM_EXCHANGE_INFO_URI,
-		"",
-		&respUm,
-	)
-	if errUm != nil {
-		return nil, errUm
-	}
-
-	for _, item := range respUm.Symbols {
-		if strings.Contains(item.ContractType, "PERPETUAL") ||
-			item.ContractType == "" ||
-			item.DeliveryDate > (nowTimestamp+5*365*24*60*60*1000) {
-			continue
-		}
-
-		var priceMaxScale, priceMinScale float64 = 1.2, 0.8
-		var tickSize float64 = -1
-		for _, filter := range item.Filters {
-			if value, ok := filter["filterType"].(string); ok && value == "PERCENT_PRICE" {
-				priceMaxScale = ToFloat64(filter["multiplierUp"])
-				priceMinScale = ToFloat64(filter["multiplierDown"])
-			}
-
-			if value, ok := filter["filterType"].(string); ok && value == "PRICE_FILTER" {
-				tickSize = ToFloat64(filter["tickSize"])
-			}
-		}
-
-		var dueTime = time.Unix(item.DeliveryDate/1000, 0).In(future.config.Location)
-		var openTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
-		var listTime = time.Unix(item.OnboardDate/1000, 0).In(future.config.Location)
-
-		var pair = Pair{
-			Basis:   NewCurrency(item.BaseAsset, ""),
-			Counter: NewCurrency(item.QuoteAsset, ""),
-		}
-
-		var contract = &FutureContract{
-			Pair:         pair,
-			Symbol:       pair.ToSymbol("_", false),
-			Exchange:     BINANCE,
-			ContractType: item.ContractType,
-			ContractName: item.Symbol,
-			Type:         FUTURE_TYPE_LINEAR, // "inverse", "linear
-
-			SettleMode: SETTLE_MODE_COUNTER,
-			Status:     item.Status,
-
-			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
-			OpenDate:      openTime.Format(GO_BIRTHDAY),
-
-			ListTimestamp: listTime.UnixNano() / int64(time.Millisecond),
-			ListDate:      listTime.Format(GO_BIRTHDAY),
-			DueTimestamp:  dueTime.UnixNano() / int64(time.Millisecond),
-			DueDate:       dueTime.Format(GO_BIRTHDAY),
-
-			UnitAmount:      1,
-			TickSize:        tickSize,
-			PricePrecision:  item.PricePrecision,
-			AmountPrecision: item.QuantityPrecision,
-
-			MaxScalePriceLimit: priceMaxScale,
-			MinScalePriceLimit: priceMinScale,
-		}
-
-		contracts = append(contracts, contract)
-	}
-
-	return contracts, nil
 }
 
 func (future *Future) GetContract(pair Pair, contractType string) (*FutureContract, error) {
@@ -946,64 +753,6 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	return resp, nil
 }
 
-func (future *Future) GetPairFlow(pair Pair) ([]*FutureAccountItem, []byte, error) {
-
-	var params = url.Values{}
-	if err := future.buildParamsSigned(&params); err != nil {
-		return nil, nil, err
-	}
-
-	var responses = make([]*struct {
-		Symbol     string  `json:"symbol"`
-		IncomeType string  `json:"incomeType"`
-		Income     float64 `json:"income,string"`
-		Asset      string  `json:"asset"`
-		Info       string  `json:"info"`
-		Time       int64   `json:"time"`
-	}, 0)
-
-	var resp, err = future.DoRequest(
-		http.MethodGet,
-		FUTURE_CM_ENDPOINT,
-		FUTURE_INCOME_URI+params.Encode(),
-		"",
-		&responses,
-	)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	var items = make([]*FutureAccountItem, 0)
-	for i := len(responses) - 1; i >= 0; i-- {
-		var r = responses[i]
-		if r.Symbol == "" || strings.Index(r.Symbol, "_PERP") > 0 {
-			continue
-		}
-
-		// 不是这个pair的滤掉
-		var symbolFilter = pair.ToSymbol("", true) + "_"
-		if strings.Index(r.Symbol, symbolFilter) < 0 {
-			continue
-		}
-		var dateTime = time.Unix(r.Time/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
-		var fai = &FutureAccountItem{
-			Pair:           pair,
-			Exchange:       BINANCE,
-			ContractName:   pair.ToSymbol("-", true) + "-" + strings.Split(r.Symbol, "_")[1],
-			Subject:        future.transferSubject(r.Income, r.IncomeType),
-			SettleMode:     SETTLE_MODE_BASIS,
-			SettleCurrency: NewCurrency(r.Asset, ""),
-			Amount:         r.Income,
-			Timestamp:      r.Time,
-			DateTime:       dateTime,
-			Info:           r.Info,
-		}
-		items = append(items, fai)
-	}
-
-	return items, resp, nil
-}
-
 func (future *Future) KeepAlive() {
 	nowTimestamp := time.Now().Unix() * 1000
 	// last timestamp in 5s, no need to keep alive
@@ -1221,12 +970,6 @@ func (future *Future) getBNSymbol(contractName string) string {
 	var infos = strings.Split(contractName, "-")
 	return infos[0] + infos[1] + "_" + infos[2]
 }
-
-//var subjectKV = map[string]string{
-//	"COMMISSION":   SUBJECT_COMMISSION,
-//	"REALIZED_PNL": SUBJECT_SETTLE,
-//	"FUNDING_FEE":  SUBJECT_FUNDING_FEE,
-//}
 
 func (future *Future) transferSubject(income float64, remoteSubject string) string {
 	if remoteSubject == "TRANSFER" {

@@ -14,7 +14,7 @@ const (
 	FUTURE_API_KEY        = ""
 	FUTURE_API_SECRETKEY  = ""
 	FUTURE_API_PASSPHRASE = ""
-	FUTURE_PROXY_URL      = "" //socks5://127.0.0.1:1090"
+	FUTURE_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
 
 /**
@@ -102,36 +102,6 @@ func TestFuture_MarketAPI(t *testing.T) {
 		return
 	} else {
 		t.Log(contract)
-	}
-
-	if contracts, err := bn.Future.GetContracts(); err != nil {
-		t.Error(err)
-		return
-	} else {
-		var c, _ = json.Marshal(contracts)
-		t.Log(string(c))
-
-		//var sinceTimestamp = time.Now().UnixNano()/int64(time.Millisecond) - 200*60*1000
-		for _, contract := range contracts {
-			if contract.Symbol == "btc_usd" || contract.Symbol == "btc_usdt" {
-				t.Log(contract)
-				//candles, resp, err := bn.Future.GetCandles(
-				//	contract.DueTimestamp,
-				//	contract.Symbol,
-				//	KLINE_PERIOD_1MIN,
-				//	200,
-				//	sinceTimestamp,
-				//)
-				//if err != nil {
-				//	t.Error(err)
-				//	return
-				//}
-				//t.Log(string(resp))
-				//
-				//var jCandles, _ = json.Marshal(candles)
-				//t.Log(string(jCandles))
-			}
-		}
 	}
 
 }
