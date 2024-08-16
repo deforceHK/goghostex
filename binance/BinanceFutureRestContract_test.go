@@ -41,7 +41,7 @@ func TestFuture_GetContracts(t *testing.T) {
 			if contract.Symbol == "btc_usd" || contract.Symbol == "btc_usdt" ||
 				contract.Symbol == "eth_usd" || contract.Symbol == "eth_usdt" {
 				t.Log(contract)
-				t.Log(contract.RawData)
+				//t.Log(contract.RawData)
 			}
 		}
 

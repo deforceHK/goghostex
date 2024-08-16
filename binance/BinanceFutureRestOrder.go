@@ -21,7 +21,7 @@ func (future *Future) GetTrades(pair Pair, contractType string) ([]*Trade, []byt
 	}
 
 	params := url.Values{}
-	params.Set("symbol", future.getBNSymbol(contract.ContractName))
+	params.Set("symbol", contract.ContractName)
 
 	uri := FUTURE_TRADE_URI + params.Encode()
 	response := make([]struct {
@@ -86,7 +86,7 @@ func (future *Future) PlaceOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	param := url.Values{}
-	param.Set("symbol", future.getBNSymbol(contract.ContractName))
+	param.Set("symbol", contract.ContractName)
 	param.Set("side", side)
 	param.Set("positionSide", positionSide)
 	param.Set("type", "LIMIT")
@@ -160,7 +160,7 @@ func (future *Future) CancelOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	param := url.Values{}
-	param.Set("symbol", future.getBNSymbol(contract.ContractName))
+	param.Set("symbol", contract.ContractName)
 	if order.OrderId != "" {
 		param.Set("orderId", order.OrderId)
 	} else {
@@ -211,7 +211,7 @@ func (future *Future) GetOrders(pair Pair, contractType string) ([]*FutureOrder,
 	}
 
 	var param = url.Values{}
-	param.Set("symbol", future.getBNSymbol(contract.ContractName))
+	param.Set("symbol", contract.ContractName)
 
 	if err := future.buildParamsSigned(&param); err != nil {
 		return nil, nil, err
@@ -287,7 +287,7 @@ func (future *Future) GetOrder(order *FutureOrder) ([]byte, error) {
 	}
 
 	var params = url.Values{}
-	params.Add("symbol", future.getBNSymbol(contract.ContractName))
+	params.Add("symbol", contract.ContractName)
 
 	if order.OrderId != "" {
 		params.Set("orderId", order.OrderId)

@@ -104,4 +104,16 @@ func TestFuture_MarketAPI(t *testing.T) {
 		t.Log(contract)
 	}
 
+	if candles, _, err := bn.Future.GetCandles(
+		1735286400000, "btc_usd",
+		KLINE_PERIOD_1MIN, 300, 0,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		for _, candle := range candles {
+			t.Log(candle)
+		}
+	}
+
 }

@@ -12,6 +12,27 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
+var __CONTRACT_STATUS_TRANS = map[string]string{
+	"PENDING_TRADING": CONTRACT_STATUS_PREPARE,
+	"TRADING":         CONTRACT_STATUS_LIVE,
+	"PRE_DELIVERING":  CONTRACT_STATUS_SUSPEND,
+	"DELIVERING":      CONTRACT_STATUS_SUSPEND,
+	"DELIVERED":       CONTRACT_STATUS_CLOSE,
+	"PRE_SETTLE":      CONTRACT_STATUS_CLOSE,
+	"SETTLING":        CONTRACT_STATUS_CLOSE,
+	"SETTLED":         CONTRACT_STATUS_CLOSE,
+}
+
+var __CONTRACT_TYPE_TRANS = map[string]string{
+	"CURRENT_QUARTER": QUARTER_CONTRACT,
+	"NEXT_QUARTER":    NEXT_QUARTER_CONTRACT,
+}
+
+var __CONTRACT_TYPE_REVERSE = map[string]string{
+	QUARTER_CONTRACT:      "CURRENT_QUARTER",
+	NEXT_QUARTER_CONTRACT: "NEXT_QUARTER",
+}
+
 // get the future contract info.
 func (future *Future) getFutureContract(pair Pair, contractType string) (*FutureContract, error) {
 	future.Locker.Lock()
@@ -32,12 +53,40 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 		currencies[1],
 		contractType,
 	)
-
 	var cf, exist = future.Contracts.ContractTypeKV[contractTypeItem]
 	if !exist {
-		return nil, errors.New("Can not find the contract by contract_type. ")
+		return nil, errors.New(fmt.Sprintf("Can not find the contract by contract_type %s. ", contractType))
 	}
 	return cf, nil
+}
+
+func (future *Future) getContractByDueTimestamp(symbol string, dueTimestamp int64) (*FutureContract, error) {
+	future.Locker.Lock()
+	defer future.Locker.Unlock()
+
+	var now = time.Now().In(future.config.Location)
+	if now.After(future.nextUpdateContractTime) {
+		_, err := future.updateFutureContracts()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var currencies = strings.Split(symbol, "_")
+	var dueTimestampItem = fmt.Sprintf(
+		"%s,%s,%d",
+		currencies[0],
+		currencies[1],
+		dueTimestamp,
+	)
+
+	var contract, exist = future.Contracts.DueTimestampKV[dueTimestampItem]
+	if !exist {
+		return nil, errors.New(fmt.Sprintf(
+			"Can not find the contract by dueTimestamp %d. ", dueTimestamp,
+		))
+	}
+	return contract, nil
 }
 
 // update the future contracts info.
@@ -181,25 +230,47 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		return resp, err
 	}
 
-	var isFreshNext10min = false
-	// todo 统一contract status
-	for _, c := range contracts {
-		if c.Status != "TRADING" {
-			isFreshNext10min = true
-		}
-	}
-	// 如果有一个合约的状态不是TRADING，那么十分钟后再更新，此外每个整点更新一次
-	var nextUpdateTime time.Time
-	if isFreshNext10min {
-		nextUpdateTime = now.Add(10 * time.Minute)
-	} else {
-		nextUpdateTime = time.Date(
-			now.Year(), now.Month(), now.Day(), now.Hour(),
-			0, 0, 0, future.config.Location,
-		).Add(time.Hour)
+	var futureContracts = FutureContracts{
+		ContractTypeKV: make(map[string]*FutureContract, 0),
+		ContractNameKV: make(map[string]*FutureContract, 0),
+		DueTimestampKV: make(map[string]*FutureContract, 0),
 	}
 
-	future.FutureContracts = contracts
+	// setting next hour update contract.
+	var nextUpdateTime = time.Date(
+		now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, future.config.Location,
+	).Add(time.Hour)
+	for _, contract := range contracts {
+		// 如果有一个合约的状态不是live，那么十分钟后再更新，此外每个整点更新一次
+		if contract.Status != CONTRACT_STATUS_LIVE {
+			nextUpdateTime = now.Add(10 * time.Minute)
+		}
+
+		var currencies = strings.Split(contract.Symbol, "_")
+		var contractTypeItem = fmt.Sprintf(
+			"%s,%s,%s",
+			currencies[0],
+			currencies[1],
+			contract.ContractType,
+		)
+		var contractNameItem = fmt.Sprintf(
+			"%s,%s,%s",
+			currencies[0],
+			currencies[1],
+			contract.ContractName,
+		)
+		var dueTimestampItem = fmt.Sprintf(
+			"%s,%s,%d",
+			currencies[0],
+			currencies[1],
+			contract.DueTimestamp,
+		)
+		futureContracts.ContractTypeKV[contractTypeItem] = contract
+		futureContracts.ContractNameKV[contractNameItem] = contract
+		futureContracts.DueTimestampKV[dueTimestampItem] = contract
+	}
+
+	future.Contracts = futureContracts
 	future.nextUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
@@ -307,16 +378,22 @@ func (future *Future) getCMContracts() ([]*FutureContract, []byte, error) {
 			Counter: NewCurrency(item.QuoteAsset, ""),
 		}
 
+		var contractStatus = __CONTRACT_STATUS_TRANS[item.ContractStatus]
+		var contractType = __CONTRACT_TYPE_TRANS[item.ContractType]
+		if contractStatus == "" || contractType == "" {
+			continue
+		}
+
 		var contract = &FutureContract{
 			Pair:         pair,
 			Symbol:       pair.ToSymbol("_", false),
 			Exchange:     BINANCE,
-			ContractType: item.ContractType,
+			ContractType: contractType,
 			ContractName: item.Symbol,
 			Type:         FUTURE_TYPE_INVERSER, // "inverse", "linear
 
 			SettleMode:    SETTLE_MODE_BASIS,
-			Status:        item.ContractStatus,
+			Status:        contractStatus,
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
 			OpenDate:      openTime.Format(GO_BIRTHDAY),
 			ListTimestamp: listTime.UnixNano() / int64(time.Millisecond),
@@ -406,16 +483,26 @@ func (future *Future) getUMContracts() ([]*FutureContract, []byte, error) {
 			Counter: NewCurrency(item.QuoteAsset, ""),
 		}
 
+		var contractStatus, exist = __CONTRACT_STATUS_TRANS[item.Status]
+		if !exist {
+			contractStatus = CONTRACT_STATUS_SUSPEND
+		}
+
+		var contractType = __CONTRACT_TYPE_TRANS[item.ContractType]
+		if contractType == "" {
+			continue
+		}
+
 		var contract = &FutureContract{
 			Pair:         pair,
 			Symbol:       pair.ToSymbol("_", false),
 			Exchange:     BINANCE,
-			ContractType: item.ContractType,
+			ContractType: contractType,
 			ContractName: item.Symbol,
 			Type:         FUTURE_TYPE_LINEAR, // "inverse", "linear
 
 			SettleMode: SETTLE_MODE_COUNTER,
-			Status:     item.Status,
+			Status:     contractStatus,
 
 			OpenTimestamp: openTime.UnixNano() / int64(time.Millisecond),
 			OpenDate:      openTime.Format(GO_BIRTHDAY),

@@ -151,11 +151,15 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		ContractNameKV: make(map[string]*FutureContract, 0),
 		DueTimestampKV: make(map[string]*FutureContract, 0),
 	}
-	var isFreshNext10min = false
+
+	var nextUpdateTime = time.Date(
+		now.Year(), now.Month(), now.Day(), now.Hour(),
+		0, 0, 0, future.config.Location,
+	).Add(time.Hour)
 	for _, contract := range contracts {
 		// need update at next 10 minutes
-		if contract.Status != CONTRACT_STATUS_LIVE && !isFreshNext10min {
-			isFreshNext10min = true
+		if contract.Status != CONTRACT_STATUS_LIVE {
+			nextUpdateTime = now.Add(10 * time.Minute)
 		}
 
 		var currencies = strings.Split(contract.Symbol, "_")
@@ -183,16 +187,7 @@ func (future *Future) updateFutureContracts() ([]byte, error) {
 		futureContracts.DueTimestampKV[dueTimestampItem] = contract
 	}
 	future.Contracts = futureContracts
-
-	if isFreshNext10min {
-		future.nextUpdateContractTime = now.Add(10 * time.Minute)
-	} else {
-		var nextHour = time.Date(
-			now.Year(), now.Month(), now.Day(), now.Hour(),
-			0, 0, 0, future.config.Location,
-		).Add(time.Hour)
-		future.nextUpdateContractTime = nextHour
-	}
+	future.nextUpdateContractTime = nextUpdateTime
 	return resp, nil
 }
 
