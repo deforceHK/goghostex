@@ -4,6 +4,8 @@ import (
 	"errors"
 )
 
+const CONTRACT_STATUS_LIVE = "live"
+
 /**
  *
  * models about account

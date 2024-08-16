@@ -458,7 +458,7 @@ func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, 
 }
 
 func (future *Future) KeepAlive() {
-	nowTimestamp := time.Now().Unix() * 1000
+	var nowTimestamp = time.Now().Unix() * 1000
 	// last in 5s, no need to keep alive.
 	if (nowTimestamp - future.config.LastTimestamp) < 5*1000 {
 		return
