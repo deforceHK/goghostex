@@ -11,8 +11,6 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
-const CONTRACT_STATUS_LIVE = "live"
-
 func (future *Future) GetContracts() ([]*FutureContract, []byte, error) {
 	var contracts = make([]*FutureContract, 0)
 	var response struct {
