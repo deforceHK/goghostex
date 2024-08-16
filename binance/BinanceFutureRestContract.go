@@ -380,7 +380,7 @@ func (future *Future) getCMContracts() ([]*FutureContract, []byte, error) {
 
 		var contractStatus = __CONTRACT_STATUS_TRANS[item.ContractStatus]
 		var contractType = __CONTRACT_TYPE_TRANS[item.ContractType]
-		if contractStatus == "" && contractType == "" {
+		if contractStatus == "" || contractType == "" {
 			continue
 		}
 
