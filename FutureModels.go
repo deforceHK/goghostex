@@ -4,7 +4,12 @@ import (
 	"errors"
 )
 
-const CONTRACT_STATUS_LIVE = "live"
+const (
+	CONTRACT_STATUS_PREPARE = "preopen"
+	CONTRACT_STATUS_LIVE    = "live"
+	CONTRACT_STATUS_SUSPEND = "suspend"
+	CONTRACT_STATUS_CLOSE   = "close"
+)
 
 /**
  *
