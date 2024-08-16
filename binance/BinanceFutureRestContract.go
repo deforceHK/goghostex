@@ -53,8 +53,6 @@ func (future *Future) getFutureContract(pair Pair, contractType string) (*Future
 		currencies[1],
 		contractType,
 	)
-	//fmt.Println(contractTypeItem,"~~~~~~~~~")
-	//fmt.Println(future.Contracts.ContractTypeKV)
 	var cf, exist = future.Contracts.ContractTypeKV[contractTypeItem]
 	if !exist {
 		return nil, errors.New(fmt.Sprintf("Can not find the contract by contract_type %s. ", contractType))
@@ -380,12 +378,9 @@ func (future *Future) getCMContracts() ([]*FutureContract, []byte, error) {
 			Counter: NewCurrency(item.QuoteAsset, ""),
 		}
 
-		var contractStatus, exist = __CONTRACT_STATUS_TRANS[item.ContractStatus]
-		if !exist {
-			contractStatus = CONTRACT_STATUS_SUSPEND
-		}
+		var contractStatus = __CONTRACT_STATUS_TRANS[item.ContractStatus]
 		var contractType = __CONTRACT_TYPE_TRANS[item.ContractType]
-		if contractType == "" {
+		if contractStatus == "" && contractType == "" {
 			continue
 		}
 
