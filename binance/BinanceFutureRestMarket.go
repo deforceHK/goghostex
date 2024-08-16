@@ -43,8 +43,7 @@ type Future struct {
 	Contracts              FutureContracts
 	nextUpdateContractTime time.Time
 
-	FutureContracts []*FutureContract
-	LastTimestamp   int64
+	LastTimestamp int64
 }
 
 func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, []byte, error) {
@@ -57,7 +56,7 @@ func (future *Future) GetTicker(pair Pair, contractType string) (*FutureTicker, 
 		return nil, nil, errContract
 	}
 	var params = url.Values{}
-	params.Add("symbol", future.getBNSymbol(contract.ContractName))
+	params.Add("symbol", contract.ContractName)
 
 	var response = make([]struct {
 		Symbol     string  `json:"symbol"`
@@ -112,7 +111,7 @@ func (future *Future) GetDepth(pair Pair, contractType string, size int) (*Futur
 	}
 
 	var params = url.Values{}
-	params.Add("symbol", future.getBNSymbol(contract.ContractName))
+	params.Add("symbol", contract.ContractName)
 	params.Add("limit", fmt.Sprintf("%d", size))
 
 	response := struct {
@@ -166,7 +165,7 @@ func (future *Future) GetLimit(pair Pair, contractType string) (float64, float64
 		return 0, 0, err
 	}
 
-	var bnSymbol = future.getBNSymbol(contract.ContractName)
+	var bnSymbol = contract.ContractName
 	var response = make([]struct {
 		Symbol string  `json:"symbol"`
 		Price  float64 `json:"markPrice,string"` //  mark price
@@ -203,7 +202,7 @@ func (future *Future) GetMark(pair Pair, contractType string) (float64, []byte, 
 		return 0, nil, errContract
 	}
 
-	var bnSymbol = future.getBNSymbol(contract.ContractName)
+	var bnSymbol = contract.ContractName
 	var response = make([]struct {
 		Symbol string  `json:"symbol"`
 		Price  float64 `json:"markPrice,string"` //  mark price
@@ -301,22 +300,10 @@ func (future *Future) GetCandles(
 	size int,
 	since int64,
 ) ([]*FutureCandle, []byte, error) {
-	if resp, err := future.updateFutureContracts(); err != nil {
-		return nil, resp, err
-	}
-	if future.FutureContracts == nil {
-		return nil, nil, errors.New("future contracts have not update. ")
-	}
 
-	var contract *FutureContract = nil
-	for _, c := range future.FutureContracts {
-		if c.Symbol == symbol && c.DueTimestamp == dueTimestamp {
-			contract = c
-			break
-		}
-	}
-	if contract == nil {
-		return nil, nil, errors.New("the contract not found. ")
+	var contract, err = future.getContractByDueTimestamp(symbol, dueTimestamp)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if contract.Type == FUTURE_TYPE_LINEAR {
@@ -324,6 +311,132 @@ func (future *Future) GetCandles(
 	} else {
 		return future.getCMCandles(contract, period, size, since)
 	}
+}
+
+func (future *Future) getCMCandles(
+	contract *FutureContract,
+	period, size int, since int64,
+) ([]*FutureCandle, []byte, error) {
+
+	var endTimestamp = since + int64(size*_INERNAL_KLINE_SECOND_CONVERTER[period])
+	if endTimestamp > since+200*24*60*60*1000 {
+		endTimestamp = since + 200*24*60*60*1000
+	}
+	if endTimestamp > time.Now().Unix()*1000 {
+		endTimestamp = time.Now().Unix() * 1000
+	}
+
+	var pairBN = strings.ToUpper(strings.Replace(contract.Symbol, "_", "", -1))
+	params := url.Values{}
+	params.Set("pair", pairBN)
+	params.Set("contractType", __CONTRACT_TYPE_REVERSE[contract.ContractType])
+	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
+	params.Set("startTime", fmt.Sprintf("%d", since))
+	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
+	params.Set("limit", fmt.Sprintf("%d", size))
+
+	var uri = FUTURE_CM_CANDLE_URI + params.Encode()
+	var results = make([][]interface{}, 0)
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		FUTURE_CM_ENDPOINT,
+		uri,
+		"",
+		&results,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	var candles = make([]*FutureCandle, 0)
+	for _, r := range results {
+		var timestamp = ToInt64(r[0])
+		var date = time.Unix(timestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+		var dueTimestamp = contract.DueTimestamp
+		var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+
+		var c = &FutureCandle{
+			Symbol:       contract.Symbol,
+			Exchange:     BINANCE,
+			Timestamp:    timestamp,
+			Date:         date,
+			Open:         ToFloat64(r[1]),
+			High:         ToFloat64(r[2]),
+			Low:          ToFloat64(r[3]),
+			Close:        ToFloat64(r[4]),
+			Vol:          ToFloat64(r[7]),
+			Vol2:         ToFloat64(r[5]),
+			Type:         contract.Type,
+			DueTimestamp: dueTimestamp,
+			DueDate:      dueDate,
+		}
+
+		candles = append(candles, c)
+	}
+	return GetAscFutureCandle(candles), resp, nil
+}
+
+func (future *Future) getUMCandles(
+	contract *FutureContract,
+	period, size int, since int64,
+) ([]*FutureCandle, []byte, error) {
+
+	var endTimestamp = since + int64(size*_INERNAL_KLINE_SECOND_CONVERTER[period])
+	if endTimestamp > since+200*24*60*60*1000 {
+		endTimestamp = since + 200*24*60*60*1000
+	}
+	if endTimestamp > time.Now().Unix()*1000 {
+		endTimestamp = time.Now().Unix() * 1000
+	}
+
+	var pairBN = strings.ToUpper(strings.Replace(contract.Symbol, "_", "", -1))
+	params := url.Values{}
+	params.Set("pair", pairBN)
+	params.Set("contractType", __CONTRACT_TYPE_REVERSE[contract.ContractType])
+	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
+	params.Set("startTime", fmt.Sprintf("%d", since))
+	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
+	params.Set("limit", fmt.Sprintf("%d", size))
+
+	var uri = FUTURE_UM_CANDLE_URI + params.Encode()
+	var results = make([][]interface{}, 0)
+	resp, err := future.DoRequest(
+		http.MethodGet,
+		FUTURE_UM_ENDPOINT,
+		uri,
+		"",
+		&results,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	var candles = make([]*FutureCandle, 0)
+	for _, r := range results {
+		var timestamp = ToInt64(r[0])
+		var date = time.Unix(timestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+		var dueTimestamp = contract.DueTimestamp
+		var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
+
+		var c = &FutureCandle{
+			Symbol:       contract.Symbol,
+			Exchange:     BINANCE,
+			Timestamp:    timestamp,
+			Date:         date,
+			Open:         ToFloat64(r[1]),
+			High:         ToFloat64(r[2]),
+			Low:          ToFloat64(r[3]),
+			Close:        ToFloat64(r[4]),
+			Vol:          ToFloat64(r[5]),
+			Vol2:         ToFloat64(r[7]),
+			Type:         contract.Type,
+			DueTimestamp: dueTimestamp,
+			DueDate:      dueDate,
+		}
+
+		candles = append(candles, c)
+	}
+	return GetAscFutureCandle(candles), resp, nil
 }
 
 func (future *Future) KeepAlive() {
@@ -372,11 +485,11 @@ func (future *Future) getFutureType(side, sidePosition string) FutureType {
 
 }
 
-// return the binance style symbol
-func (future *Future) getBNSymbol(contractName string) string {
-	var infos = strings.Split(contractName, "-")
-	return infos[0] + infos[1] + "_" + infos[2]
-}
+//// return the binance style symbol
+//func (future *Future) getBNSymbol(contractName string) string {
+//	var infos = strings.Split(contractName, "-")
+//	return infos[0] + infos[1] + "_" + infos[2]
+//}
 
 func (future *Future) transferSubject(income float64, remoteSubject string) string {
 	if remoteSubject == "TRANSFER" {
@@ -392,130 +505,4 @@ func (future *Future) transferSubject(income float64, remoteSubject string) stri
 		return strings.ToLower(remoteSubject)
 	}
 
-}
-
-func (future *Future) getCMCandles(
-	contract *FutureContract,
-	period, size int, since int64,
-) ([]*FutureCandle, []byte, error) {
-
-	var endTimestamp = since + int64(size*_INERNAL_KLINE_SECOND_CONVERTER[period])
-	if endTimestamp > since+200*24*60*60*1000 {
-		endTimestamp = since + 200*24*60*60*1000
-	}
-	if endTimestamp > time.Now().Unix()*1000 {
-		endTimestamp = time.Now().Unix() * 1000
-	}
-
-	var pairBN = strings.ToUpper(strings.Replace(contract.Symbol, "_", "", -1))
-	params := url.Values{}
-	params.Set("pair", pairBN)
-	params.Set("contractType", contract.ContractType)
-	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", fmt.Sprintf("%d", since))
-	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
-	params.Set("limit", fmt.Sprintf("%d", size))
-
-	var uri = FUTURE_CM_CANDLE_URI + params.Encode()
-	var results = make([][]interface{}, 0)
-	resp, err := future.DoRequest(
-		http.MethodGet,
-		FUTURE_CM_ENDPOINT,
-		uri,
-		"",
-		&results,
-	)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	var candles []*FutureCandle = make([]*FutureCandle, 0)
-	for _, r := range results {
-		var timestamp = ToInt64(r[0])
-		var date = time.Unix(timestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
-		var dueTimestamp = contract.DueTimestamp
-		var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
-
-		var c = &FutureCandle{
-			Symbol:       contract.Symbol,
-			Exchange:     BINANCE,
-			Timestamp:    timestamp,
-			Date:         date,
-			Open:         ToFloat64(r[1]),
-			High:         ToFloat64(r[2]),
-			Low:          ToFloat64(r[3]),
-			Close:        ToFloat64(r[4]),
-			Vol:          ToFloat64(r[7]),
-			Vol2:         ToFloat64(r[5]),
-			Type:         contract.Type,
-			DueTimestamp: dueTimestamp,
-			DueDate:      dueDate,
-		}
-
-		candles = append(candles, c)
-	}
-	return GetAscFutureCandle(candles), resp, nil
-}
-
-func (future *Future) getUMCandles(
-	contract *FutureContract,
-	period, size int, since int64,
-) ([]*FutureCandle, []byte, error) {
-
-	var endTimestamp = since + int64(size*_INERNAL_KLINE_SECOND_CONVERTER[period])
-	if endTimestamp > since+200*24*60*60*1000 {
-		endTimestamp = since + 200*24*60*60*1000
-	}
-	if endTimestamp > time.Now().Unix()*1000 {
-		endTimestamp = time.Now().Unix() * 1000
-	}
-
-	var pairBN = strings.ToUpper(strings.Replace(contract.Symbol, "_", "", -1))
-	params := url.Values{}
-	params.Set("pair", pairBN)
-	params.Set("contractType", contract.ContractType)
-	params.Set("interval", _INERNAL_KLINE_PERIOD_CONVERTER[period])
-	params.Set("startTime", fmt.Sprintf("%d", since))
-	params.Set("endTime", fmt.Sprintf("%d", endTimestamp))
-	params.Set("limit", fmt.Sprintf("%d", size))
-
-	var uri = FUTURE_UM_CANDLE_URI + params.Encode()
-	var results = make([][]interface{}, 0)
-	resp, err := future.DoRequest(
-		http.MethodGet,
-		FUTURE_UM_ENDPOINT,
-		uri,
-		"",
-		&results,
-	)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	var candles = make([]*FutureCandle, 0)
-	for _, r := range results {
-		var timestamp = ToInt64(r[0])
-		var date = time.Unix(timestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
-		var dueTimestamp = contract.DueTimestamp
-		var dueDate = time.Unix(dueTimestamp/1000, 0).In(future.config.Location).Format(GO_BIRTHDAY)
-
-		var c = &FutureCandle{
-			Symbol:       contract.Symbol,
-			Exchange:     BINANCE,
-			Timestamp:    timestamp,
-			Date:         date,
-			Open:         ToFloat64(r[1]),
-			High:         ToFloat64(r[2]),
-			Low:          ToFloat64(r[3]),
-			Close:        ToFloat64(r[4]),
-			Vol:          ToFloat64(r[5]),
-			Vol2:         ToFloat64(r[7]),
-			Type:         contract.Type,
-			DueTimestamp: dueTimestamp,
-			DueDate:      dueDate,
-		}
-
-		candles = append(candles, c)
-	}
-	return GetAscFutureCandle(candles), resp, nil
 }
