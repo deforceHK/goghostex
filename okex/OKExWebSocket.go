@@ -77,6 +77,10 @@ func (this *WSTradeOKEx) Start() {
 	)
 	if err != nil {
 		this.ErrorHandler(err)
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+		}
 		time.Sleep(60 * time.Second)
 		this.Start()
 		return
@@ -103,6 +107,10 @@ func (this *WSTradeOKEx) Start() {
 	err = this.conn.WriteJSON(login)
 	if err != nil {
 		this.ErrorHandler(err)
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+		}
 		time.Sleep(60 * time.Second)
 		this.Start()
 		return
@@ -111,12 +119,20 @@ func (this *WSTradeOKEx) Start() {
 	var messageType, p, readErr = this.conn.ReadMessage()
 	if readErr != nil {
 		this.ErrorHandler(readErr)
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+		}
 		time.Sleep(60 * time.Second)
 		this.Start()
 		return
 	}
 	if messageType != websocket.TextMessage {
 		this.ErrorHandler(fmt.Errorf("message type error"))
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+		}
 		time.Sleep(60 * time.Second)
 		this.Start()
 		return
@@ -215,10 +231,8 @@ func (this *WSTradeOKEx) Stop() {
 	}
 
 	if this.conn != nil {
-		var err = this.conn.Close()
-		if err != nil {
-			this.ErrorHandler(err)
-		}
+		_ = this.conn.Close()
+		this.conn = nil
 	}
 
 }
@@ -268,6 +282,10 @@ func (this *WSMarketOKEx) Start() {
 	)
 	if err != nil {
 		this.ErrorHandler(err)
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+		}
 		time.Sleep(60 * time.Second)
 		this.Start()
 		return
