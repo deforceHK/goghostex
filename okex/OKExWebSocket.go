@@ -37,6 +37,8 @@ type WSTradeOKEx struct {
 
 	conn       *websocket.Conn
 	connId     string
+	restartSec int
+
 	subscribed []interface{}
 
 	lastPingTS    int64
@@ -71,6 +73,9 @@ func (this *WSTradeOKEx) Start() {
 			log.Println(err)
 		}
 	}
+	if this.restartSec == 0 {
+		this.restartSec = 60
+	}
 
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		"wss://ws.okx.com:8443/ws/v5/private",
@@ -80,11 +85,14 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(err)
 		if this.conn != nil {
 			_ = this.conn.Close()
-			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
+			log.Printf(
+				"websocket conn %s will be restart in next %d seconds...",
+				this.connId, this.restartSec,
+			)
 			this.conn = nil
 			this.connId = ""
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		this.Start()
 		return
 	}
@@ -112,11 +120,14 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(err)
 		if this.conn != nil {
 			_ = this.conn.Close()
-			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
+			log.Printf(
+				"websocket conn %s will be restart in next %d seconds...",
+				this.connId, this.restartSec,
+			)
 			this.conn = nil
 			this.connId = ""
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		this.Start()
 		return
 	}
@@ -126,11 +137,14 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(readErr)
 		if this.conn != nil {
 			_ = this.conn.Close()
-			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
+			log.Printf(
+				"websocket conn %s will be restart in next %d seconds...",
+				this.connId, this.restartSec,
+			)
 			this.conn = nil
 			this.connId = ""
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		this.Start()
 		return
 	}
@@ -138,11 +152,14 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(fmt.Errorf("message type error"))
 		if this.conn != nil {
 			_ = this.conn.Close()
-			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
+			log.Printf(
+				"websocket conn %s will be restart in next %d seconds...",
+				this.connId, this.restartSec,
+			)
 			this.conn = nil
 			this.connId = ""
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		this.Start()
 		return
 	}
@@ -287,6 +304,10 @@ func (this *WSMarketOKEx) Start() {
 		}
 	}
 
+	if this.restartSec == 0 {
+		this.restartSec = 5
+	}
+
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		"wss://ws.okx.com:8443/ws/v5/public",
 		nil,
@@ -297,7 +318,7 @@ func (this *WSMarketOKEx) Start() {
 			_ = this.conn.Close()
 			this.conn = nil
 		}
-		time.Sleep(60 * time.Second)
+		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		this.Start()
 		return
 	}
