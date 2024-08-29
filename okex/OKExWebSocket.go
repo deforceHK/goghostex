@@ -36,6 +36,7 @@ type WSTradeOKEx struct {
 	Config       *APIConfig
 
 	conn       *websocket.Conn
+	connId     string
 	subscribed []interface{}
 
 	lastPingTS    int64
@@ -79,7 +80,9 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(err)
 		if this.conn != nil {
 			_ = this.conn.Close()
+			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
 			this.conn = nil
+			this.connId = ""
 		}
 		time.Sleep(60 * time.Second)
 		this.Start()
@@ -109,7 +112,9 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(err)
 		if this.conn != nil {
 			_ = this.conn.Close()
+			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
 			this.conn = nil
+			this.connId = ""
 		}
 		time.Sleep(60 * time.Second)
 		this.Start()
@@ -121,7 +126,9 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(readErr)
 		if this.conn != nil {
 			_ = this.conn.Close()
+			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
 			this.conn = nil
+			this.connId = ""
 		}
 		time.Sleep(60 * time.Second)
 		this.Start()
@@ -131,7 +138,9 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(fmt.Errorf("message type error"))
 		if this.conn != nil {
 			_ = this.conn.Close()
+			log.Printf("websocket conn %s will be restart in next 60 seconds...", this.connId)
 			this.conn = nil
+			this.connId = ""
 		}
 		time.Sleep(60 * time.Second)
 		this.Start()
@@ -139,9 +148,10 @@ func (this *WSTradeOKEx) Start() {
 	}
 
 	var result = struct {
-		Event string `json:"event"`
-		Code  string `json:"code"`
-		Msg   string `json:"msg"`
+		Event  string `json:"event"`
+		Code   string `json:"code"`
+		Msg    string `json:"msg"`
+		ConnId string `json:"connId"`
 	}{}
 
 	var jsonErr = json.Unmarshal(p, &result)
@@ -153,6 +163,7 @@ func (this *WSTradeOKEx) Start() {
 		this.ErrorHandler(fmt.Errorf("login error: %s", result.Msg))
 		return
 	}
+	this.connId = result.ConnId
 
 	go this.pingRoutine()
 	go this.recvRoutine()
@@ -162,7 +173,7 @@ func (this *WSTradeOKEx) Start() {
 func (this *WSTradeOKEx) pingRoutine() {
 	var stopPingChn = make(chan bool, 1)
 	this.stopPingSign = stopPingChn
-	var ticker = time.NewTicker(15 * time.Second)
+	var ticker = time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 
 	for {
