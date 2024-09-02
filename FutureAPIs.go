@@ -30,7 +30,7 @@ type FutureWebsocketAPI interface {
 
 	Unsubscribe(v interface{})
 
-	Start()
+	Start() error
 
 	Stop()
 
