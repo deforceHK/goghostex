@@ -82,6 +82,7 @@ func (this *WSTradeOKEx) Start() error {
 
 	var conn, err = this.noLoginConn("wss://ws.okx.com:8443/ws/v5/private")
 	if err != nil {
+		this.ErrorHandler(err)
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
@@ -206,16 +207,16 @@ func (this *WSTradeOKEx) pingRoutine() {
 func (this *WSTradeOKEx) recvRoutine() {
 	var stopRecvChn = make(chan bool, 1)
 	this.stopRecvSign = stopRecvChn
-	var ticker = time.NewTicker(5 * time.Minute)
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
 	defer ticker.Stop()
 	var conn = this.conn
 
 	for {
 		select {
 		case <-ticker.C:
-			// 超过x秒没有收到消息，重新连接
+			// 超过x秒没有收到消息，重新连接，如果超出重连次数，ws将停止。
 			if time.Now().Unix()-this.lastPingTS > DEFAULT_WEBSOCKET_PENDING_SEC {
-				this.ErrorHandler(fmt.Errorf("ping timeout"))
+				this.ErrorHandler(fmt.Errorf("ping timeout, last ping ts: %d", this.lastPingTS))
 				this.Restart()
 				continue
 			}
@@ -226,7 +227,6 @@ func (this *WSTradeOKEx) recvRoutine() {
 			var msgType, msg, readErr = conn.ReadMessage()
 			if readErr != nil {
 				this.ErrorHandler(readErr)
-				this.ErrorHandler(fmt.Errorf("read err websocket will be restart"))
 				this.Restart()
 				continue
 			}
@@ -262,10 +262,17 @@ func (this *WSTradeOKEx) Stop() {
 }
 
 func (this *WSTradeOKEx) Restart() {
+	this.ErrorHandler(
+		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSec)},
+	)
 	this.restartTS[time.Now().Unix()] = this.connId
 	this.Stop()
+
 	time.Sleep(time.Duration(this.restartSec) * time.Second)
-	_ = this.Start()
+	if err := this.Start(); err != nil {
+		this.ErrorHandler(err)
+		return
+	}
 
 	var conn = this.conn
 	// subscribe unsubscribe the channel
@@ -317,7 +324,13 @@ func (this *WSTradeOKEx) startCheck() error {
 		}
 	}
 	if restartNum > this.restartLimitNum {
-		return fmt.Errorf("restart limit")
+		var wsErr = &WSStopError{
+			Msg: fmt.Sprintf(
+				"The ws restarted %d times in %d seconds, stop the ws",
+				restartNum, this.restartLimitSec,
+			),
+		}
+		return wsErr
 	}
 	return nil
 }
@@ -329,14 +342,9 @@ func (this *WSTradeOKEx) noLoginConn(wss string) (*websocket.Conn, error) {
 		nil,
 	)
 	if err != nil {
-		this.ErrorHandler(err)
 		this.restartTS[time.Now().Unix()] = this.connId
 		if this.conn != nil {
 			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSec,
-			)
 			this.conn = nil
 			this.connId = ""
 		}
