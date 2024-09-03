@@ -1,9 +1,10 @@
-package okex
+package binance
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,26 +20,7 @@ const (
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_SEC = 300
 )
 
-type WSArgOKEx struct {
-	Channel  string `json:"channel"`
-	InstId   string `json:"instId,omitempty"`
-	InstType string `json:"instType,omitempty"`
-}
-
-type WSOpOKEx struct {
-	Op   string              `json:"op"`
-	Args []map[string]string `json:"args"`
-}
-
-type WSResOKEx struct {
-	Event string          `json:"event"`
-	Arg   *WSArgOKEx      `json:"arg,omitempty"`
-	Code  string          `json:"code,omitempty"`
-	Msg   string          `json:"msg,omitempty"`
-	Data  json.RawMessage `json:"data,omitempty"`
-}
-
-type WSTradeOKEx struct {
+type WSTradeUMBN struct {
 	RecvHandler  func(string)
 	ErrorHandler func(error)
 	Config       *APIConfig
@@ -54,58 +36,60 @@ type WSTradeOKEx struct {
 
 	subscribed []interface{}
 
+	listenKey  string
 	lastPingTS int64
 
 	stopPingSign chan bool
 	stopRecvSign chan bool
 }
 
-func (this *WSTradeOKEx) Subscribe(v interface{}) {
+type WSMethodBN struct {
+	Id     string   `json:"id"`
+	Param  []string `json:"params"`
+	Method string   `json:"method"`
+}
+
+func (this *WSTradeUMBN) Subscribe(v interface{}) {
+	if item, ok := v.(string); ok {
+		fmt.Println("sdfsf")
+		this.subscribed = append(this.subscribed, item)
+		var req = WSMethodBN{
+			this.connId,
+			[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
+			"REQUEST",
+		}
+		if err := this.conn.WriteJSON(req); err != nil {
+			this.ErrorHandler(err)
+		}
+	}
+}
+
+func (this *WSTradeUMBN) Unsubscribe(v interface{}) {
 	this.subscribed = append(this.subscribed, v)
 	if err := this.conn.WriteJSON(v); err != nil {
 		this.ErrorHandler(err)
 	}
 }
 
-func (this *WSTradeOKEx) Unsubscribe(v interface{}) {
-	this.subscribed = append(this.subscribed, v)
-	if err := this.conn.WriteJSON(v); err != nil {
-		this.ErrorHandler(err)
-	}
-}
-
-func (this *WSTradeOKEx) Start() error {
+func (this *WSTradeUMBN) Start() error {
 	// it will stop the ws if the restart limit is reached
 	if err := this.startCheck(); err != nil {
 		return err
 	}
 
-	var conn, err = this.noLoginConn("wss://ws.okx.com:8443/ws/v5/private")
+	var conn, err = this.loginConn()
 	if err != nil {
 		this.ErrorHandler(err)
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		return err
 	}
 	this.conn = conn
 
-	var ts = fmt.Sprintf("%d", time.Now().Unix())
-	var sign, _ = GetParamHmacSHA256Base64Sign(
-		this.Config.ApiSecretKey,
-		fmt.Sprintf("%sGET/users/self/verify", ts),
-	)
-	var login = WSOpOKEx{
-		Op: "login",
-		Args: []map[string]string{
-			{
-				"apiKey":     this.Config.ApiKey,
-				"passphrase": this.Config.ApiPassphrase,
-				"timestamp":  ts,
-				"sign":       sign,
-			},
-		},
+	var req = WSMethodBN{
+		this.connId, []string{"userDataStream.start"}, "REQUEST",
 	}
-
-	err = conn.WriteJSON(login)
+	//json.Marshal(req)
+	err = conn.WriteJSON(req)
 	if err != nil {
 		this.ErrorHandler(err)
 		this.restartTS[time.Now().Unix()] = this.connId
@@ -138,42 +122,15 @@ func (this *WSTradeOKEx) Start() error {
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
-	//if messageType != websocket.TextMessage {
-	//	this.ErrorHandler(fmt.Errorf("message type error"))
-	//	this.restartTS[time.Now().Unix()] = this.connId
-	//	if this.conn != nil {
-	//		_ = this.conn.Close()
-	//		log.Printf(
-	//			"websocket conn %s will be restart in next %d seconds...",
-	//			this.connId, this.restartSec,
-	//		)
-	//		var nowTS = time.Now().Unix()
-	//		this.restartTS[nowTS] = this.connId
-	//		this.conn = nil
-	//		this.connId = ""
-	//	}
-	//	time.Sleep(time.Duration(this.restartSec) * time.Second)
-	//	return this.Start()
-	//}
 
 	var result = struct {
-		Event  string `json:"event"`
-		Code   string `json:"code"`
-		Msg    string `json:"msg"`
-		ConnId string `json:"connId"`
+		Id string `json:"id"`
 	}{}
 
 	var jsonErr = json.Unmarshal(p, &result)
 	if jsonErr != nil {
 		this.ErrorHandler(jsonErr)
 		return jsonErr
-	}
-	if result.Code != "0" {
-		this.ErrorHandler(fmt.Errorf("login error: %s", result.Msg))
-		return fmt.Errorf("login error: %s", result.Msg)
-	}
-	if result.ConnId != "" {
-		this.connId = result.ConnId
 	}
 
 	go this.pingRoutine()
@@ -182,7 +139,7 @@ func (this *WSTradeOKEx) Start() error {
 	return nil
 }
 
-func (this *WSTradeOKEx) pingRoutine() {
+func (this *WSTradeUMBN) pingRoutine() {
 	var stopPingChn = make(chan bool, 1)
 	this.stopPingSign = stopPingChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
@@ -202,7 +159,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 	}
 }
 
-func (this *WSTradeOKEx) recvRoutine() {
+func (this *WSTradeUMBN) recvRoutine() {
 	var stopRecvChn = make(chan bool, 1)
 	this.stopRecvSign = stopRecvChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
@@ -230,20 +187,21 @@ func (this *WSTradeOKEx) recvRoutine() {
 			}
 
 			if msgType != websocket.TextMessage {
+				fmt.Println("msgType != websocket.TextMessage")
 				continue
 			}
 
 			this.lastPingTS = time.Now().Unix()
-			var msgStr = string(msg)
-			if msgStr != "pong" {
-				this.RecvHandler(msgStr)
-			}
+			//var msgStr = string(msg)
+			//if msgStr != "pong" {
+			this.RecvHandler(string(msg))
+			//}
 		}
 	}
 
 }
 
-func (this *WSTradeOKEx) Stop() {
+func (this *WSTradeUMBN) Stop() {
 	if this.stopPingSign != nil {
 		this.stopPingSign <- true
 	}
@@ -259,7 +217,7 @@ func (this *WSTradeOKEx) Stop() {
 
 }
 
-func (this *WSTradeOKEx) Restart() {
+func (this *WSTradeUMBN) Restart() {
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSec)},
 	)
@@ -285,7 +243,7 @@ func (this *WSTradeOKEx) Restart() {
 
 }
 
-func (this *WSTradeOKEx) initDefaultValue() {
+func (this *WSTradeUMBN) initDefaultValue() {
 	if this.RecvHandler == nil {
 		this.RecvHandler = func(msg string) {
 			log.Println(msg)
@@ -314,7 +272,7 @@ func (this *WSTradeOKEx) initDefaultValue() {
 
 }
 
-func (this *WSTradeOKEx) startCheck() error {
+func (this *WSTradeUMBN) startCheck() error {
 	var restartNum, limitTS = 0, time.Now().Unix() - int64(this.restartLimitSec)
 	for ts, _ := range this.restartTS {
 		if ts > limitTS {
@@ -333,7 +291,44 @@ func (this *WSTradeOKEx) startCheck() error {
 	return nil
 }
 
-func (this *WSTradeOKEx) noLoginConn(wss string) (*websocket.Conn, error) {
+func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
+	this.initDefaultValue()
+
+	var bn = New(this.Config)
+	var response = struct {
+		ListenKey string `json:"listenKey"`
+	}{}
+	if _, err := bn.Swap.DoRequest(
+		http.MethodPost,
+		"/fapi/v1/listenKey",
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	); err != nil {
+		return nil, err
+	}
+
+	var conn, _, err = websocket.DefaultDialer.Dial(
+		fmt.Sprintf("wss://fstream.binance.com/ws/%s", response.ListenKey),
+		nil,
+	)
+	if err != nil {
+		this.restartTS[time.Now().Unix()] = this.connId
+		if this.conn != nil {
+			_ = this.conn.Close()
+			this.conn = nil
+			this.connId = ""
+		}
+		return nil, err
+	}
+
+	this.connId = UUID()
+	this.listenKey = response.ListenKey
+
+	return conn, nil
+}
+
+func (this *WSTradeUMBN) noLoginConn(wss string) (*websocket.Conn, error) {
 	this.initDefaultValue()
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		wss,
@@ -349,27 +344,4 @@ func (this *WSTradeOKEx) noLoginConn(wss string) (*websocket.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
-}
-
-type WSMarketOKEx struct {
-	*WSTradeOKEx
-}
-
-func (this *WSMarketOKEx) Start() error {
-	// it will stop the ws if the restart limit is reached
-	if err := this.startCheck(); err != nil {
-		return err
-	}
-
-	var conn, err = this.noLoginConn("wss://ws.okx.com:8443/ws/v5/public")
-	if err != nil {
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
-	}
-	this.conn = conn
-
-	go this.pingRoutine()
-	go this.recvRoutine()
-
-	return nil
 }
