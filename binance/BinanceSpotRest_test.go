@@ -13,7 +13,8 @@ import (
 const (
 	API_KEY       = ""
 	API_SECRETKEY = ""
-	PROXY_URL     = "socks5://127.0.0.1:1090"
+	//PROXY_URL     = "socks5://127.0.0.1:1090"
+	PROXY_URL = ""
 )
 
 /**
