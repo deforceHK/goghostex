@@ -2,6 +2,7 @@ package kraken
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	. "github.com/deforceHK/goghostex"
@@ -25,32 +26,27 @@ var _INERNAL_KLINE_PERIOD_CONVERTER = map[int]string{
 }
 
 func New(config *APIConfig) *Kraken {
-	k := &Kraken{config: config}
+	var k = &Kraken{config: config}
 	k.Spot = &Spot{k}
+	k.Swap = &Swap{
+		Kraken:        k,
+		Locker:        new(sync.Mutex),
+		swapContracts: SwapContracts{},
+	}
 	return k
 }
 
 type Kraken struct {
 	config *APIConfig
 	Spot   *Spot
+	Swap   *Swap
 	//Margin *Margin
-	//Swap   *Swap
 	//Future *Future
 }
 
 func (k *Kraken) GetExchangeName() string {
 	return KRAKEN
 }
-
-//func (k *Kraken) buildParamsSigned(postForm *url.Values) error {
-//	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
-//	postForm.Set("timestamp", timestamp)
-//	postForm.Set("recvWindow", "60000")
-//	payload := postForm.Encode()
-//	sign, _ := GetParamHmacSHA256Sign(k.config.ApiSecretKey, payload)
-//	postForm.Set("signature", sign)
-//	return nil
-//}
 
 func (k *Kraken) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	resp, err := NewHttpRequest(
