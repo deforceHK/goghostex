@@ -51,7 +51,6 @@ type WSMethodBN struct {
 
 func (this *WSTradeUMBN) Subscribe(v interface{}) {
 	if item, ok := v.(string); ok {
-		fmt.Println("sdfsf")
 		this.subscribed = append(this.subscribed, item)
 		var req = WSMethodBN{
 			this.connId,
@@ -88,7 +87,7 @@ func (this *WSTradeUMBN) Start() error {
 	var req = WSMethodBN{
 		this.connId, []string{"userDataStream.start"}, "REQUEST",
 	}
-	//json.Marshal(req)
+
 	err = conn.WriteJSON(req)
 	if err != nil {
 		this.ErrorHandler(err)
@@ -187,7 +186,6 @@ func (this *WSTradeUMBN) recvRoutine() {
 			}
 
 			if msgType != websocket.TextMessage {
-				fmt.Println("msgType != websocket.TextMessage")
 				continue
 			}
 
