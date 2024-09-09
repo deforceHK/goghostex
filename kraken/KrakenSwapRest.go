@@ -1,10 +1,19 @@
 package kraken
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 
 	. "github.com/deforceHK/goghostex"
+)
+
+const (
+	SWAP_KRAKEN_ENDPOINT = "https://futures.kraken.com"
+
+	SWAP_API_KEY        = ""
+	SWAP_API_SECRETKEY  = ""
+	SWAP_API_PASSPHRASE = ""
 )
 
 type Swap struct {
@@ -13,7 +22,28 @@ type Swap struct {
 	swapContracts SwapContracts
 
 	nextUpdateContractTime time.Time // 下一次更新交易所contract信息
-	LastKeepLiveTime       time.Time // 上一次keep live时间。
+	//LastKeepLiveTime       time.Time // 上一次keep live时间。
+	lastRequestTS int64 // 最近一次请求时间戳
+}
+
+func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+	resp, err := NewHttpRequest(
+		swap.config.HttpClient,
+		httpMethod,
+		SWAP_KRAKEN_ENDPOINT+uri,
+		reqBody,
+		map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		swap.lastRequestTS = time.Now().UnixNano() / int64(time.Millisecond)
+		return resp, json.Unmarshal(resp, &response)
+	}
+
 }
 
 func (swap *Swap) GetOpenAmount(pair Pair) (float64, int64, []byte, error) {
