@@ -1,6 +1,7 @@
 package kraken
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -10,11 +11,10 @@ import (
 
 /**
 * unit test cmd
-* go test -v ./kraken/... -count=1 -run=TestSwap_Kraken_Market
+* go test -v ./kraken/... -count=1 -run=TestSwap_Kraken_GetContracts
 *
 **/
-func TestSwap_Kraken_Market(t *testing.T) {
-
+func TestSwap_Kraken_GetContracts(t *testing.T) {
 	var config = &APIConfig{
 		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
@@ -31,18 +31,12 @@ func TestSwap_Kraken_Market(t *testing.T) {
 	}
 
 	var kraken = New(config)
-	if klines, _, err := kraken.Swap.GetKline(
-		NewPair("btc_usd", "_"),
-		KLINE_PERIOD_1MIN,
-		0,
-		1725878280000,
-	); err != nil {
+	if contracts, _, err := kraken.Swap.GetContracts(); err != nil {
 		t.Error(err)
 		return
 	} else {
-		//t.Log(string(resp))
-		for _, kline := range klines {
-			t.Log(kline)
+		for _, contract := range contracts {
+			fmt.Println(contract)
 		}
 	}
 }
