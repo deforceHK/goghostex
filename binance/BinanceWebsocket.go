@@ -143,14 +143,26 @@ func (this *WSTradeUMBN) pingRoutine() {
 	this.stopPingSign = stopPingChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
 	defer ticker.Stop()
-	var conn = this.conn
+
 	for {
 		select {
 		case <-ticker.C:
 			if this.conn == nil {
 				continue
 			}
-			_ = conn.WriteMessage(websocket.PingMessage, nil)
+			var bn = New(this.Config)
+			var response = struct {
+				ListenKey string `json:"listenKey"`
+			}{}
+			if _, err := bn.Swap.DoRequest(
+				http.MethodPut,
+				"/fapi/v1/listenKey",
+				"",
+				&response,
+				SETTLE_MODE_COUNTER,
+			); err != nil {
+				this.ErrorHandler(err)
+			}
 		case <-stopPingChn:
 			close(stopPingChn)
 			return
