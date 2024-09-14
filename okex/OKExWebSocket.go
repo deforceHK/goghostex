@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DEFAULT_WEBSOCKET_RESTART_SEC        = 60
+	DEFAULT_WEBSOCKET_RESTART_SEC        = 30
 	DEFAULT_WEBSOCKET_PING_SEC           = 20
 	DEFAULT_WEBSOCKET_PENDING_SEC        = 100
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM = 10
@@ -138,23 +138,6 @@ func (this *WSTradeOKEx) Start() error {
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
-	//if messageType != websocket.TextMessage {
-	//	this.ErrorHandler(fmt.Errorf("message type error"))
-	//	this.restartTS[time.Now().Unix()] = this.connId
-	//	if this.conn != nil {
-	//		_ = this.conn.Close()
-	//		log.Printf(
-	//			"websocket conn %s will be restart in next %d seconds...",
-	//			this.connId, this.restartSec,
-	//		)
-	//		var nowTS = time.Now().Unix()
-	//		this.restartTS[nowTS] = this.connId
-	//		this.conn = nil
-	//		this.connId = ""
-	//	}
-	//	time.Sleep(time.Duration(this.restartSec) * time.Second)
-	//	return this.Start()
-	//}
 
 	var result = struct {
 		Event  string `json:"event"`
@@ -195,8 +178,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 			if this.conn == nil {
 				continue
 			}
-			fmt.Println("ping")
-			if err := conn.WriteMessage(websocket.TextMessage, []byte("ping"));err!=nil{
+			if err := conn.WriteMessage(websocket.TextMessage, []byte("ping")); err != nil {
 				fmt.Println(err)
 			}
 		case <-stopPingChn:
@@ -216,7 +198,6 @@ func (this *WSTradeOKEx) checkRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("check ping")
 			// 超过x秒没有收到消息，重新连接，如果超出重连次数，ws将停止。
 			if time.Now().Unix()-this.lastPingTS > DEFAULT_WEBSOCKET_PENDING_SEC {
 				this.ErrorHandler(fmt.Errorf("ping timeout, last ping ts: %d", this.lastPingTS))
@@ -231,10 +212,6 @@ func (this *WSTradeOKEx) checkRoutine() {
 }
 
 func (this *WSTradeOKEx) recvRoutine() {
-	//var stopRecvChn = make(chan bool, 1)
-	//this.stopRecvSign = stopRecvChn
-	//var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
-	//defer ticker.Stop()
 	var conn = this.conn
 	for {
 		var msgType, msg, readErr = conn.ReadMessage()
@@ -252,11 +229,8 @@ func (this *WSTradeOKEx) recvRoutine() {
 		var msgStr = string(msg)
 		if msgStr != "pong" {
 			this.RecvHandler(msgStr)
-		} else {
-			fmt.Println("pong")
 		}
 	}
-
 }
 
 func (this *WSTradeOKEx) Stop() {
@@ -317,7 +291,7 @@ func (this *WSTradeOKEx) initDefaultValue() {
 	}
 
 	if this.restartLimitNum == 0 {
-		this.restartLimitSec = DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM
+		this.restartLimitNum = DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM
 	}
 
 	if this.restartLimitSec == 0 {
@@ -385,6 +359,7 @@ func (this *WSMarketOKEx) Start() error {
 	this.conn = conn
 
 	go this.pingRoutine()
+	go this.checkRoutine()
 	go this.recvRoutine()
 
 	return nil
