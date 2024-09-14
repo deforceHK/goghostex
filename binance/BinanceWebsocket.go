@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	DEFAULT_WEBSOCKET_RESTART_SEC        = 60
-	DEFAULT_WEBSOCKET_PING_SEC           = 20
+	DEFAULT_WEBSOCKET_RESTART_SEC        = 30
+	DEFAULT_WEBSOCKET_PING_SEC           = 60
 	DEFAULT_WEBSOCKET_PENDING_SEC        = 100
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM = 10
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_SEC = 300
@@ -40,7 +40,8 @@ type WSTradeUMBN struct {
 	lastPingTS int64
 
 	stopPingSign chan bool
-	stopRecvSign chan bool
+	stopChecSign chan bool
+	//stopRecvSign chan bool
 }
 
 type WSMethodBN struct {
@@ -92,32 +93,32 @@ func (this *WSTradeUMBN) Start() error {
 	if err != nil {
 		this.ErrorHandler(err)
 		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSec,
-			)
-			this.conn = nil
-			this.connId = ""
-		}
+		//if this.conn != nil {
+		_ = this.conn.Close()
+		log.Printf(
+			"websocket conn %s will be restart in next %d seconds...",
+			this.connId, this.restartSec,
+		)
+		this.conn = nil
+		this.connId = ""
+		//}
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
 
 	var _, p, readErr = conn.ReadMessage()
 	if readErr != nil {
+
 		this.ErrorHandler(readErr)
 		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSec,
-			)
-			this.conn = nil
-			this.connId = ""
-		}
+		_ = conn.Close()
+		log.Printf(
+			"websocket conn %s will be restart in next %d seconds...",
+			this.connId, this.restartSec,
+		)
+		this.conn = nil
+		this.connId = ""
+
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
@@ -133,6 +134,7 @@ func (this *WSTradeUMBN) Start() error {
 	}
 
 	go this.pingRoutine()
+	go this.checRoutine()
 	go this.recvRoutine()
 
 	return nil
@@ -143,18 +145,18 @@ func (this *WSTradeUMBN) pingRoutine() {
 	this.stopPingSign = stopPingChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:
 			if this.conn == nil {
 				continue
 			}
+
 			var bn = New(this.Config)
 			var response = struct {
 				ListenKey string `json:"listenKey"`
 			}{}
-			if _, err := bn.Swap.DoRequest(
+			if resp, err := bn.Swap.DoRequest(
 				http.MethodPut,
 				"/fapi/v1/listenKey",
 				"",
@@ -162,6 +164,10 @@ func (this *WSTradeUMBN) pingRoutine() {
 				SETTLE_MODE_COUNTER,
 			); err != nil {
 				this.ErrorHandler(err)
+			} else if response.ListenKey == "" {
+				this.ErrorHandler(fmt.Errorf(string(resp)))
+			} else {
+				this.lastPingTS = time.Now().Unix()
 			}
 		case <-stopPingChn:
 			close(stopPingChn)
@@ -170,12 +176,11 @@ func (this *WSTradeUMBN) pingRoutine() {
 	}
 }
 
-func (this *WSTradeUMBN) recvRoutine() {
-	var stopRecvChn = make(chan bool, 1)
-	this.stopRecvSign = stopRecvChn
-	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
+func (this *WSTradeUMBN) checRoutine() {
+	var stopCheckChn = make(chan bool, 1)
+	this.stopChecSign = stopCheckChn
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
 	defer ticker.Stop()
-	var conn = this.conn
 
 	for {
 		select {
@@ -186,27 +191,38 @@ func (this *WSTradeUMBN) recvRoutine() {
 				this.Restart()
 				continue
 			}
-		case <-stopRecvChn:
-			close(stopRecvChn)
+		case <-stopCheckChn:
+			close(stopCheckChn)
 			return
-		default:
-			var msgType, msg, readErr = conn.ReadMessage()
-			if readErr != nil {
-				this.ErrorHandler(readErr)
-				this.Restart()
-				continue
-			}
-
-			if msgType != websocket.TextMessage {
-				continue
-			}
-
-			this.lastPingTS = time.Now().Unix()
-			//var msgStr = string(msg)
-			//if msgStr != "pong" {
-			this.RecvHandler(string(msg))
-			//}
 		}
+	}
+}
+
+func (this *WSTradeUMBN) recvRoutine() {
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
+	defer ticker.Stop()
+	var conn = this.conn
+
+	for {
+		if conn == nil {
+			return
+		}
+
+		var msgType, msg, readErr = conn.ReadMessage()
+		if readErr != nil {
+			this.ErrorHandler(readErr)
+			this.Restart()
+			return
+		}
+
+		if msgType != websocket.TextMessage {
+			continue
+		}
+
+		this.lastPingTS = time.Now().Unix()
+		//var msgStr = string(msg)
+		//if msgStr != "pong" {
+		this.RecvHandler(string(msg))
 	}
 
 }
@@ -216,8 +232,8 @@ func (this *WSTradeUMBN) Stop() {
 		this.stopPingSign <- true
 	}
 
-	if this.stopRecvSign != nil {
-		this.stopRecvSign <- true
+	if this.stopChecSign != nil {
+		this.stopChecSign <- true
 	}
 
 	if this.conn != nil {
@@ -229,7 +245,7 @@ func (this *WSTradeUMBN) Stop() {
 
 func (this *WSTradeUMBN) Restart() {
 	this.ErrorHandler(
-		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSec)},
+		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds......", this.restartSec)},
 	)
 	this.restartTS[time.Now().Unix()] = this.connId
 	this.Stop()
@@ -240,15 +256,9 @@ func (this *WSTradeUMBN) Restart() {
 		return
 	}
 
-	var conn = this.conn
 	// subscribe unsubscribe the channel
 	for _, v := range this.subscribed {
-		var err = conn.WriteJSON(v)
-		if err != nil {
-			this.ErrorHandler(err)
-			var errMsg, _ = json.Marshal(v)
-			this.ErrorHandler(fmt.Errorf("subscribe error: %s", string(errMsg)))
-		}
+		this.Subscribe(v)
 	}
 
 }
@@ -269,7 +279,7 @@ func (this *WSTradeUMBN) initDefaultValue() {
 	}
 
 	if this.restartLimitNum == 0 {
-		this.restartLimitSec = DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM
+		this.restartLimitNum = DERFAULT_WEBSOCKET_RESTART_LIMIT_NUM
 	}
 
 	if this.restartLimitSec == 0 {
@@ -289,6 +299,7 @@ func (this *WSTradeUMBN) startCheck() error {
 			restartNum++
 		}
 	}
+	fmt.Println(restartNum, this.restartLimitNum)
 	if restartNum > this.restartLimitNum {
 		var wsErr = &WSStopError{
 			Msg: fmt.Sprintf(
