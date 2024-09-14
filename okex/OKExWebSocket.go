@@ -183,6 +183,7 @@ func (this *WSTradeOKEx) pingRoutine() {
 			}
 		case _, opened := <-stopPingChn:
 			if opened {
+				this.stopPingSign = nil
 				close(stopPingChn)
 			}
 			return
@@ -208,6 +209,7 @@ func (this *WSTradeOKEx) checkRoutine() {
 			}
 		case _, opened := <-stopChecChn:
 			if opened {
+				this.stopChecSign = nil
 				close(stopChecChn)
 			}
 			return
@@ -254,6 +256,10 @@ func (this *WSTradeOKEx) Stop() {
 }
 
 func (this *WSTradeOKEx) Restart() {
+	// it's restarting now, just return.
+	if this.stopChecSign == nil || this.stopPingSign == nil || this.conn == nil {
+		return
+	}
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSec)},
 	)
