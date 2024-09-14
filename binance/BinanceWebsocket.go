@@ -94,7 +94,7 @@ func (this *WSTradeUMBN) Start() error {
 		this.ErrorHandler(err)
 		this.restartTS[time.Now().Unix()] = this.connId
 		//if this.conn != nil {
-		_ = this.conn.Close()
+		_ = conn.Close()
 		log.Printf(
 			"websocket conn %s will be restart in next %d seconds...",
 			this.connId, this.restartSec,
