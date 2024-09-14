@@ -181,8 +181,10 @@ func (this *WSTradeOKEx) pingRoutine() {
 			if err := conn.WriteMessage(websocket.TextMessage, []byte("ping")); err != nil {
 				fmt.Println(err)
 			}
-		case <-stopPingChn:
-			close(stopPingChn)
+		case _, opened := <-stopPingChn:
+			if opened {
+				close(stopPingChn)
+			}
 			return
 		}
 	}
@@ -204,8 +206,10 @@ func (this *WSTradeOKEx) checkRoutine() {
 				this.Restart()
 				continue
 			}
-		case <-stopChecChn:
-			close(stopChecChn)
+		case _, opened := <-stopChecChn:
+			if opened {
+				close(stopChecChn)
+			}
 			return
 		}
 	}
