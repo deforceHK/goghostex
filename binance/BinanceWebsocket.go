@@ -41,7 +41,6 @@ type WSTradeUMBN struct {
 
 	stopPingSign chan bool
 	stopChecSign chan bool
-	//stopRecvSign chan bool
 }
 
 type WSMethodBN struct {
@@ -93,7 +92,7 @@ func (this *WSTradeUMBN) Start() error {
 	if err != nil {
 		this.ErrorHandler(err)
 		this.restartTS[time.Now().Unix()] = this.connId
-		//if this.conn != nil {
+
 		_ = conn.Close()
 		log.Printf(
 			"websocket conn %s will be restart in next %d seconds...",
@@ -101,7 +100,6 @@ func (this *WSTradeUMBN) Start() error {
 		)
 		this.conn = nil
 		this.connId = ""
-		//}
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
 	}
@@ -169,8 +167,10 @@ func (this *WSTradeUMBN) pingRoutine() {
 			} else {
 				this.lastPingTS = time.Now().Unix()
 			}
-		case <-stopPingChn:
-			close(stopPingChn)
+		case _, opened := <-stopPingChn:
+			if opened {
+				close(stopPingChn)
+			}
 			return
 		}
 	}
@@ -179,7 +179,7 @@ func (this *WSTradeUMBN) pingRoutine() {
 func (this *WSTradeUMBN) checRoutine() {
 	var stopCheckChn = make(chan bool, 1)
 	this.stopChecSign = stopCheckChn
-	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -191,8 +191,10 @@ func (this *WSTradeUMBN) checRoutine() {
 				this.Restart()
 				continue
 			}
-		case <-stopCheckChn:
-			close(stopCheckChn)
+		case _, opened := <-stopCheckChn:
+			if opened {
+				close(stopCheckChn)
+			}
 			return
 		}
 	}
@@ -204,10 +206,6 @@ func (this *WSTradeUMBN) recvRoutine() {
 	var conn = this.conn
 
 	for {
-		if conn == nil {
-			return
-		}
-
 		var msgType, msg, readErr = conn.ReadMessage()
 		if readErr != nil {
 			this.ErrorHandler(readErr)
@@ -220,8 +218,6 @@ func (this *WSTradeUMBN) recvRoutine() {
 		}
 
 		this.lastPingTS = time.Now().Unix()
-		//var msgStr = string(msg)
-		//if msgStr != "pong" {
 		this.RecvHandler(string(msg))
 	}
 
@@ -319,7 +315,7 @@ func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
 	var response = struct {
 		ListenKey string `json:"listenKey"`
 	}{}
-	if _, err := bn.Swap.DoRequest(
+	if resp, err := bn.Swap.DoRequest(
 		http.MethodPost,
 		"/fapi/v1/listenKey",
 		"",
@@ -327,6 +323,8 @@ func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
 		SETTLE_MODE_COUNTER,
 	); err != nil {
 		return nil, err
+	} else if response.ListenKey == "" {
+		return nil, fmt.Errorf(string(resp))
 	}
 
 	var conn, _, err = websocket.DefaultDialer.Dial(
