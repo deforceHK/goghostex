@@ -107,6 +107,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 				Vol:   candle.Volume,
 			})
 		}
-		return klines, resp, nil
+
+		return GetAscSwapKline(klines), resp, nil
 	}
 }

@@ -11,6 +11,11 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
+/**
+* unit test cmd
+* go test -v ./kraken/... -count=1 -run=TestSpot_GetKlineRecords
+*
+**/
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	var config = &APIConfig{
