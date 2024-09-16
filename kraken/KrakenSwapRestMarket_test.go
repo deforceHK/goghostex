@@ -2,6 +2,7 @@ package kraken
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -16,13 +17,13 @@ import (
 func TestSwap_Kraken_Market(t *testing.T) {
 
 	var config = &APIConfig{
-		Endpoint:   ENDPOINT,
+		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
-			//Transport: &http.Transport{
-			//	Proxy: func(req *http.Request) (*url.URL, error) {
-			//		return url.Parse(PROXY_URL)
-			//	},
-			//},
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(PROXY_URL)
+				},
+			},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
@@ -35,7 +36,7 @@ func TestSwap_Kraken_Market(t *testing.T) {
 		NewPair("btc_usd", "_"),
 		KLINE_PERIOD_1MIN,
 		0,
-		1725878280000,
+		1726448400000,
 	); err != nil {
 		t.Error(err)
 		return
