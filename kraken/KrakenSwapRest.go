@@ -1,7 +1,13 @@
 package kraken
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -9,12 +15,12 @@ import (
 )
 
 const (
-	SWAP_KRAKEN_ENDPOINT = "https://futures.kraken.com"
+	SWAP_KRAKEN_ENDPOINT = "https://futures.kraken.com/derivatives"
 
 	SWAP_API_KEY        = ""
 	SWAP_API_SECRETKEY  = ""
 	SWAP_API_PASSPHRASE = ""
-	PROXY_URL           = "socks5://127.0.0.1:1090"
+	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
 
 type Swap struct {
@@ -28,6 +34,27 @@ type Swap struct {
 }
 
 func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+	var aut = ""
+	var nonce = fmt.Sprintf("%d", time.Now().Unix()*1000)
+	if httpMethod == http.MethodPost {
+		aut = reqBody + nonce + uri
+		fmt.Println(reqBody)
+		fmt.Println(nonce)
+		fmt.Println(uri)
+
+		var sha256Hash = sha256.New()
+		sha256Hash.Write([]byte(aut))
+		var sha256AUT = sha256Hash.Sum(nil)
+		if decodedSecret, err := base64.StdEncoding.DecodeString(swap.config.ApiSecretKey); err != nil {
+			return nil, err
+		} else {
+			var hmacHash = hmac.New(sha512.New, decodedSecret)
+			hmacHash.Write(sha256AUT)
+			var hmacAUT = hmacHash.Sum(nil)
+			aut = base64.StdEncoding.EncodeToString(hmacAUT)
+		}
+	}
+
 	resp, err := NewHttpRequest(
 		swap.config.HttpClient,
 		httpMethod,
@@ -35,6 +62,10 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 		reqBody,
 		map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
+			"Accept":       "application/json",
+			"APIKey":       swap.config.ApiKey,
+			"Authent":      aut,
+			"Nonce":        nonce,
 		},
 	)
 
@@ -64,31 +95,6 @@ func (swap *Swap) GetFundingFee(pair Pair) (float64, error) {
 
 func (swap *Swap) GetAccount() (*SwapAccount, []byte, error) {
 
-	//TODO implement me
-	panic("implement me")
-}
-
-func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {
 	//TODO implement me
 	panic("implement me")
 }

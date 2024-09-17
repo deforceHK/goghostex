@@ -2,14 +2,124 @@ package kraken
 
 import (
 	"fmt"
-	. "github.com/deforceHK/goghostex"
 	"net/http"
 	"strings"
+	"time"
+
+	. "github.com/deforceHK/goghostex"
 )
 
 const (
-	SWAP_CONTRACT_URI = "/derivatives/api/v3/instruments"
+	SWAP_CONTRACT_URI = "/api/v3/instruments"
 )
+
+func (swap *Swap) getContract(pair Pair) *SwapContract {
+	defer swap.Unlock()
+	swap.Lock()
+
+	var now = time.Now().In(swap.config.Location)
+	if now.After(swap.nextUpdateContractTime) {
+		_, err := swap.updateContracts()
+		//重试三次
+		for i := 0; err != nil && i < 3; i++ {
+			time.Sleep(time.Second)
+			_, err = swap.updateContracts()
+		}
+
+		// init fail at first time, get a default one.
+		if swap.nextUpdateContractTime.IsZero() && err != nil {
+			swap.initManual()
+			swap.nextUpdateContractTime = now.Add(10 * time.Minute)
+		}
+	}
+
+	var symbol = pair.ToSymbol("", true)
+	var krSymbol = fmt.Sprintf("PF_%s", symbol)
+	if symbol == "BTCUSD" {
+		krSymbol = "PF_XBTUSD"
+	}
+	return swap.swapContracts.ContractNameKV[krSymbol]
+}
+
+func (swap *Swap) updateContracts() ([]byte, error) {
+	var contracts, resp, err = swap.GetContracts()
+	if err != nil {
+		return resp, err
+	}
+
+	var swapContracts = SwapContracts{
+		ContractNameKV: make(map[string]*SwapContract, 0),
+	}
+
+	for _, contract := range contracts {
+		swapContracts.ContractNameKV[contract.ContractName] = contract
+	}
+
+	// setting next update time.
+	var nowTime = time.Now().In(swap.config.Location)
+	var nextUpdateTime = time.Date(
+		nowTime.Year(), nowTime.Month(), nowTime.Day(),
+		16, 0, 0, 0, swap.config.Location,
+	)
+	if nowTime.Hour() >= 16 {
+		nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
+	}
+
+	swap.nextUpdateContractTime = nextUpdateTime
+	swap.swapContracts = swapContracts
+	return resp, nil
+}
+
+func (swap *Swap) initManual() {
+	swap.swapContracts = SwapContracts{
+		ContractNameKV: map[string]*SwapContract{
+			"PF_XBTUSD": {
+				Pair:            Pair{BTC, USD},
+				Symbol:          "btc_usd",
+				Exchange:        KRAKEN,
+				ContractName:    "PF_XBTUSD",
+				SettleMode:      SETTLE_MODE_COUNTER,
+				UnitAmount:      1,
+				TickSize:        1,
+				PricePrecision:  0,
+				AmountPrecision: 0,
+			},
+			"PF_ETHUSD": {
+				Pair:            Pair{ETH, USD},
+				Symbol:          "eth_usd",
+				Exchange:        KRAKEN,
+				ContractName:    "PF_ETHUSD",
+				SettleMode:      SETTLE_MODE_COUNTER,
+				UnitAmount:      1,
+				TickSize:        0.1,
+				PricePrecision:  1,
+				AmountPrecision: 0,
+			},
+			"PF_BNBUSD": {
+				Pair:            Pair{BNB, USD},
+				Symbol:          "bnb_usd",
+				Exchange:        KRAKEN,
+				ContractName:    "PF_BNBUSD",
+				SettleMode:      SETTLE_MODE_COUNTER,
+				UnitAmount:      1,
+				TickSize:        0.01,
+				PricePrecision:  2,
+				AmountPrecision: 0,
+			},
+			"PF_SOLUSD": {
+				Pair:            Pair{SOL, USD},
+				Symbol:          "sol_usd",
+				Exchange:        KRAKEN,
+				ContractName:    "PF_SOLUSD",
+				SettleMode:      SETTLE_MODE_COUNTER,
+				UnitAmount:      1,
+				TickSize:        0.01,
+				PricePrecision:  2,
+				AmountPrecision: 0,
+			},
+		},
+	}
+}
 
 func (swap *Swap) GetContracts() ([]*SwapContract, []byte, error) {
 	var results = struct {
@@ -33,7 +143,7 @@ func (swap *Swap) GetContracts() ([]*SwapContract, []byte, error) {
 
 		var contracts = make([]*SwapContract, 0)
 		for _, inst := range results.Instruments {
-			// PI FF FI not swap
+			// PI FF PF not swap
 			if !strings.HasPrefix(inst.Symbol, "PF") {
 				continue
 			}
