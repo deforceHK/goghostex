@@ -3,6 +3,7 @@ package kraken
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -16,13 +17,13 @@ import (
 **/
 func TestSwap_Kraken_GetContracts(t *testing.T) {
 	var config = &APIConfig{
-		Endpoint:   ENDPOINT,
+		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
-			//Transport: &http.Transport{
-			//	Proxy: func(req *http.Request) (*url.URL, error) {
-			//		return url.Parse(PROXY_URL)
-			//	},
-			//},
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse(SWAP_PROXY_URL)
+				},
+			},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
@@ -31,12 +32,15 @@ func TestSwap_Kraken_GetContracts(t *testing.T) {
 	}
 
 	var kraken = New(config)
-	if contracts, _, err := kraken.Swap.GetContracts(); err != nil {
+	if contracts, resp, err := kraken.Swap.GetContracts(); err != nil {
 		t.Error(err)
 		return
 	} else {
 		for _, contract := range contracts {
 			fmt.Println(contract)
 		}
+		go func() {
+			t.Log(string(resp))
+		}()
 	}
 }
