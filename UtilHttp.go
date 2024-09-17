@@ -13,12 +13,11 @@ func NewHttpRequest(
 	reqType,
 	reqUrl,
 	postData string,
-	requstHeaders map[string]string,
+	reqHeaders map[string]string,
 ) ([]byte, error) {
 
 	var req *http.Request
 	if strings.ToUpper(reqType) == http.MethodGet {
-		//todo if here change to the newRequestWithoutContext
 		req, _ = http.NewRequest(strings.ToUpper(reqType), reqUrl, nil)
 	} else {
 		req, _ = http.NewRequest(strings.ToUpper(reqType), reqUrl, strings.NewReader(postData))
@@ -30,8 +29,8 @@ func NewHttpRequest(
 			"Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36",
 		)
 	}
-	if requstHeaders != nil {
-		for k, v := range requstHeaders {
+	if reqHeaders != nil {
+		for k, v := range reqHeaders {
 			req.Header.Add(k, v)
 		}
 	}

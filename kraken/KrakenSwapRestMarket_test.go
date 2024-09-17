@@ -21,7 +21,7 @@ func TestSwap_Kraken_Market(t *testing.T) {
 		HttpClient: &http.Client{
 			Transport: &http.Transport{
 				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
+					return url.Parse(SWAP_PROXY_URL)
 				},
 			},
 		},
@@ -32,7 +32,7 @@ func TestSwap_Kraken_Market(t *testing.T) {
 	}
 
 	var kraken = New(config)
-	if klines, _, err := kraken.Swap.GetKline(
+	if klines, resp, err := kraken.Swap.GetKline(
 		NewPair("btc_usd", "_"),
 		KLINE_PERIOD_1MIN,
 		0,
@@ -45,5 +45,6 @@ func TestSwap_Kraken_Market(t *testing.T) {
 		for _, kline := range klines {
 			t.Log(kline)
 		}
+		t.Log(string(resp))
 	}
 }
