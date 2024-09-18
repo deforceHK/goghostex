@@ -100,15 +100,13 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	); err != nil {
 		return resp, err
 	} else {
-		if response.Result != "success" ||
-			len(response.SendStatus.OrderEvents) == 0 {
+		if response.Result != "success" || len(response.SendStatus.OrderEvents) == 0 {
 			return resp, errors.New(string(resp))
 		}
 		if orderStatus, exist := statusRelation[response.SendStatus.Status]; !exist {
 			order.Status = ORDER_FAIL
 			return resp, errors.New(string(resp))
 		} else {
-
 			order.Status = orderStatus
 		}
 
@@ -118,23 +116,9 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 			order.PlaceTimestamp = orderTime.UnixMilli()
 			order.PlaceDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
 		}
-		order.OrderId = response.SendStatus.OrderEvents[0].Order.OrderId
+		order.OrderId = response.SendStatus.OrderId
 		return resp, nil
 	}
-
-	//orderTime := time.Unix(response.UpdateTime/1000, 0)
-	//order.OrderId = fmt.Sprintf("%d", response.OrderId)
-	//order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
-	//order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	//order.DealTimestamp = response.UpdateTime
-	//order.DealDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
-	//order.Status = statusRelation[response.Status]
-	//order.Price = response.Price
-	//order.Amount = response.Amount
-	//if response.DealAmount > 0 {
-	//	order.AvgPrice = response.CumQuote / response.DealAmount
-	//	order.DealAmount = response.DealAmount
-	//}
 }
 
 func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
@@ -144,9 +128,9 @@ func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
 
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	var param = url.Values{}
-	param.Set("orderIds", fmt.Sprintf("[\"%s\"]", order.OrderId))
+	param.Set("orderIds", order.OrderId)
 	if order.Cid != "" {
-		param.Set("cliOrdIds", fmt.Sprintf("[\"%s\"]", order.Cid))
+		param.Set("cliOrdIds", order.Cid)
 	}
 
 	var response struct {

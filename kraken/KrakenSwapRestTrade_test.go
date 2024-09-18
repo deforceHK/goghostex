@@ -78,4 +78,14 @@ func TestSwap_GetOrder(t *testing.T) {
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
+
+	if resp, err := kr.Swap.GetOrder(&orderLong); err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(orderLong)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
+
 }
