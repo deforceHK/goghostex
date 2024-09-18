@@ -16,11 +16,6 @@ import (
 
 const (
 	SWAP_KRAKEN_ENDPOINT = "https://futures.kraken.com/derivatives"
-
-	SWAP_API_KEY        = ""
-	SWAP_API_SECRETKEY  = ""
-	SWAP_API_PASSPHRASE = ""
-	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
 )
 
 type Swap struct {
@@ -38,10 +33,6 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 	var nonce = fmt.Sprintf("%d", time.Now().Unix()*1000)
 	if httpMethod == http.MethodPost {
 		aut = reqBody + nonce + uri
-		fmt.Println(reqBody)
-		fmt.Println(nonce)
-		fmt.Println(uri)
-
 		var sha256Hash = sha256.New()
 		sha256Hash.Write([]byte(aut))
 		var sha256AUT = sha256Hash.Sum(nil)
