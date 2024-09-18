@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	. "github.com/deforceHK/goghostex"
 )
@@ -20,6 +21,13 @@ var placeTypeRelation = map[PlaceType]string{
 	NORMAL:     "lmt",
 	ONLY_MAKER: "post",
 	IOC:        "ioc",
+}
+
+var statusRelation = map[string]TradeStatus{
+	"placed":          ORDER_UNFINISH,
+	"partiallyFilled": ORDER_PART_FINISH,
+	"filled":          ORDER_FINISH,
+	"cancelled":       ORDER_CANCEL,
 }
 
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
@@ -59,19 +67,61 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	var response struct {
 		ServerTime string `json:"serverTime"`
 		Result     string `json:"result"`
-		//SendStatus []json.RawMessage `json:"sendStatus"`
+		SendStatus struct {
+			CliOrdId     string `json:"cliOrdId"`
+			Status       string `json:"status"`
+			ReceivedTime string `json:"receivedTime"`
+			OrderId      string `json:"order_id"`
+			OrderEvents  []struct {
+				Order struct {
+					OrderId             string  `json:"orderId"`
+					CliOrdId            string  `json:"cliOrdId"`
+					Type                string  `json:"type"`
+					Symbol              string  `json:"symbol"`
+					Side                string  `json:"side"`
+					Quantity            float64 `json:"quantity"`
+					Filled              float64 `json:"filled"`
+					LimitPrice          float64 `json:"limitPrice"`
+					ReduceOnly          bool    `json:"reduceOnly"`
+					Timestamp           string  `json:"timestamp"`
+					LastUpdateTimestamp string  `json:"lastUpdateTimestamp"`
+				} `json:"order"`
+				ReduceQuantity string `json:"reduceQuantity"`
+				Type           string `json:"type"`
+			} `json:"orderEvents"`
+		} `json:"sendStatus"`
 	}
 	var uri = "/api/v3/sendorder"
-	resp, err := swap.DoRequest(
+	if resp, err := swap.DoRequest(
 		http.MethodPost,
 		uri,
 		param.Encode(),
 		&response,
-	)
+	); err != nil {
+		return resp, err
+	} else {
+		if response.Result != "success" ||
+			len(response.SendStatus.OrderEvents) == 0 {
+			return resp, errors.New(string(resp))
+		}
+		if orderStatus, exist := statusRelation[response.SendStatus.Status]; !exist {
+			order.Status = ORDER_FAIL
+			return resp, errors.New(string(resp))
+		} else {
 
-	if err != nil {
-		return nil, err
+			order.Status = orderStatus
+		}
+
+		if orderTime, err := time.Parse(time.RFC3339, response.SendStatus.ReceivedTime); err != nil {
+			return resp, errors.New(string(resp))
+		} else {
+			order.PlaceTimestamp = orderTime.UnixMilli()
+			order.PlaceDatetime = orderTime.In(swap.config.Location).Format(GO_BIRTHDAY)
+		}
+		order.OrderId = response.SendStatus.OrderEvents[0].Order.OrderId
+		return resp, nil
 	}
+
 	//orderTime := time.Unix(response.UpdateTime/1000, 0)
 	//order.OrderId = fmt.Sprintf("%d", response.OrderId)
 	//order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
@@ -85,7 +135,6 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	//	order.AvgPrice = response.CumQuote / response.DealAmount
 	//	order.DealAmount = response.DealAmount
 	//}
-	return resp, nil
 }
 
 func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
@@ -94,8 +143,32 @@ func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
 }
 
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	var param = url.Values{}
+	param.Set("orderIds", fmt.Sprintf("[\"%s\"]", order.OrderId))
+	if order.Cid != "" {
+		param.Set("cliOrdIds", fmt.Sprintf("[\"%s\"]", order.Cid))
+	}
+
+	var response struct {
+		ServerTime string `json:"serverTime"`
+		Result     string `json:"result"`
+		Orders     []struct {
+			Status string `json:"status"`
+			Error  string `json:"error"`
+		} `json:"orders"`
+	}
+
+	var uri = "/api/v3/orders/status"
+	if resp, err := swap.DoRequest(
+		http.MethodPost,
+		uri,
+		param.Encode(),
+		&response,
+	); err != nil {
+		return resp, err
+	} else {
+		return resp, nil
+	}
 }
 
 func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
