@@ -30,7 +30,7 @@ type Swap struct {
 
 func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	var aut = ""
-	var nonce = fmt.Sprintf("%d", time.Now().Unix()*1000)
+	var nonce = fmt.Sprintf("%d", time.Now().UnixNano())
 	if httpMethod == http.MethodPost {
 		aut = reqBody + nonce + uri
 		var sha256Hash = sha256.New()
@@ -63,7 +63,7 @@ func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{
 	if err != nil {
 		return nil, err
 	} else {
-		swap.lastRequestTS = time.Now().UnixNano() / int64(time.Millisecond)
+		swap.lastRequestTS = time.Now().UnixMilli()
 		return resp, json.Unmarshal(resp, &response)
 	}
 
