@@ -45,6 +45,9 @@ func TestSwap_Kraken_Market(t *testing.T) {
 		for _, kline := range klines {
 			t.Log(kline)
 		}
-		t.Log(string(resp))
+		go func() {
+			t.Log(string(resp))
+		}()
+
 	}
 }

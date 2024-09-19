@@ -1,14 +1,11 @@
 package kraken
 
 import (
-	//"sync"
-	//"time"
-
 	"fmt"
-	. "github.com/deforceHK/goghostex"
-	"net/http"
 	"net/url"
 	"time"
+
+	. "github.com/deforceHK/goghostex"
 )
 
 var SWAP_KRAKEN_PERIOD_TRANS = map[int]string{
@@ -60,7 +57,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 	if symbol == "BTCUSD" {
 		symbol = "XBTUSD"
 	}
-	symbol = fmt.Sprintf("PI_%s", symbol)
+	symbol = fmt.Sprintf("PF_%s", symbol)
 
 	var params = url.Values{}
 	var reqBody = ""
@@ -84,8 +81,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 		} `json:"candles"`
 	}{}
 
-	if resp, err := swap.DoRequest(
-		http.MethodGet,
+	if resp, err := swap.DoGetRequest(
 		fmt.Sprintf("/api/charts/v1/trade/%s/%s", symbol, SWAP_KRAKEN_PERIOD_TRANS[period])+reqBody,
 		"", &candles,
 	); err != nil {
