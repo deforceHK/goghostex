@@ -30,6 +30,13 @@ var statusRelation = map[string]TradeStatus{
 	"cancelled":       ORDER_CANCEL,
 }
 
+var getOrderStatusRelation = map[string]TradeStatus{
+	"ENTERED_BOOK":   ORDER_UNFINISH,
+	"FULLY_EXECUTED": ORDER_FINISH,
+	"REJECTED":       ORDER_FAIL,
+	"CANCELLED":      ORDER_CANCEL,
+}
+
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	if order == nil {
 		return nil, errors.New("order param is nil")
@@ -122,8 +129,37 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 }
 
 func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	var param = url.Values{}
+	param.Set("order_id", order.OrderId)
+	if order.Cid != "" {
+		param.Set("cliOrdId", order.Cid)
+	}
+	var uri = "/api/v3/cancelorder"
+	var response struct {
+		Result       string `json:"result"`
+		CancelStatus struct {
+			Status       string `json:"status"`
+			CliOrdId     string `json:"cliOrdId"`
+			ReceivedTime string `json:"receivedTime"`
+			OrderId      string `json:"order_id"`
+		} `json:"cancelStatus"`
+	}
+
+	var resp, err = swap.DoRequest(http.MethodPost, uri, param.Encode(), &response)
+	if err != nil {
+		return resp, err
+	} else {
+		if response.Result != "success" {
+			return resp, errors.New(string(resp))
+		}
+		if orderStatus, exist := statusRelation[response.CancelStatus.Status]; !exist {
+			return resp, errors.New(string(resp))
+		} else {
+			order.Status = orderStatus
+		}
+		return resp, nil
+	}
+
 }
 
 func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
@@ -137,8 +173,22 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 		ServerTime string `json:"serverTime"`
 		Result     string `json:"result"`
 		Orders     []struct {
-			Status string `json:"status"`
-			Error  string `json:"error"`
+			Status       string `json:"status"`
+			Error        string `json:"error"`
+			UpdateReason string `json:"updateReason"`
+			Order        struct {
+				Type                string  `json:"type"`
+				OrderId             string  `json:"orderId"`
+				CliOrdId            string  `json:"cliOrdId"`
+				Symbol              string  `json:"symbol"`
+				Side                string  `json:"side"`
+				Quantity            float64 `json:"quantity"`
+				Filled              float64 `json:"filled"`
+				LimitPrice          float64 `json:"limitPrice"`
+				ReduceOnly          bool    `json:"reduceOnly"`
+				Timestamp           string  `json:"timestamp"`
+				LastUpdateTimestamp string  `json:"lastUpdateTimestamp"`
+			} `json:"order"`
 		} `json:"orders"`
 	}
 
@@ -151,6 +201,13 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	); err != nil {
 		return resp, err
 	} else {
+		if orderStatus, exist := getOrderStatusRelation[response.Orders[0].Status]; !exist {
+			return resp, errors.New(string(resp))
+		} else {
+			order.Status = orderStatus
+		}
+		order.DealAmount = response.Orders[0].Order.Filled
+
 		return resp, nil
 	}
 }
