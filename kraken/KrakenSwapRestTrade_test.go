@@ -48,9 +48,19 @@ func TestSwap_GetOrder(t *testing.T) {
 	//	Exchange:  KRAKEN,
 	//}
 
+	//var orderLong = SwapOrder{
+	//	Cid:       UUID(),
+	//	Price:     61999,
+	//	Amount:    0.0001,
+	//	PlaceType: NORMAL,
+	//	Type:      OPEN_LONG,
+	//	LeverRate: 20,
+	//	Pair:      pair,
+	//	Exchange:  KRAKEN,
+	//}
 	var orderLong = SwapOrder{
 		Cid:       UUID(),
-		Price:     58888,
+		Price:     60999,
 		Amount:    0.0001,
 		PlaceType: NORMAL,
 		Type:      OPEN_LONG,
@@ -78,8 +88,7 @@ func TestSwap_GetOrder(t *testing.T) {
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
-
-	if resp, err := kr.Swap.GetOrder(&orderLong); err != nil {
+	if resp, err := kr.Swap.CancelOrder(&orderLong); err != nil {
 		t.Error(err)
 		return
 	} else {
@@ -87,5 +96,15 @@ func TestSwap_GetOrder(t *testing.T) {
 		t.Log(string(resp))
 		t.Log(string(stdOrder))
 	}
+
+	//
+	//if resp, err := kr.Swap.GetOrder(&orderLong); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	stdOrder, _ := json.Marshal(orderLong)
+	//	t.Log(string(resp))
+	//	t.Log(string(stdOrder))
+	//}
 
 }

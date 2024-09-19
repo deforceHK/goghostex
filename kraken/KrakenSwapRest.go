@@ -28,6 +28,25 @@ type Swap struct {
 	lastRequestTS int64 // 最近一次请求时间戳
 }
 
+func (swap *Swap) DoGetRequest(uri, reqBody string, response interface{}) ([]byte, error) {
+	var resp, err = NewHttpRequest(
+		swap.config.HttpClient,
+		http.MethodGet,
+		"https://futures.kraken.com"+uri,
+		reqBody,
+		map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+			"Accept":       "application/json",
+		},
+	)
+	if err != nil {
+		return resp, err
+	} else {
+		swap.lastRequestTS = time.Now().UnixMilli()
+		return resp, json.Unmarshal(resp, &response)
+	}
+}
+
 func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	var aut = ""
 	var nonce = fmt.Sprintf("%d", time.Now().UnixNano())
