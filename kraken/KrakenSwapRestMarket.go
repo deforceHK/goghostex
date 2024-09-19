@@ -2,6 +2,7 @@ package kraken
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -33,18 +34,86 @@ var SWAP_KRAKEN_PERIOD_INTERVAL = map[int]int{
 }
 
 func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
-	// TODO implement me
-	panic("implement me")
+	var contract = swap.getContract(pair)
+	var uri = fmt.Sprintf("/api/v3/tickers/%s", contract.ContractName)
+	var response = struct {
+		ServerTime string `json:"serverTime"`
+		Result     string `json:"result"`
+		Ticker     struct {
+			Last     float64 `json:"last"`
+			LastTime string  `json:"lastTime"`
+			Bid      float64 `json:"bid"`
+			Ask      float64 `json:"ask"`
+			Vol24h   float64 `json:"vol24h"`
+			High24h  float64 `json:"high24h"`
+			Low24h   float64 `json:"low24h"`
+		} `json:"ticker"`
+	}{}
+
+	if resp, err := swap.DoRequest(http.MethodGet, uri, "", &response); err != nil || response.Result != "success" {
+		return nil, resp, err
+	} else {
+		var serverTime, err = time.Parse(time.RFC3339, response.ServerTime)
+		if err != nil {
+			return nil, resp, err
+		}
+
+		return &SwapTicker{
+			Pair:      pair,
+			Last:      response.Ticker.Last,
+			High:      response.Ticker.High24h,
+			Low:       response.Ticker.Low24h,
+			Vol:       response.Ticker.Vol24h,
+			Buy:       response.Ticker.Bid,
+			Sell:      response.Ticker.Ask,
+			Timestamp: serverTime.UnixMilli(),
+			Date:      serverTime.In(swap.config.Location).Format(GO_BIRTHDAY),
+		}, resp, nil
+	}
 }
 
 func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
-	// TODO implement me
-	panic("implement me")
+	var contract = swap.getContract(pair)
+	var uri = fmt.Sprintf("/api/v3/orderbook?symbol=%s", contract.ContractName)
+	var response = struct {
+		ServerTime string `json:"serverTime"`
+		Result     string `json:"result"`
+		OrderBook  struct {
+			Asks [][2]float64 `json:"asks"`
+			Bids [][2]float64 `json:"bids"`
+		} `json:"orderBook"`
+	}{}
+
+	if resp, err := swap.DoRequest(http.MethodGet, uri, "", &response); err != nil || response.Result != "success" {
+		return nil, resp, err
+	} else {
+		var serverTime, err = time.Parse(time.RFC3339, response.ServerTime)
+		if err != nil {
+			return nil, resp, err
+		}
+		var depth = SwapDepth{
+			Pair:      pair,
+			Timestamp: serverTime.UnixMilli(),
+			Date:      serverTime.In(swap.config.Location).Format(GO_BIRTHDAY),
+			Sequence:  serverTime.UnixMilli(),
+			BidList:   make(DepthRecords, 0),
+			AskList:   make(DepthRecords, 0),
+		}
+
+		for _, bid := range response.OrderBook.Bids {
+			depth.BidList = append(depth.BidList, DepthRecord{bid[0], bid[1]})
+		}
+
+		for _, ask := range response.OrderBook.Asks {
+			depth.AskList = append(depth.AskList, DepthRecord{ask[0], ask[1]})
+		}
+
+		return &depth, resp, nil
+	}
 }
 
 func (swap *Swap) GetContract(pair Pair) *SwapContract {
-	// TODO implement me
-	panic("implement me")
+	return swap.getContract(pair)
 }
 
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
