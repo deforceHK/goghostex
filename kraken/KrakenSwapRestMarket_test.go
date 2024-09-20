@@ -33,13 +33,13 @@ func TestSwap_Kraken_Market(t *testing.T) {
 
 	var kraken = New(config)
 
-	if depth, resp, err := kraken.Swap.GetDepth(NewPair("btc_usd", "_"), 10); err != nil {
-		t.Error(err)
-		return
-	} else {
-		t.Log(depth)
-		t.Log(string(resp))
-	}
+	//if depth, resp, err := kraken.Swap.GetDepth(NewPair("btc_usd", "_"), 10); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	t.Log(depth)
+	//	t.Log(string(resp))
+	//}
 
 	//if contract, resp, err := kraken.Swap.GetTicker(NewPair("btc_usd", "_")); err != nil {
 	//	t.Error(err)
@@ -49,21 +49,21 @@ func TestSwap_Kraken_Market(t *testing.T) {
 	//	t.Log(string(resp))
 	//}
 
-	//if klines, resp, err := kraken.Swap.GetKline(
-	//	NewPair("btc_usd", "_"),
-	//	KLINE_PERIOD_1MIN,
-	//	0,
-	//	1726448400000,
-	//); err != nil {
-	//	t.Error(err)
-	//	return
-	//} else {
-	//	//t.Log(string(resp))
-	//	for _, kline := range klines {
-	//		t.Log(kline)
-	//	}
-	//	go func() {
-	//		t.Log(string(resp))
-	//	}()
-	//}
+	if klines, resp, err := kraken.Swap.GetKline(
+		NewPair("btc_usd", "_"),
+		KLINE_PERIOD_1MIN,
+		1440,
+		1654045200000,
+	); err != nil {
+		t.Error(err)
+		return
+	} else {
+		//t.Log(string(resp))
+		for _, kline := range klines {
+			t.Log(kline)
+		}
+		go func() {
+			t.Log(string(resp))
+		}()
+	}
 }

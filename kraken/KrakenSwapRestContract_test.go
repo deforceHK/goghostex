@@ -39,8 +39,8 @@ func TestSwap_Kraken_GetContracts(t *testing.T) {
 		for _, contract := range contracts {
 			fmt.Println(contract)
 		}
-		go func() {
-			t.Log(string(resp))
-		}()
+		//go func() {
+		t.Log(string(resp))
+		//}()
 	}
 }
