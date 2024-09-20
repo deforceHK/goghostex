@@ -164,7 +164,7 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 				Timestamp: candle.Time,
 				Date: time.Unix(candle.Time/1000, 0).In(
 					swap.config.Location,
-				).Format("2006-01-02 15:04:05"),
+				).Format(GO_BIRTHDAY),
 				Open:  candle.Open,
 				Close: candle.Close,
 				High:  candle.High,
