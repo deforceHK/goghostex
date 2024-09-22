@@ -50,7 +50,12 @@ func (swap *Swap) GetTicker(pair Pair) (*SwapTicker, []byte, error) {
 		} `json:"ticker"`
 	}{}
 
-	if resp, err := swap.DoRequest(http.MethodGet, uri, "", &response); err != nil || response.Result != "success" {
+	if resp, err := swap.DoRequest(
+		SWAP_KRAKEN_ENDPOINT,
+		http.MethodGet,
+		uri, "",
+		&response,
+	); err != nil || response.Result != "success" {
 		return nil, resp, err
 	} else {
 		var serverTime, err = time.Parse(time.RFC3339, response.ServerTime)
@@ -84,7 +89,13 @@ func (swap *Swap) GetDepth(pair Pair, size int) (*SwapDepth, []byte, error) {
 		} `json:"orderBook"`
 	}{}
 
-	if resp, err := swap.DoRequest(http.MethodGet, uri, "", &response); err != nil || response.Result != "success" {
+	if resp, err := swap.DoRequest(
+		SWAP_KRAKEN_ENDPOINT,
+		http.MethodGet,
+		uri,
+		"",
+		&response,
+	); err != nil || response.Result != "success" {
 		return nil, resp, err
 	} else {
 		var serverTime, err = time.Parse(time.RFC3339, response.ServerTime)
@@ -150,7 +161,9 @@ func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []
 		} `json:"candles"`
 	}{}
 
-	if resp, err := swap.DoGetRequest(
+	if resp, err := swap.DoRequest(
+		SWAP_BASE_MODE_CHART,
+		http.MethodGet,
 		fmt.Sprintf("/api/charts/v1/trade/%s/%s", symbol, SWAP_KRAKEN_PERIOD_TRANS[period])+reqBody,
 		"", &candles,
 	); err != nil {
