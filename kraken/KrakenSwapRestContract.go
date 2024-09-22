@@ -134,7 +134,13 @@ func (swap *Swap) GetContracts() ([]*SwapContract, []byte, error) {
 		} `json:"instruments"`
 	}{}
 
-	if resp, err := swap.DoRequest(http.MethodGet, SWAP_CONTRACT_URI, "", &results); err != nil {
+	if resp, err := swap.DoRequest(
+		SWAP_KRAKEN_ENDPOINT,
+		http.MethodGet,
+		SWAP_CONTRACT_URI,
+		"",
+		&results,
+	); err != nil {
 		return nil, resp, err
 	} else {
 		if results.Result != "success" {
