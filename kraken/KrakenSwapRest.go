@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -16,6 +15,8 @@ import (
 
 const (
 	SWAP_KRAKEN_ENDPOINT = "https://futures.kraken.com/derivatives"
+
+	SWAP_BASE_MODE_CHART = "https://futures.kraken.com"
 )
 
 type Swap struct {
@@ -28,11 +29,11 @@ type Swap struct {
 	lastRequestTS int64 // 最近一次请求时间戳
 }
 
-func (swap *Swap) DoGetRequest(uri, reqBody string, response interface{}) ([]byte, error) {
+func (swap *Swap) DoRequest(baseUrl, httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	var resp, err = NewHttpRequest(
 		swap.config.HttpClient,
-		http.MethodGet,
-		"https://futures.kraken.com"+uri,
+		httpMethod,
+		baseUrl+uri,
 		reqBody,
 		map[string]string{
 			"Content-Type": "application/x-www-form-urlencoded",
@@ -47,22 +48,20 @@ func (swap *Swap) DoGetRequest(uri, reqBody string, response interface{}) ([]byt
 	}
 }
 
-func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
+func (swap *Swap) DoAuthRequest(httpMethod, uri, reqBody string, response interface{}) ([]byte, error) {
 	var aut = ""
 	var nonce = fmt.Sprintf("%d", time.Now().UnixNano())
-	if httpMethod == http.MethodPost {
-		aut = reqBody + nonce + uri
-		var sha256Hash = sha256.New()
-		sha256Hash.Write([]byte(aut))
-		var sha256AUT = sha256Hash.Sum(nil)
-		if decodedSecret, err := base64.StdEncoding.DecodeString(swap.config.ApiSecretKey); err != nil {
-			return nil, err
-		} else {
-			var hmacHash = hmac.New(sha512.New, decodedSecret)
-			hmacHash.Write(sha256AUT)
-			var hmacAUT = hmacHash.Sum(nil)
-			aut = base64.StdEncoding.EncodeToString(hmacAUT)
-		}
+	aut = reqBody + nonce + uri
+	var sha256Hash = sha256.New()
+	sha256Hash.Write([]byte(aut))
+	var sha256AUT = sha256Hash.Sum(nil)
+	if decodedSecret, err := base64.StdEncoding.DecodeString(swap.config.ApiSecretKey); err != nil {
+		return nil, err
+	} else {
+		var hmacHash = hmac.New(sha512.New, decodedSecret)
+		hmacHash.Write(sha256AUT)
+		var hmacAUT = hmacHash.Sum(nil)
+		aut = base64.StdEncoding.EncodeToString(hmacAUT)
 	}
 
 	resp, err := NewHttpRequest(

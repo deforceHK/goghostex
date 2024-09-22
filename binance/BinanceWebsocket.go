@@ -260,7 +260,16 @@ func (this *WSTradeUMBN) Restart() {
 
 	// subscribe unsubscribe the channel
 	for _, v := range this.subscribed {
-		this.Subscribe(v)
+		if item, ok := v.(string); ok {
+			var req = WSMethodBN{
+				this.connId,
+				[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
+				"REQUEST",
+			}
+			if err := this.conn.WriteJSON(req); err != nil {
+				this.ErrorHandler(err)
+			}
+		}
 	}
 
 }

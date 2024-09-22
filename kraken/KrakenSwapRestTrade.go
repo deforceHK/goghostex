@@ -99,7 +99,7 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 		} `json:"sendStatus"`
 	}
 	var uri = "/api/v3/sendorder"
-	if resp, err := swap.DoRequest(
+	if resp, err := swap.DoAuthRequest(
 		http.MethodPost,
 		uri,
 		param.Encode(),
@@ -145,7 +145,7 @@ func (swap *Swap) CancelOrder(order *SwapOrder) ([]byte, error) {
 		} `json:"cancelStatus"`
 	}
 
-	var resp, err = swap.DoRequest(http.MethodPost, uri, param.Encode(), &response)
+	var resp, err = swap.DoAuthRequest(http.MethodPost, uri, param.Encode(), &response)
 	if err != nil {
 		return resp, err
 	} else {
@@ -193,7 +193,7 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 	}
 
 	var uri = "/api/v3/orders/status"
-	if resp, err := swap.DoRequest(
+	if resp, err := swap.DoAuthRequest(
 		http.MethodPost,
 		uri,
 		param.Encode(),
@@ -207,17 +207,81 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 			order.Status = orderStatus
 		}
 		order.DealAmount = response.Orders[0].Order.Filled
+		if order.Status != ORDER_FINISH {
+			return resp, nil
+		}
 
+		// the order is completed, and get it fill info.
+		if fills, _, err := swap.GetOrders(order.Pair); err != nil {
+			return resp, err
+		} else {
+			for _, fill := range fills {
+				if fill.OrderId != order.OrderId {
+					continue
+				} else {
+					order.AvgPrice = fill.AvgPrice
+					order.DealAmount = fill.DealAmount
+					order.DealTimestamp = fill.DealTimestamp
+					order.DealDatetime = fill.DealDatetime
+					break
+				}
+			}
+		}
 		return resp, nil
 	}
 }
 
 func (swap *Swap) GetOrders(pair Pair) ([]*SwapOrder, []byte, error) {
-	//TODO implement me
-	panic("implement me")
+	var contract = swap.getContract(pair)
+	var param = url.Values{}
+	var response struct {
+		ServerTime string `json:"serverTime"`
+		Result     string `json:"result"`
+		Fills      []struct {
+			CliOrdId string  `json:"cliOrdId"`
+			FillTime string  `json:"fillTime"`
+			FillType string  `json:"fillType"`
+			FillId   string  `json:"fill_id"`
+			OrderId  string  `json:"order_id"`
+			Price    float64 `json:"price"`
+			Side     string  `json:"side"`
+			Size     float64 `json:"size"`
+			Symbol   string  `json:"symbol"`
+		} `json:"fills"`
+	}
+	var uri = "/api/v3/fills"
+	if resp, err := swap.DoAuthRequest(
+		http.MethodGet,
+		uri,
+		param.Encode(),
+		&response,
+	); err != nil {
+		return nil, resp, err
+	} else {
+		if response.Result != "success" {
+			return nil, resp, errors.New(string(resp))
+		}
+		var orders = make([]*SwapOrder, 0)
+		for _, fill := range response.Fills {
+			if contract.ContractName != fill.Symbol {
+				continue
+			}
+
+			var fillTime, _ = time.Parse(time.RFC3339, fill.FillTime)
+			orders = append(orders, &SwapOrder{
+				Cid:           fill.CliOrdId,
+				OrderId:       fill.OrderId,
+				AvgPrice:      fill.Price,
+				DealAmount:    fill.Size,
+				DealDatetime:  fillTime.Format(GO_BIRTHDAY),
+				DealTimestamp: fillTime.UnixMilli(),
+			})
+		}
+		return orders, resp, nil
+	}
 }
 
 func (swap *Swap) GetUnFinishOrders(pair Pair) ([]*SwapOrder, []byte, error) {
-	//TODO implement me
+
 	panic("implement me")
 }
