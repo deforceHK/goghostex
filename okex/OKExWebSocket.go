@@ -47,8 +47,8 @@ type WSTradeOKEx struct {
 	connId string
 
 	restartSec      int
-	restartLimitNum int // In X seconds, the times of restart
-	restartLimitSec int // During the seconds, the restart limit
+	restartLimitNum int // In X(restartLimitSec) seconds, the limit times of restart
+	restartLimitSec int // In the seconds, the limit times(restartLimitNum) of restart
 
 	restartTS map[int64]string
 
@@ -80,7 +80,7 @@ func (this *WSTradeOKEx) Start() error {
 		return err
 	}
 
-	var conn, err = this.noLoginConn("wss://ws.okx.com:8443/ws/v5/private")
+	var conn, err = this.getConn("wss://ws.okx.com:8443/ws/v5/private")
 	if err != nil {
 		this.ErrorHandler(err)
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
@@ -333,7 +333,7 @@ func (this *WSTradeOKEx) startCheck() error {
 	return nil
 }
 
-func (this *WSTradeOKEx) noLoginConn(wss string) (*websocket.Conn, error) {
+func (this *WSTradeOKEx) getConn(wss string) (*websocket.Conn, error) {
 	this.initDefaultValue()
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		wss,
@@ -361,7 +361,7 @@ func (this *WSMarketOKEx) Start() error {
 		return err
 	}
 
-	var conn, err = this.noLoginConn("wss://ws.okx.com:8443/ws/v5/public")
+	var conn, err = this.getConn("wss://ws.okx.com:8443/ws/v5/public")
 	if err != nil {
 		time.Sleep(time.Duration(this.restartSec) * time.Second)
 		return this.Start()
