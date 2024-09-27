@@ -39,17 +39,7 @@ func TestWSSwapKK_Start(t *testing.T) {
 		return
 	}
 
-	var ticker = struct {
-		Event string `json:"event"`
-		Feed  string `json:"feed"`
-		//ProductIDs []string `json:"product_ids"`
-	}{
-		Event: "subscribe",
-		Feed:  "heartbeat", // "ticker",
-		//ApiKey: SWAP_API_KEY,
-		//ProductIDs: []string{"PF_XBTUSD", "PF_ETHUSD"},
-	}
-	ws.Subscribe(ticker)
+	ws.Subscribe("account_log")
 	select {}
 
 }
