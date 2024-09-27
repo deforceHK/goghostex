@@ -1,11 +1,16 @@
 package kraken
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	. "github.com/deforceHK/goghostex"
 )
@@ -36,20 +41,35 @@ type WSSwapKK struct {
 
 	lastPingTS int64
 
-	stopPingSign chan bool
 	stopChecSign chan bool
 }
 
 func (this *WSSwapKK) Subscribe(v interface{}) {
-	var err = this.conn.WriteJSON(v)
+	var channel, isStr = v.(string)
+	if !isStr {
+		this.ErrorHandler(fmt.Errorf("the subscribe param must be string"))
+		return
+	}
+
+	var sub = map[string]string{
+		"event":              "subscribe",
+		"feed":               channel,
+		"api_key":            this.Config.ApiKey,
+		"original_challenge": this.connId,
+		"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
+	}
+
+	var err = this.conn.WriteJSON(sub)
 	if err != nil {
 		this.ErrorHandler(err)
 	}
 }
 
 func (this *WSSwapKK) Unsubscribe(v interface{}) {
-	//TODO implement me
-	panic("implement me")
+	var err = this.conn.WriteJSON(v)
+	if err != nil {
+		this.ErrorHandler(err)
+	}
 }
 
 func (this *WSSwapKK) Start() error {
@@ -105,18 +125,51 @@ func (this *WSSwapKK) Start() error {
 	}
 
 	go this.recvRoutine()
+	go this.pingRoutine()
+	go this.checkRoutine()
 
 	return nil
 }
 
 func (this *WSSwapKK) Stop() {
-	//TODO implement me
-	panic("implement me")
+
+	if this.stopChecSign != nil {
+		this.stopChecSign <- true
+	}
+
+	if this.conn != nil {
+		_ = this.conn.Close()
+		this.conn = nil
+	}
 }
 
 func (this *WSSwapKK) Restart() {
-	//TODO implement me
-	panic("implement me")
+	// it's restarting now, just return.
+	if this.stopChecSign == nil || this.conn == nil {
+		return
+	}
+	this.ErrorHandler(
+		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSleepSec)},
+	)
+	this.restartTS[time.Now().Unix()] = this.connId
+	this.Stop()
+
+	time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
+	if err := this.Start(); err != nil {
+		this.ErrorHandler(err)
+		return
+	}
+
+	// subscribe unsubscribe the channel
+	for _, v := range this.subscribed {
+		var err = this.conn.WriteJSON(v)
+		if err != nil {
+			this.ErrorHandler(err)
+			var errMsg, _ = json.Marshal(v)
+			this.ErrorHandler(fmt.Errorf("subscribe error: %s", string(errMsg)))
+		}
+	}
+
 }
 
 func (this *WSSwapKK) startCheck() error {
@@ -185,10 +238,53 @@ func (this *WSSwapKK) initDefaultValue() {
 
 }
 
-func (this *WSSwapKK) recvRoutine() {
-	var conn = this.conn
+func (this *WSSwapKK) pingRoutine() {
+
+	var heartBeat = struct {
+		Event string `json:"event"`
+		Feed  string `json:"feed"`
+	}{
+		Event: "subscribe",
+		Feed:  "heartbeat",
+	}
+
+	var err = this.conn.WriteJSON(heartBeat)
+	if err != nil {
+		this.ErrorHandler(err)
+		return
+	}
+}
+
+func (this *WSSwapKK) checkRoutine() {
+	var stopChecChn = make(chan bool, 1)
+	this.stopChecSign = stopChecChn
+
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
+	defer ticker.Stop()
+
 	for {
-		var msgType, msg, readErr = conn.ReadMessage()
+		select {
+		case <-ticker.C:
+			// 超过x秒没有收到消息，重新连接，如果超出重连次数，ws将停止。
+			if time.Now().Unix()-this.lastPingTS > DEFAULT_WEBSOCKET_PENDING_SEC {
+				this.ErrorHandler(fmt.Errorf("ping timeout, last ping ts: %d", this.lastPingTS))
+				this.Restart()
+				continue
+			}
+		case _, opened := <-stopChecChn:
+			if opened {
+				this.stopChecSign = nil
+				close(stopChecChn)
+			}
+			return
+		}
+	}
+}
+
+func (this *WSSwapKK) recvRoutine() {
+	//var conn = this.conn
+	for {
+		var msgType, msg, readErr = this.conn.ReadMessage()
 		if readErr != nil {
 			this.ErrorHandler(readErr)
 			this.Restart()
@@ -202,4 +298,21 @@ func (this *WSSwapKK) recvRoutine() {
 		this.lastPingTS = time.Now().Unix()
 		this.RecvHandler(string(msg))
 	}
+}
+
+func hashChallenge(apiSecret, challenge string) string {
+
+	// 1. Hash the challenge with SHA-256
+	var challengeHash = sha256.Sum256([]byte(challenge))
+
+	// 2. Base64-decode your api_secret
+	var decodedSecret, _ = base64.StdEncoding.DecodeString(apiSecret)
+
+	// 3. Use the result of step 2 to hash the result of step 1 with HMAC-SHA-512
+	var hmac = hmac.New(sha512.New, decodedSecret)
+	hmac.Write(challengeHash[:])
+	var signature = hmac.Sum(nil)
+
+	// 4. Base64-encode the result of step 3
+	return base64.StdEncoding.EncodeToString(signature)
 }
