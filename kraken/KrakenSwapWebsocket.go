@@ -23,7 +23,7 @@ const (
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_SEC = 300
 )
 
-type WSSwapKK struct {
+type WSSwapTradeKK struct {
 	RecvHandler  func(string)
 	ErrorHandler func(error)
 	Config       *APIConfig
@@ -44,35 +44,50 @@ type WSSwapKK struct {
 	stopChecSign chan bool
 }
 
-func (this *WSSwapKK) Subscribe(v interface{}) {
+func (this *WSSwapTradeKK) Subscribe(v interface{}) {
 	var channel, isStr = v.(string)
 	if !isStr {
 		this.ErrorHandler(fmt.Errorf("the subscribe param must be string"))
 		return
 	}
 
-	var sub = map[string]string{
+	var err = this.conn.WriteJSON(map[string]string{
 		"event":              "subscribe",
 		"feed":               channel,
 		"api_key":            this.Config.ApiKey,
 		"original_challenge": this.connId,
 		"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
-	}
-
-	var err = this.conn.WriteJSON(sub)
+	})
 	if err != nil {
 		this.ErrorHandler(err)
 	}
 }
 
-func (this *WSSwapKK) Unsubscribe(v interface{}) {
-	var err = this.conn.WriteJSON(v)
+func (this *WSSwapTradeKK) Unsubscribe(v interface{}) {
+	var channel, isStr = v.(string)
+	if !isStr {
+		this.ErrorHandler(fmt.Errorf("the unsubscribe param must be string"))
+		return
+	}
+
+	var err = this.conn.WriteJSON(map[string]string{
+		"event":              "unsubscribe",
+		"feed":               channel,
+		"api_key":            this.Config.ApiKey,
+		"original_challenge": this.connId,
+		"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
+	})
 	if err != nil {
 		this.ErrorHandler(err)
 	}
 }
 
-func (this *WSSwapKK) Start() error {
+func (this *WSSwapTradeKK) Start() error {
+	var stopErr = this.startCheck()
+	if stopErr != nil {
+		return stopErr
+	}
+
 	var conn, err = this.getConn("wss://futures.kraken.com/ws/v1")
 	if err != nil {
 		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
@@ -124,14 +139,38 @@ func (this *WSSwapKK) Start() error {
 		}
 	}
 
+	var heartBeat = struct {
+		Event string `json:"event"`
+		Feed  string `json:"feed"`
+	}{
+		Event: "subscribe",
+		Feed:  "heartbeat",
+	}
+
+	err = this.conn.WriteJSON(heartBeat)
+	if err != nil {
+		this.ErrorHandler(err)
+		this.restartTS[time.Now().Unix()] = this.connId
+		if this.conn != nil {
+			_ = this.conn.Close()
+			log.Printf(
+				"websocket conn %s will be restart in next %d seconds...",
+				this.connId, this.restartSleepSec,
+			)
+			this.conn = nil
+			this.connId = ""
+		}
+		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
+		return this.Start()
+	}
+
 	go this.recvRoutine()
-	go this.pingRoutine()
 	go this.checkRoutine()
 
 	return nil
 }
 
-func (this *WSSwapKK) Stop() {
+func (this *WSSwapTradeKK) Stop() {
 
 	if this.stopChecSign != nil {
 		this.stopChecSign <- true
@@ -143,7 +182,7 @@ func (this *WSSwapKK) Stop() {
 	}
 }
 
-func (this *WSSwapKK) Restart() {
+func (this *WSSwapTradeKK) Restart() {
 	// it's restarting now, just return.
 	if this.stopChecSign == nil || this.conn == nil {
 		return
@@ -172,7 +211,7 @@ func (this *WSSwapKK) Restart() {
 
 }
 
-func (this *WSSwapKK) startCheck() error {
+func (this *WSSwapTradeKK) startCheck() error {
 	var restartNum, limitTS = 0, time.Now().Unix() - int64(this.restartLimitSec)
 	for ts, _ := range this.restartTS {
 		if ts > limitTS {
@@ -191,7 +230,7 @@ func (this *WSSwapKK) startCheck() error {
 	return nil
 }
 
-func (this *WSSwapKK) getConn(wss string) (*websocket.Conn, error) {
+func (this *WSSwapTradeKK) getConn(wss string) (*websocket.Conn, error) {
 	this.initDefaultValue()
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		wss,
@@ -209,7 +248,7 @@ func (this *WSSwapKK) getConn(wss string) (*websocket.Conn, error) {
 	return conn, nil
 }
 
-func (this *WSSwapKK) initDefaultValue() {
+func (this *WSSwapTradeKK) initDefaultValue() {
 	if this.RecvHandler == nil {
 		this.RecvHandler = func(msg string) {
 			log.Println(msg)
@@ -238,24 +277,7 @@ func (this *WSSwapKK) initDefaultValue() {
 
 }
 
-func (this *WSSwapKK) pingRoutine() {
-
-	var heartBeat = struct {
-		Event string `json:"event"`
-		Feed  string `json:"feed"`
-	}{
-		Event: "subscribe",
-		Feed:  "heartbeat",
-	}
-
-	var err = this.conn.WriteJSON(heartBeat)
-	if err != nil {
-		this.ErrorHandler(err)
-		return
-	}
-}
-
-func (this *WSSwapKK) checkRoutine() {
+func (this *WSSwapTradeKK) checkRoutine() {
 	var stopChecChn = make(chan bool, 1)
 	this.stopChecSign = stopChecChn
 
@@ -281,7 +303,7 @@ func (this *WSSwapKK) checkRoutine() {
 	}
 }
 
-func (this *WSSwapKK) recvRoutine() {
+func (this *WSSwapTradeKK) recvRoutine() {
 	//var conn = this.conn
 	for {
 		var msgType, msg, readErr = this.conn.ReadMessage()
@@ -294,9 +316,14 @@ func (this *WSSwapKK) recvRoutine() {
 		if msgType != websocket.TextMessage {
 			continue
 		}
-
+		var event = struct {
+			Feed string `json:"feed"`
+		}{}
+		_ = json.Unmarshal(msg, &event)
 		this.lastPingTS = time.Now().Unix()
-		this.RecvHandler(string(msg))
+		if event.Feed != "heartbeat" {
+			this.RecvHandler(string(msg))
+		}
 	}
 }
 
@@ -315,4 +342,48 @@ func hashChallenge(apiSecret, challenge string) string {
 
 	// 4. Base64-encode the result of step 3
 	return base64.StdEncoding.EncodeToString(signature)
+}
+
+type WSSwapMarketKK struct {
+	*WSSwapTradeKK
+}
+
+func (this *WSSwapMarketKK) Start() error {
+	var stopErr = this.startCheck()
+	if stopErr != nil {
+		return stopErr
+	}
+
+	var conn, err = this.getConn("wss://futures.kraken.com/ws/v1")
+	if err != nil {
+		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
+		return this.Start()
+	}
+	this.conn = conn
+
+	var heartBeat = struct {
+		Event string `json:"event"`
+		Feed  string `json:"feed"`
+	}{
+		Event: "subscribe",
+		Feed:  "heartbeat",
+	}
+
+	err = this.conn.WriteJSON(heartBeat)
+	if err != nil {
+		this.ErrorHandler(err)
+		return err
+	}
+
+	go this.recvRoutine()
+	go this.checkRoutine()
+	return nil
+
+}
+
+func (this *WSSwapMarketKK) Subscribe(v interface{}) {
+	var err = this.conn.WriteJSON(v)
+	if err != nil {
+		this.ErrorHandler(err)
+	}
 }
