@@ -11,12 +11,12 @@ import (
 
 /**
 * unit test cmd
-* go test -v ./kraken/... -count=1 -run=TestWSSwapKK_Start
+* go test -v ./kraken/... -count=1 -run=TestWSSwapTradeKK_Start
 *
 **/
-func TestWSSwapKK_Start(t *testing.T) {
+func TestWSSwapTradeKK_Start(t *testing.T) {
 
-	var ws = WSSwapKK{
+	var ws = WSSwapTradeKK{
 		Config: &APIConfig{
 			Endpoint: SWAP_KRAKEN_ENDPOINT,
 			HttpClient: &http.Client{
@@ -42,4 +42,46 @@ func TestWSSwapKK_Start(t *testing.T) {
 	ws.Subscribe("account_log")
 	select {}
 
+}
+
+/**
+* unit test cmd
+* go test -v ./kraken/... -count=1 -run=TestWSSwapMarketKK_Start
+*
+**/
+func TestWSSwapMarketKK_Start(t *testing.T) {
+	var ws = WSSwapMarketKK{
+		&WSSwapTradeKK{
+			Config: &APIConfig{
+				Endpoint: SWAP_KRAKEN_ENDPOINT,
+				HttpClient: &http.Client{
+					Transport: &http.Transport{
+						Proxy: func(req *http.Request) (*url.URL, error) {
+							return url.Parse(SWAP_PROXY_URL)
+						},
+					},
+				},
+				ApiKey:        SWAP_API_KEY,
+				ApiSecretKey:  SWAP_API_SECRETKEY,
+				ApiPassphrase: SWAP_API_PASSPHRASE,
+				Location:      time.Now().Location(),
+			},
+		},
+	}
+	var err = ws.Start()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var sub = struct {
+		Event      string   `json:"event"`
+		Feed       string   `json:"feed"`
+		ProductIds []string `json:"product_ids"`
+	}{
+		"subscribe", "trade", []string{"PI_XBTUSD"},
+	}
+	ws.Subscribe(sub)
+
+	select {}
 }
