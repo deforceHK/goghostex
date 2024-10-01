@@ -244,9 +244,9 @@ func (this *WSTradeUMBN) Stop() {
 
 func (this *WSTradeUMBN) Restart() {
 	// it's restarting now, just return.
-	if this.stopPingSign == nil || this.stopChecSign == nil || this.conn == nil {
-		return
-	}
+	//if this.stopPingSign == nil || this.stopChecSign == nil || this.conn == nil {
+	//	return
+	//}
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds......", this.restartSec)},
 	)
