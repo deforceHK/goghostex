@@ -28,18 +28,16 @@ type WSSwapTradeKK struct {
 	ErrorHandler func(error)
 	Config       *APIConfig
 
-	conn   *websocket.Conn
-	connId string
+	conn       *websocket.Conn
+	connId     string
+	subscribed []interface{}
 
 	restartSleepSec int
 	restartLimitNum int // In X(restartLimitSec) seconds, the limit times(restartLimitNum) of restart
 	restartLimitSec int // In X(restartLimitSec) seconds, the limit times(restartLimitNum) of restart
 
-	restartTS map[int64]string
-
-	subscribed []interface{}
-
 	lastPingTS int64
+	restartTS  map[int64]string
 
 	stopChecSign chan bool
 }
@@ -60,7 +58,9 @@ func (this *WSSwapTradeKK) Subscribe(v interface{}) {
 	})
 	if err != nil {
 		this.ErrorHandler(err)
+		return
 	}
+	this.subscribed = append(this.subscribed, v)
 }
 
 func (this *WSSwapTradeKK) Unsubscribe(v interface{}) {
@@ -79,7 +79,16 @@ func (this *WSSwapTradeKK) Unsubscribe(v interface{}) {
 	})
 	if err != nil {
 		this.ErrorHandler(err)
+		return
 	}
+
+	var newSub = make([]interface{}, 0)
+	for _, subCh := range this.subscribed {
+		if subCh.(string) != channel {
+			newSub = append(newSub, subCh)
+		}
+	}
+	this.subscribed = newSub
 }
 
 func (this *WSSwapTradeKK) Start() error {
@@ -200,11 +209,17 @@ func (this *WSSwapTradeKK) Restart() {
 	}
 
 	// subscribe unsubscribe the channel
-	for _, v := range this.subscribed {
-		var err = this.conn.WriteJSON(v)
+	for _, channel := range this.subscribed {
+		var err = this.conn.WriteJSON(map[string]string{
+			"event":              "subscribe",
+			"feed":               channel.(string),
+			"api_key":            this.Config.ApiKey,
+			"original_challenge": this.connId,
+			"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
+		})
 		if err != nil {
 			this.ErrorHandler(err)
-			var errMsg, _ = json.Marshal(v)
+			var errMsg, _ = json.Marshal(channel.(string))
 			this.ErrorHandler(fmt.Errorf("subscribe error: %s", string(errMsg)))
 		}
 	}
