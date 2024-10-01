@@ -51,7 +51,6 @@ type WSMethodBN struct {
 
 func (this *WSTradeUMBN) Subscribe(v interface{}) {
 	if item, ok := v.(string); ok {
-		this.subscribed = append(this.subscribed, item)
 		var req = WSMethodBN{
 			this.connId,
 			[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
@@ -59,7 +58,9 @@ func (this *WSTradeUMBN) Subscribe(v interface{}) {
 		}
 		if err := this.conn.WriteJSON(req); err != nil {
 			this.ErrorHandler(err)
+			return
 		}
+		this.subscribed = append(this.subscribed, item)
 	}
 }
 
