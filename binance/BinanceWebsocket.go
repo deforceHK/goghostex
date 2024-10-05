@@ -45,7 +45,7 @@ type WSTradeUMBN struct {
 
 type WSMethodBN struct {
 	Id     string   `json:"id"`
-	Param  []string `json:"params"`
+	Params []string `json:"params"`
 	Method string   `json:"method"`
 }
 
@@ -72,15 +72,16 @@ func (this *WSTradeUMBN) Unsubscribe(v interface{}) {
 }
 
 func (this *WSTradeUMBN) Start() error {
-	// it will stop the ws if the restart limit is reached
 	if err := this.startCheck(); err != nil {
 		return err
 	}
 
 	var conn, err = this.loginConn()
 	if err != nil {
-		this.ErrorHandler(err)
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
+		// it means stopped at least once.
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
 		return err
 	}
 	this.conn = conn
@@ -91,46 +92,27 @@ func (this *WSTradeUMBN) Start() error {
 
 	err = conn.WriteJSON(req)
 	if err != nil {
-		this.ErrorHandler(err)
-		this.restartTS[time.Now().Unix()] = this.connId
-
-		_ = conn.Close()
-		log.Printf(
-			"websocket conn %s will be restart in next %d seconds...",
-			this.connId, this.restartSec,
-		)
-		this.conn = nil
-		this.connId = ""
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		// it means stopped at least once.
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
 	}
 
 	var _, p, readErr = conn.ReadMessage()
 	if readErr != nil {
-
-		this.ErrorHandler(readErr)
-		this.restartTS[time.Now().Unix()] = this.connId
-		_ = conn.Close()
-		log.Printf(
-			"websocket conn %s will be restart in next %d seconds...",
-			this.connId, this.restartSec,
-		)
-		this.conn = nil
-		this.connId = ""
-
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		// it means stopped at least once.
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return readErr
 	}
 
 	var result = struct {
 		Id string `json:"id"`
 	}{}
 
-	var jsonErr = json.Unmarshal(p, &result)
-	if jsonErr != nil {
-		this.ErrorHandler(jsonErr)
-		return jsonErr
-	}
+	_ = json.Unmarshal(p, &result)
 
 	go this.pingRoutine()
 	go this.checRoutine()
@@ -170,9 +152,9 @@ func (this *WSTradeUMBN) pingRoutine() {
 			}
 		case _, opened := <-stopPingChn:
 			if opened {
-				this.stopPingSign = nil
 				close(stopPingChn)
 			}
+			this.stopPingSign = nil
 			return
 		}
 	}
@@ -195,9 +177,9 @@ func (this *WSTradeUMBN) checRoutine() {
 			}
 		case _, opened := <-stopCheckChn:
 			if opened {
-				this.stopChecSign = nil
 				close(stopCheckChn)
 			}
+			this.stopChecSign = nil
 			return
 		}
 	}
@@ -239,19 +221,15 @@ func (this *WSTradeUMBN) Stop() {
 		_ = this.conn.Close()
 		this.conn = nil
 	}
-
+	this.connId = ""
 }
 
 func (this *WSTradeUMBN) Restart() {
-	// it's restarting now, just return.
-	//if this.stopPingSign == nil || this.stopChecSign == nil || this.conn == nil {
-	//	return
-	//}
+	this.restartTS[time.Now().Unix()] = this.connId
+	this.Stop()
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds......", this.restartSec)},
 	)
-	this.restartTS[time.Now().Unix()] = this.connId
-	this.Stop()
 
 	time.Sleep(time.Duration(this.restartSec) * time.Second)
 	if err := this.Start(); err != nil {
@@ -311,7 +289,7 @@ func (this *WSTradeUMBN) startCheck() error {
 			restartNum++
 		}
 	}
-	fmt.Println(restartNum, this.restartLimitNum)
+	fmt.Println("Restarted time: ", restartNum, "Restart limit time: ", this.restartLimitNum)
 	if restartNum > this.restartLimitNum {
 		var wsErr = &WSStopError{
 			Msg: fmt.Sprintf(
@@ -348,12 +326,6 @@ func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
 		nil,
 	)
 	if err != nil {
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			this.conn = nil
-			this.connId = ""
-		}
 		return nil, err
 	}
 
@@ -363,20 +335,95 @@ func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
 	return conn, nil
 }
 
-func (this *WSTradeUMBN) noLoginConn(wss string) (*websocket.Conn, error) {
+type WSMarketUMBN struct {
+	*WSTradeUMBN
+}
+
+func (this *WSMarketUMBN) Start() error {
+	// it will return error if the restart limit is reached
+	if err := this.startCheck(); err != nil {
+		return err
+	}
+
+	var conn, err = this.noLoginConn("wss://fstream.binance.com/stream")
+	if err != nil {
+		// it means stopped at least once.
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
+	}
+	this.conn = conn
+
+	//go this.pingRoutine()
+	go this.checRoutine()
+	go this.recvRoutine()
+
+	return nil
+}
+
+func (this *WSMarketUMBN) Subscribe(v interface{}) {
+	if item, ok := v.(string); ok {
+
+		var req = struct {
+			Id     string   `json:"id"`
+			Method string   `json:"method"`
+			Params []string `json:"params"`
+		}{
+			this.connId,
+			"SUBSCRIBE",
+			[]string{item},
+		}
+
+		if err := this.conn.WriteJSON(req); err != nil {
+			this.ErrorHandler(err)
+			return
+		}
+		this.subscribed = append(this.subscribed, item)
+	}
+}
+
+func (this *WSMarketUMBN) Restart() {
+	this.restartTS[time.Now().Unix()] = this.connId
+	this.Stop()
+	this.ErrorHandler(
+		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds......", this.restartSec)},
+	)
+
+	time.Sleep(time.Duration(this.restartSec) * time.Second)
+	if err := this.Start(); err != nil {
+		this.ErrorHandler(err)
+		return
+	}
+
+	// subscribe unsubscribe the channel
+	for _, v := range this.subscribed {
+		if item, ok := v.(string); ok {
+			var req = struct {
+				Id     string   `json:"id"`
+				Method string   `json:"method"`
+				Params []string `json:"params"`
+			}{
+				this.connId,
+				"SUBSCRIBE",
+				[]string{item},
+			}
+			if err := this.conn.WriteJSON(req); err != nil {
+				this.ErrorHandler(err)
+			}
+		}
+	}
+}
+
+func (this *WSMarketUMBN) noLoginConn(wss string) (*websocket.Conn, error) {
 	this.initDefaultValue()
 	var conn, _, err = websocket.DefaultDialer.Dial(
 		wss,
 		nil,
 	)
 	if err != nil {
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			this.conn = nil
-			this.connId = ""
-		}
 		return nil, err
 	}
+	this.connId = UUID()
 	return conn, nil
 }
