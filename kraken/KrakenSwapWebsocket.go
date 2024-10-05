@@ -310,9 +310,9 @@ func (this *WSSwapTradeKK) checkRoutine() {
 			}
 		case _, opened := <-stopChecChn:
 			if opened {
-				this.stopChecSign = nil
 				close(stopChecChn)
 			}
+			this.stopChecSign = nil
 			return
 		}
 	}
