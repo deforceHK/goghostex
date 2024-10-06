@@ -46,10 +46,10 @@ func TestWSSwapTradeKK_Start(t *testing.T) {
 
 /**
 * unit test cmd
-* go test -v ./kraken/... -count=1 -run=TestWSSwapMarketKK_Start
+* go test -v ./kraken/... -count=1 -run=TestWSSwapMarketKK_LocalOrderBook
 *
 **/
-func TestWSSwapMarketKK_Start(t *testing.T) {
+func TestWSSwapMarketKK_LocalOrderBook(t *testing.T) {
 	var ws = WSSwapMarketKK{
 		&WSSwapTradeKK{
 			Config: &APIConfig{
@@ -79,7 +79,7 @@ func TestWSSwapMarketKK_Start(t *testing.T) {
 		Feed       string   `json:"feed"`
 		ProductIds []string `json:"product_ids"`
 	}{
-		"subscribe", "trade", []string{"PI_XBTUSD"},
+		"subscribe", "book", []string{"PF_XBTUSD"},
 	}
 	ws.Subscribe(sub)
 
