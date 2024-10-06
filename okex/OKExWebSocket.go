@@ -84,9 +84,10 @@ func (this *WSTradeOKEx) Start() error {
 
 	var conn, err = this.getConn("wss://ws.okx.com:8443/ws/v5/private")
 	if err != nil {
-		this.ErrorHandler(err)
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
 	}
 	this.conn = conn
 
@@ -109,36 +110,18 @@ func (this *WSTradeOKEx) Start() error {
 
 	err = conn.WriteJSON(login)
 	if err != nil {
-		this.ErrorHandler(err)
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSec,
-			)
-			this.conn = nil
-			this.connId = ""
+		if len(this.restartTS) != 0 {
+			this.Restart()
 		}
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		return err
 	}
 
 	var _, p, readErr = conn.ReadMessage()
 	if readErr != nil {
-		this.ErrorHandler(readErr)
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSec,
-			)
-			this.conn = nil
-			this.connId = ""
+		if len(this.restartTS) != 0 {
+			this.Restart()
 		}
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		return readErr
 	}
 
 	var result = struct {
@@ -254,14 +237,11 @@ func (this *WSTradeOKEx) Stop() {
 		_ = this.conn.Close()
 		this.conn = nil
 	}
+	this.connId = ""
 
 }
 
 func (this *WSTradeOKEx) Restart() {
-	//it's restarting now, just return.
-	//if this.stopChecSign == nil || this.stopPingSign == nil || this.conn == nil {
-	//	return
-	//}
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSec)},
 	)
@@ -365,8 +345,10 @@ func (this *WSMarketOKEx) Start() error {
 
 	var conn, err = this.getConn("wss://ws.okx.com:8443/ws/v5/public")
 	if err != nil {
-		time.Sleep(time.Duration(this.restartSec) * time.Second)
-		return this.Start()
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
 	}
 	this.conn = conn
 
