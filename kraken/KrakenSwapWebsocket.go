@@ -99,10 +99,11 @@ func (this *WSSwapTradeKK) Start() error {
 
 	var conn, err = this.getConn("wss://futures.kraken.com/ws/v1")
 	if err != nil {
-		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
-		return this.Start()
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
 	}
-
 	this.conn = conn
 
 	var challenge = struct {
@@ -117,19 +118,10 @@ func (this *WSSwapTradeKK) Start() error {
 
 	err = this.conn.WriteJSON(challenge)
 	if err != nil {
-		this.ErrorHandler(err)
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSleepSec,
-			)
-			this.conn = nil
-			this.connId = ""
+		if len(this.restartTS) != 0 {
+			this.Restart()
 		}
-		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
-		return this.Start()
+		return err
 	}
 
 	for {
@@ -158,19 +150,10 @@ func (this *WSSwapTradeKK) Start() error {
 
 	err = this.conn.WriteJSON(heartBeat)
 	if err != nil {
-		this.ErrorHandler(err)
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			log.Printf(
-				"websocket conn %s will be restart in next %d seconds...",
-				this.connId, this.restartSleepSec,
-			)
-			this.conn = nil
-			this.connId = ""
+		if len(this.restartTS) != 0 {
+			this.Restart()
 		}
-		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
-		return this.Start()
+		return err
 	}
 
 	go this.recvRoutine()
@@ -189,13 +172,10 @@ func (this *WSSwapTradeKK) Stop() {
 		_ = this.conn.Close()
 		this.conn = nil
 	}
+	this.connId = ""
 }
 
 func (this *WSSwapTradeKK) Restart() {
-	// it's restarting now, just return.
-	//if this.stopChecSign == nil || this.conn == nil {
-	//	return
-	//}
 	this.ErrorHandler(
 		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds...", this.restartSleepSec)},
 	)
@@ -252,12 +232,6 @@ func (this *WSSwapTradeKK) getConn(wss string) (*websocket.Conn, error) {
 		nil,
 	)
 	if err != nil {
-		this.restartTS[time.Now().Unix()] = this.connId
-		if this.conn != nil {
-			_ = this.conn.Close()
-			this.conn = nil
-			this.connId = ""
-		}
 		return nil, err
 	}
 	return conn, nil
@@ -319,7 +293,6 @@ func (this *WSSwapTradeKK) checkRoutine() {
 }
 
 func (this *WSSwapTradeKK) recvRoutine() {
-	//var conn = this.conn
 	for {
 		var msgType, msg, readErr = this.conn.ReadMessage()
 		if readErr != nil {
@@ -371,10 +344,13 @@ func (this *WSSwapMarketKK) Start() error {
 
 	var conn, err = this.getConn("wss://futures.kraken.com/ws/v1")
 	if err != nil {
-		time.Sleep(time.Duration(this.restartSleepSec) * time.Second)
-		return this.Start()
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
+		return err
 	}
 	this.conn = conn
+	this.connId = UUID()
 
 	var heartBeat = struct {
 		Event string `json:"event"`
@@ -386,7 +362,9 @@ func (this *WSSwapMarketKK) Start() error {
 
 	err = this.conn.WriteJSON(heartBeat)
 	if err != nil {
-		this.ErrorHandler(err)
+		if len(this.restartTS) != 0 {
+			this.Restart()
+		}
 		return err
 	}
 
