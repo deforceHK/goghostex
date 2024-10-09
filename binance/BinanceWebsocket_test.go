@@ -71,6 +71,6 @@ func TestBinanceSwapMarketWebsocket(t *testing.T) {
 	}
 	time.Sleep(10 * time.Second)
 
-	wsBN.Subscribe("solusdt@depth@500ms")
+	wsBN.Subscribe("solusdt@depth")
 	select {}
 }

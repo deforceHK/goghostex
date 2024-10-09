@@ -395,7 +395,7 @@ type KKSnapshot struct {
 		Price float64 `json:"price"`
 		Qty   float64 `json:"qty"`
 	} `json:"asks"`
-	Timestamp int64  `json:"timestamp"`
+	Timestamp int64 `json:"timestamp"`
 }
 
 func (this *WSSwapMarketKK) Subscribe(v interface{}) {
@@ -412,17 +412,17 @@ type LocalOrderBooks struct {
 	OrderBookMuxs map[string]*sync.Mutex
 }
 
-func (this *LocalOrderBooks) Init()  {
-	if this.OrderBookMuxs == nil{
+func (this *LocalOrderBooks) Init() {
+	if this.OrderBookMuxs == nil {
 		this.OrderBookMuxs = make(map[string]*sync.Mutex)
 	}
-	if this.BidData ==nil{
+	if this.BidData == nil {
 		this.BidData = make(map[string]map[int64]float64)
 	}
-	if this.AskData ==nil{
+	if this.AskData == nil {
 		this.AskData = make(map[string]map[int64]float64)
 	}
-	if this.SeqData == nil{
+	if this.SeqData == nil {
 		this.SeqData = make(map[string]map[int64]int64)
 	}
 }
@@ -446,28 +446,28 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 	}
 }
 
-func (this *LocalOrderBooks) recvBook(book KKBook)  {
+func (this *LocalOrderBooks) recvBook(book KKBook) {
 	var mux, exist = this.OrderBookMuxs[book.ProductId]
 	if !exist {
 		return
 	}
 	mux.Lock()
 	defer mux.Unlock()
-	var stdPrice = int64(book.Price*100000000)
-	if book.Seq <= this.SeqData[book.ProductId][stdPrice]{
+	var stdPrice = int64(book.Price * 100000000)
+	if book.Seq <= this.SeqData[book.ProductId][stdPrice] {
 		return
 	}
-	if book.Side == "buy"{
+	if book.Side == "buy" {
 		this.BidData[book.ProductId][stdPrice] = book.Qty
 		this.SeqData[book.ProductId][stdPrice] = book.Seq
-	}else{
+	} else {
 		this.AskData[book.ProductId][stdPrice] = book.Qty
 		this.SeqData[book.ProductId][stdPrice] = book.Seq
 	}
 }
 
-func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot)  {
-	var _,exist = this.OrderBookMuxs[snapshot.ProductId]
+func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot) {
+	var _, exist = this.OrderBookMuxs[snapshot.ProductId]
 	if !exist {
 		this.OrderBookMuxs[snapshot.ProductId] = &sync.Mutex{}
 	}
@@ -479,14 +479,14 @@ func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot)  {
 	var bidData = make(map[int64]float64)
 	var askData = make(map[int64]float64)
 	var seqData = make(map[int64]int64)
-	for _, bid := range snapshot.Bids{
-		var stdPrice = int64(bid.Price*100000000)
+	for _, bid := range snapshot.Bids {
+		var stdPrice = int64(bid.Price * 100000000)
 		bidData[stdPrice] = bid.Qty
 		seqData[stdPrice] = snapshot.Seq
 	}
 
-	for _,ask :=range snapshot.Asks{
-		var stdPrice = int64(ask.Price*100000000)
+	for _, ask := range snapshot.Asks {
+		var stdPrice = int64(ask.Price * 100000000)
 		askData[stdPrice] = ask.Qty
 		seqData[stdPrice] = snapshot.Seq
 	}
