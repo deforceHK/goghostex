@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -428,101 +426,4 @@ func (this *WSMarketUMBN) noLoginConn(wss string) (*websocket.Conn, error) {
 	}
 	this.connId = UUID()
 	return conn, nil
-}
-
-type LocalOrderBooks struct {
-	*WSTradeUMBN
-	BidData       map[string]map[int64]float64
-	AskData       map[string]map[int64]float64
-	SeqData       map[string]map[int64]int64
-	OrderBookMuxs map[string]*sync.Mutex
-	Cache         map[string][]*DeltaOrderBook
-}
-
-type DeltaOrderBook struct {
-}
-
-func (this *LocalOrderBooks) Init() error {
-	if this.OrderBookMuxs == nil {
-		this.OrderBookMuxs = make(map[string]*sync.Mutex)
-	}
-	if this.BidData == nil {
-		this.BidData = make(map[string]map[int64]float64)
-	}
-	if this.AskData == nil {
-		this.AskData = make(map[string]map[int64]float64)
-	}
-	if this.SeqData == nil {
-		this.SeqData = make(map[string]map[int64]int64)
-	}
-	if this.Cache == nil {
-		this.Cache = make(map[string][]*DeltaOrderBook)
-	}
-	var err = this.Start()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (this *LocalOrderBooks)  Restart() {
-	this.WSTradeUMBN.Restart()
-	//	重新申请一次snapshot
-
-}
-
-func (this *LocalOrderBooks) ReceiveSnapshot(productId, msg string) {
-	var snapshot = struct {
-		LastUpdateId int64      `json:"lastUpdateId"`
-		E            int64      `json:"E"`
-		T            int64      `json:"T"`
-		Bids         [][]string `json:"bids"`
-		Asks         [][]string `json:"asks"`
-	}{}
-
-	_ = json.Unmarshal([]byte(msg), &snapshot)
-
-	if _, exist := this.OrderBookMuxs[productId]; !exist {
-		this.OrderBookMuxs[productId] = &sync.Mutex{}
-	}
-
-	var mux = this.OrderBookMuxs[productId]
-	mux.Lock()
-	defer mux.Unlock()
-
-	for _, bid := range snapshot.Bids {
-		var price, _ = strconv.ParseFloat(bid[0], 64)
-		var stdPrice = int64(price * 100000000)
-		var volume, _ = strconv.ParseFloat(bid[1], 64)
-
-		this.BidData[productId][stdPrice] = volume
-		this.SeqData[productId][stdPrice] = snapshot.LastUpdateId
-	}
-
-	for _, ask := range snapshot.Asks {
-		var price, _ = strconv.ParseFloat(ask[0], 64)
-		var stdPrice = int64(price * 100000000)
-		var volume, _ = strconv.ParseFloat(ask[1], 64)
-
-		this.AskData[productId][stdPrice] = volume
-		this.SeqData[productId][stdPrice] = snapshot.LastUpdateId
-	}
-}
-
-func (this *LocalOrderBooks) ReceiveDelta(productId, msg string) {
-	var delta = struct {
-		Stream string `json:"stream"`
-		Data   struct {
-			E        string     `json:"E"`
-			T        string     `json:"T"`
-			S        string     `json:"s"`
-			StartSeq int64      `json:"U"`
-			EndSeq   int64      `json:"u"`
-			B        [][]string `json:"b"`
-			A        [][]string `json:"a"`
-		} `json:"data"`
-	}{}
-
-	_ = json.Unmarshal([]byte(msg), &delta)
-
 }
