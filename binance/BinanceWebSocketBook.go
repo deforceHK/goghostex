@@ -3,6 +3,7 @@ package binance
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -222,7 +223,7 @@ func (this *LocalOrderBooks) Snapshot(productId string) (*SwapDepth, error) {
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}
-	var zeroCount, sumCount = 0, 0
+	var zeroCount, sumCount = 0.0, 0.0
 	for stdPrice, amount := range this.BidData[productId] {
 		if amount > 0 {
 			depth.BidList = append(depth.BidList, DepthRecord{
@@ -246,9 +247,11 @@ func (this *LocalOrderBooks) Snapshot(productId string) (*SwapDepth, error) {
 		}
 		sumCount++
 	}
+	sort.Sort(sort.Reverse(depth.BidList))
+	sort.Sort(depth.AskList)
 
 	// collect the zero amount data
-	if float32(zeroCount)/float32(sumCount) > 0.3 {
+	if zeroCount/sumCount > 0.3 {
 		for priceKey, amountValue := range this.BidData[productId] {
 			if amountValue > 0 {
 				continue

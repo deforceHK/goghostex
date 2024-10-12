@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -375,124 +374,9 @@ func (this *WSSwapMarketKK) Start() error {
 
 }
 
-type KKBook struct {
-	ProductId string  `json:"product_id"`
-	Side      string  `json:"side"`
-	Seq       int64   `json:"seq"`
-	Price     float64 `json:"price"`
-	Qty       float64 `json:"qty"`
-	Timestamp int64   `json:"timestamp"`
-}
-
-type KKSnapshot struct {
-	ProductId string `json:"product_id"`
-	Seq       int64  `json:"seq"`
-	Bids      []*struct {
-		Price float64 `json:"price"`
-		Qty   float64 `json:"qty"`
-	} `json:"bids"`
-	Asks []*struct {
-		Price float64 `json:"price"`
-		Qty   float64 `json:"qty"`
-	} `json:"asks"`
-	Timestamp int64 `json:"timestamp"`
-}
-
 func (this *WSSwapMarketKK) Subscribe(v interface{}) {
 	var err = this.conn.WriteJSON(v)
 	if err != nil {
 		this.ErrorHandler(err)
 	}
-}
-
-type LocalOrderBooks struct {
-	BidData       map[string]map[int64]float64
-	AskData       map[string]map[int64]float64
-	SeqData       map[string]map[int64]int64
-	OrderBookMuxs map[string]*sync.Mutex
-}
-
-func (this *LocalOrderBooks) Init() {
-	if this.OrderBookMuxs == nil {
-		this.OrderBookMuxs = make(map[string]*sync.Mutex)
-	}
-	if this.BidData == nil {
-		this.BidData = make(map[string]map[int64]float64)
-	}
-	if this.AskData == nil {
-		this.AskData = make(map[string]map[int64]float64)
-	}
-	if this.SeqData == nil {
-		this.SeqData = make(map[string]map[int64]int64)
-	}
-}
-
-func (this *LocalOrderBooks) Receiver(msg string) {
-	var rawData = []byte(msg)
-	var pre = struct {
-		Feed string `json:"feed"`
-	}{}
-	_ = json.Unmarshal(rawData, &pre)
-
-	if pre.Feed == "book" {
-		var book = KKBook{}
-		_ = json.Unmarshal(rawData, &book)
-	} else if pre.Feed == "book_snapshot" {
-		var snapshot = KKSnapshot{}
-		_ = json.Unmarshal(rawData, &snapshot)
-		this.recvSnapshot(snapshot)
-	} else {
-		fmt.Println("The feed must in book_snapshot book")
-	}
-}
-
-func (this *LocalOrderBooks) recvBook(book KKBook) {
-	var mux, exist = this.OrderBookMuxs[book.ProductId]
-	if !exist {
-		return
-	}
-	mux.Lock()
-	defer mux.Unlock()
-	var stdPrice = int64(book.Price * 100000000)
-	if book.Seq <= this.SeqData[book.ProductId][stdPrice] {
-		return
-	}
-	if book.Side == "buy" {
-		this.BidData[book.ProductId][stdPrice] = book.Qty
-		this.SeqData[book.ProductId][stdPrice] = book.Seq
-	} else {
-		this.AskData[book.ProductId][stdPrice] = book.Qty
-		this.SeqData[book.ProductId][stdPrice] = book.Seq
-	}
-}
-
-func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot) {
-	var _, exist = this.OrderBookMuxs[snapshot.ProductId]
-	if !exist {
-		this.OrderBookMuxs[snapshot.ProductId] = &sync.Mutex{}
-	}
-
-	var mux = this.OrderBookMuxs[snapshot.ProductId]
-	mux.Lock()
-	defer mux.Unlock()
-
-	var bidData = make(map[int64]float64)
-	var askData = make(map[int64]float64)
-	var seqData = make(map[int64]int64)
-	for _, bid := range snapshot.Bids {
-		var stdPrice = int64(bid.Price * 100000000)
-		bidData[stdPrice] = bid.Qty
-		seqData[stdPrice] = snapshot.Seq
-	}
-
-	for _, ask := range snapshot.Asks {
-		var stdPrice = int64(ask.Price * 100000000)
-		askData[stdPrice] = ask.Qty
-		seqData[stdPrice] = snapshot.Seq
-	}
-
-	this.BidData[snapshot.ProductId] = bidData
-	this.AskData[snapshot.ProductId] = askData
-	this.SeqData[snapshot.ProductId] = seqData
-
 }

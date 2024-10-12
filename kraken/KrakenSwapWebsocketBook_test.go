@@ -1,4 +1,4 @@
-package binance
+package kraken
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
-// go test -v ./binance/... -count=1 -run=TestBinanceWebsocketBook
-func TestBinanceWebsocketBook(t *testing.T) {
+// go test -v ./kraken/... -count=1 -run=TestLocalOrderBooks_Init
+func TestLocalOrderBooks_Init(t *testing.T) {
 	var config = &APIConfig{
 		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
@@ -26,26 +26,25 @@ func TestBinanceWebsocketBook(t *testing.T) {
 		Location:      time.Now().Location(),
 	}
 
-	var wsBN = &LocalOrderBooks{
-		WSMarketUMBN: &WSMarketUMBN{
-			&WSTradeUMBN{
+	var book = &LocalOrderBooks{
+		WSSwapMarketKK: &WSSwapMarketKK{
+			WSSwapTradeKK: &WSSwapTradeKK{
 				Config: config,
 			},
 		},
 	}
-
-	err := wsBN.Init()
+	var err = book.Init()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	time.Sleep(1 * time.Second)
 
-	wsBN.Subscribe("solusdt@depth")
+	var pair = NewPair("btc_usd", "_")
+	book.Subscribe(pair)
 
-	for i := 0; i < 10; i++ {
-		time.Sleep(10 * time.Second)
-		depth, depthErr := wsBN.Snapshot("solusdt")
+	for i := 0; i < 100; i++ {
+		time.Sleep(5 * time.Second)
+		depth, depthErr := book.Snapshot(pair)
 		if depthErr != nil {
 			t.Error(depthErr)
 			return
