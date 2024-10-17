@@ -56,6 +56,7 @@ func (this *WSTradeUMBN) Subscribe(v interface{}) {
 			[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
 			"REQUEST",
 		}
+
 		if err := this.conn.WriteJSON(req); err != nil {
 			this.ErrorHandler(err)
 			return

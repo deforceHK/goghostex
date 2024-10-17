@@ -128,8 +128,11 @@ func (swap *Swap) GetContract(pair Pair) *SwapContract {
 }
 
 func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
-	// TODO implement me
-	panic("implement me")
+	var ticker, _, err = swap.GetTicker(pair)
+	if err != nil {
+		return 0, 0, err
+	}
+	return ticker.Sell * 1.2, ticker.Buy * 0.8, nil
 }
 
 func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error) {
