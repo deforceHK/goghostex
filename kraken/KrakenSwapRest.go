@@ -124,6 +124,8 @@ func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount floa
 }
 
 func (swap *Swap) KeepAlive() {
-	//TODO implement me
-	panic("implement me")
+	if time.Now().UnixMilli()-swap.lastRequestTS < 5*1000 {
+		return
+	}
+	_, _, _ = swap.GetTicker(Pair{BTC, USD})
 }
