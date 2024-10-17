@@ -128,4 +128,5 @@ func (swap *Swap) KeepAlive() {
 		return
 	}
 	_, _, _ = swap.GetTicker(Pair{BTC, USD})
+	swap.lastRequestTS = time.Now().UnixMilli()
 }

@@ -132,7 +132,7 @@ func (swap *Swap) GetLimit(pair Pair) (float64, float64, error) {
 	if err != nil {
 		return 0, 0, err
 	}
-	return ticker.Sell * 1.2, ticker.Buy * 0.8, nil
+	return ticker.Sell * 1.15, ticker.Buy * 0.85, nil
 }
 
 func (swap *Swap) GetKline(pair Pair, period, size, since int) ([]*SwapKline, []byte, error) {
