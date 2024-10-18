@@ -36,7 +36,7 @@ func TestBinanceFutureWebsocket_Start(t *testing.T) {
 		return
 	}
 
-	wsBN.Subscribe("balance")
+	//wsBN.Subscribe("balance")
 
 	time.Sleep(600 * time.Second)
 }

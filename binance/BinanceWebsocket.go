@@ -1,7 +1,6 @@
 package binance
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -45,7 +44,11 @@ type WSTradeUMBN struct {
 
 type WSMethodBN struct {
 	Id     string   `json:"id"`
-	Params []string `json:"params"`
+	Params struct{
+		ApiKey string `json:"apiKey"`
+		Timestamp int64 `json:"timestamp"`
+		Signature string `json:"signature"`
+	} `json:"params"`
 	Method string   `json:"method"`
 }
 
@@ -53,8 +56,16 @@ func (this *WSTradeUMBN) Subscribe(v interface{}) {
 	if item, ok := v.(string); ok {
 		var req = WSMethodBN{
 			this.connId,
-			[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
-			"REQUEST",
+			struct{
+				ApiKey string `json:"apiKey"`
+				Timestamp int64 `json:"timestamp"`
+				Signature string `json:"signature"`
+			}{
+				this.Config.ApiKey,
+				time.Now().UnixMilli(),
+				"",
+			},
+			item,
 		}
 
 		if err := this.conn.WriteJSON(req); err != nil {
@@ -87,33 +98,33 @@ func (this *WSTradeUMBN) Start() error {
 	}
 	this.conn = conn
 
-	var req = WSMethodBN{
-		this.connId, []string{"userDataStream.start"}, "REQUEST",
-	}
-
-	err = conn.WriteJSON(req)
-	if err != nil {
-		// it means stopped at least once.
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-
-	var _, p, readErr = conn.ReadMessage()
-	if readErr != nil {
-		// it means stopped at least once.
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return readErr
-	}
-
-	var result = struct {
-		Id string `json:"id"`
-	}{}
-
-	_ = json.Unmarshal(p, &result)
+	//var req = WSMethodBN{
+	//	this.connId, []string{"userDataStream.start"}, "REQUEST",
+	//}
+	//
+	//err = conn.WriteJSON(req)
+	//if err != nil {
+	//	// it means stopped at least once.
+	//	if len(this.restartTS) != 0 {
+	//		this.Restart()
+	//	}
+	//	return err
+	//}
+	//
+	//var _, p, readErr = conn.ReadMessage()
+	//if readErr != nil {
+	//	// it means stopped at least once.
+	//	if len(this.restartTS) != 0 {
+	//		this.Restart()
+	//	}
+	//	return readErr
+	//}
+	//
+	//var result = struct {
+	//	Id string `json:"id"`
+	//}{}
+	//
+	//_ = json.Unmarshal(p, &result)
 
 	go this.pingRoutine()
 	go this.checRoutine()
@@ -239,18 +250,18 @@ func (this *WSTradeUMBN) Restart() {
 	}
 
 	// subscribe unsubscribe the channel
-	for _, v := range this.subscribed {
-		if item, ok := v.(string); ok {
-			var req = WSMethodBN{
-				this.connId,
-				[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
-				"REQUEST",
-			}
-			if err := this.conn.WriteJSON(req); err != nil {
-				this.ErrorHandler(err)
-			}
-		}
-	}
+	//for _, v := range this.subscribed {
+	//	if item, ok := v.(string); ok {
+	//		var req = WSMethodBN{
+	//			this.connId,
+	//			[]string{fmt.Sprintf("%s@%s", this.listenKey, item)},
+	//			"REQUEST",
+	//		}
+	//		if err := this.conn.WriteJSON(req); err != nil {
+	//			this.ErrorHandler(err)
+	//		}
+	//	}
+	//}
 
 }
 
