@@ -43,22 +43,22 @@ type WSTradeUMBN struct {
 }
 
 type WSMethodBN struct {
-	Id     string   `json:"id"`
-	Params struct{
-		ApiKey string `json:"apiKey"`
-		Timestamp int64 `json:"timestamp"`
+	Id     string `json:"id"`
+	Params struct {
+		ApiKey    string `json:"apiKey"`
+		Timestamp int64  `json:"timestamp"`
 		Signature string `json:"signature"`
 	} `json:"params"`
-	Method string   `json:"method"`
+	Method string `json:"method"`
 }
 
 func (this *WSTradeUMBN) Subscribe(v interface{}) {
 	if item, ok := v.(string); ok {
 		var req = WSMethodBN{
 			this.connId,
-			struct{
-				ApiKey string `json:"apiKey"`
-				Timestamp int64 `json:"timestamp"`
+			struct {
+				ApiKey    string `json:"apiKey"`
+				Timestamp int64  `json:"timestamp"`
 				Signature string `json:"signature"`
 			}{
 				this.Config.ApiKey,

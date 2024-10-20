@@ -130,13 +130,13 @@ func TestSwap_Trade_And_Cancel(t *testing.T) {
 func TestSwap_Trade_Deal(t *testing.T) {
 
 	config := &APIConfig{
-		Endpoint: SWAP_KRAKEN_ENDPOINT,
+		Endpoint:   SWAP_KRAKEN_ENDPOINT,
 		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(SWAP_PROXY_URL)
-				},
-			},
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse(SWAP_PROXY_URL)
+			//	},
+			//},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
