@@ -125,12 +125,13 @@ func (swap *Swap) GetContracts() ([]*SwapContract, []byte, error) {
 	var results = struct {
 		Result      string `json:"result"`
 		Instruments []struct {
-			Symbol       string  `json:"symbol"`
-			Type         string  `json:"type"`
-			Underlying   string  `json:"underlying"`
-			TickSize     float64 `json:"tickSize"`
-			ContractSize float64 `json:"contractSize"`
-			OpeningDate  string  `json:"openingDate"`
+			Symbol                      string  `json:"symbol"`
+			Type                        string  `json:"type"`
+			Underlying                  string  `json:"underlying"`
+			TickSize                    float64 `json:"tickSize"`
+			ContractSize                float64 `json:"contractSize"`
+			ContractValueTradePrecision int64   `json:"contractValueTradePrecision"`
+			OpeningDate                 string  `json:"openingDate"`
 		} `json:"instruments"`
 	}{}
 
@@ -181,7 +182,7 @@ func (swap *Swap) GetContracts() ([]*SwapContract, []byte, error) {
 				UnitAmount:      inst.ContractSize,
 				TickSize:        inst.TickSize,
 				PricePrecision:  GetPrecisionInt64(inst.TickSize),
-				AmountPrecision: GetPrecisionInt64(inst.ContractSize),
+				AmountPrecision: inst.ContractValueTradePrecision,
 			})
 		}
 		return contracts, resp, nil
