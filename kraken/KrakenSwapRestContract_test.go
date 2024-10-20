@@ -1,6 +1,7 @@
 package kraken
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -43,4 +44,9 @@ func TestSwap_Kraken_GetContracts(t *testing.T) {
 		t.Log(string(resp))
 		//}()
 	}
+
+	var contract = kraken.Swap.GetContract(Pair{SOL, USD})
+	t.Log(contract)
+	var contractBody, _ = json.Marshal(contract)
+	t.Log(string(contractBody))
 }
