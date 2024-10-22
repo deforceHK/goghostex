@@ -138,7 +138,7 @@ func (this *LocalOrderBooks) recvBook(book KKBook) {
 	var stdPrice = int64(book.Price * 100000000)
 	if book.Seq != this.SeqData[book.ProductId]+1 {
 		//这样restart也可以，但是重新订阅是不是更轻量？
-		this.Restart()
+		this.Resubscribe(book.ProductId)
 		return
 	}
 
@@ -245,4 +245,32 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 		}
 	}
 	return depth, nil
+}
+
+func (this *LocalOrderBooks) Resubscribe(productId string) {
+	var unSub = struct {
+		Event      string   `json:"event"`
+		Feed       string   `json:"feed"`
+		ProductIds []string `json:"product_ids"`
+	}{
+		"unsubscribe", "book", []string{productId},
+	}
+
+	var err = this.conn.WriteJSON(unSub)
+	if err != nil {
+		this.ErrorHandler(err)
+	}
+	time.Sleep(10 * time.Second)
+
+	var sub = struct {
+		Event      string   `json:"event"`
+		Feed       string   `json:"feed"`
+		ProductIds []string `json:"product_ids"`
+	}{
+		"subscribe", "book", []string{productId},
+	}
+	err = this.conn.WriteJSON(sub)
+	if err != nil {
+		this.ErrorHandler(err)
+	}
 }
