@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -296,6 +297,12 @@ func (this *WSSwapTradeKK) recvRoutine() {
 	for {
 		var msgType, msg, readErr = this.conn.ReadMessage()
 		if readErr != nil {
+			// conn closed by user.
+			if strings.Index(readErr.Error(), "use of closed network connection") > 0 {
+				fmt.Println("conn closed by user. ")
+				return
+			}
+
 			this.ErrorHandler(readErr)
 			this.Restart()
 			return
@@ -330,53 +337,4 @@ func hashChallenge(apiSecret, challenge string) string {
 
 	// 4. Base64-encode the result of step 3
 	return base64.StdEncoding.EncodeToString(signature)
-}
-
-type WSSwapMarketKK struct {
-	*WSSwapTradeKK
-}
-
-func (this *WSSwapMarketKK) Start() error {
-	var stopErr = this.startCheck()
-	if stopErr != nil {
-		return stopErr
-	}
-
-	var conn, err = this.getConn("wss://futures.kraken.com/ws/v1")
-	if err != nil {
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-	this.conn = conn
-	this.connId = UUID()
-
-	var heartBeat = struct {
-		Event string `json:"event"`
-		Feed  string `json:"feed"`
-	}{
-		Event: "subscribe",
-		Feed:  "heartbeat",
-	}
-
-	err = this.conn.WriteJSON(heartBeat)
-	if err != nil {
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-
-	go this.recvRoutine()
-	go this.checkRoutine()
-	return nil
-
-}
-
-func (this *WSSwapMarketKK) Subscribe(v interface{}) {
-	var err = this.conn.WriteJSON(v)
-	if err != nil {
-		this.ErrorHandler(err)
-	}
 }
