@@ -88,6 +88,24 @@ func (this *LocalOrderBooks) Subscribe(pair Pair) {
 	this.WSSwapMarketKK.Subscribe(sub)
 }
 
+func (this *LocalOrderBooks) Unsubscribe(pair Pair) {
+	var symbol = pair.ToSymbol("", true)
+	if symbol == "BTCUSD" {
+		symbol = "XBTUSD"
+	}
+
+	var sub = struct {
+		Event      string   `json:"event"`
+		Feed       string   `json:"feed"`
+		ProductIds []string `json:"product_ids"`
+	}{
+		"unsubscribe", "book", []string{fmt.Sprintf("PF_%s", symbol)},
+	}
+
+	this.WSSwapMarketKK.Unsubscribe(sub)
+
+}
+
 func (this *LocalOrderBooks) Receiver(msg string) {
 	var rawData = []byte(msg)
 	var pre = struct {
