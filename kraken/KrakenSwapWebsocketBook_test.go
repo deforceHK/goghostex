@@ -28,9 +28,9 @@ func TestLocalOrderBooks_Init(t *testing.T) {
 
 	var book = &LocalOrderBooks{
 		WSSwapMarketKK: &WSSwapMarketKK{
-			WSSwapTradeKK: &WSSwapTradeKK{
-				Config: config,
-			},
+			//WSSwapTradeKK: &WSSwapTradeKK{
+			Config: config,
+			//},
 		},
 	}
 	var err = book.Init()
