@@ -28,9 +28,7 @@ func TestBinanceWebsocketBook(t *testing.T) {
 
 	var wsBN = &LocalOrderBooks{
 		WSMarketUMBN: &WSMarketUMBN{
-			&WSTradeUMBN{
-				Config: config,
-			},
+			Config: config,
 		},
 	}
 
@@ -41,17 +39,30 @@ func TestBinanceWebsocketBook(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 
-	wsBN.Subscribe("solusdt@depth")
+	var sol = Pair{SOL, USDT}
+	var eth = Pair{ETH, USDT}
+	wsBN.Subscribe(sol)
+	wsBN.Subscribe(eth)
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(10 * time.Second)
-		depth, depthErr := wsBN.Snapshot("solusdt")
-		if depthErr != nil {
-			t.Error(depthErr)
-			return
+		time.Sleep(5 * time.Second)
+		if i%2 == 0 {
+			depth, depthErr := wsBN.Snapshot(sol)
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+			var depthData, _ = json.Marshal(depth)
+			t.Log(string(depthData))
+		} else {
+			depth, depthErr := wsBN.Snapshot(eth)
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+			var depthData, _ = json.Marshal(depth)
+			t.Log(string(depthData))
 		}
-		var depthData, _ = json.Marshal(depth)
-		t.Log(string(depthData))
 	}
 
 	select {}
