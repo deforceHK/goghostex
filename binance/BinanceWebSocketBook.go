@@ -3,6 +3,7 @@ package binance
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func (this *LocalOrderBooks) Init() error {
 	if this.Cache == nil {
 		this.Cache = make(map[string][]*DeltaOrderBook)
 	}
-	this.WSTradeUMBN.RecvHandler = func(s string) {
+	this.RecvHandler = func(s string) {
 		this.ReceiveDelta(s)
 	}
 	//this.WSTradeUMBN.ErrorHandler = func(err error) {
@@ -67,7 +68,7 @@ func (this *LocalOrderBooks) Restart() {
 		mux.Unlock()
 	}
 
-	this.WSTradeUMBN.Restart()
+	this.WSMarketUMBN.Restart()
 }
 
 func (this *LocalOrderBooks) ReceiveDelta(msg string) {
@@ -78,6 +79,7 @@ func (this *LocalOrderBooks) ReceiveDelta(msg string) {
 
 	_ = json.Unmarshal([]byte(msg), &delta)
 	if delta.Stream == "" {
+		log.Println(msg)
 		return
 	}
 
@@ -204,13 +206,12 @@ func (this *LocalOrderBooks) getSnapshot(productId string, times int) {
 	mux.Unlock()
 }
 
-func (this *LocalOrderBooks) Snapshot(productId string) (*SwapDepth, error) {
-
+func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
+	var productId = pair.ToSymbol("", false)
 	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
 		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
 	}
 
-	var pair = this.getPairByProductId(productId)
 	var mux = this.OrderBookMuxs[productId]
 	mux.Lock()
 	defer mux.Unlock()
@@ -267,4 +268,19 @@ func (this *LocalOrderBooks) Snapshot(productId string) (*SwapDepth, error) {
 	}
 
 	return depth, nil
+}
+
+func (this *LocalOrderBooks) Subscribe(pair Pair) {
+
+	var symbol = pair.ToSymbol("", false)
+
+	this.WSMarketUMBN.Subscribe(fmt.Sprintf("%s@depth", symbol))
+}
+
+func (this *LocalOrderBooks) Unsubscribe(pair Pair) {
+
+	var symbol = pair.ToSymbol("", false)
+
+	this.WSMarketUMBN.Unsubscribe(fmt.Sprintf("%s@depth", symbol))
+
 }
