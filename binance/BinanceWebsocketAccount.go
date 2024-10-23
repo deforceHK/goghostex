@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -19,7 +20,7 @@ const (
 	DERFAULT_WEBSOCKET_RESTART_LIMIT_SEC = 300
 )
 
-type WSTradeUMBN struct {
+type WSAccountUMBN struct {
 	RecvHandler  func(string)
 	ErrorHandler func(error)
 	Config       *APIConfig
@@ -52,7 +53,7 @@ type WSMethodBN struct {
 	Method string `json:"method"`
 }
 
-func (this *WSTradeUMBN) Subscribe(v interface{}) {
+func (this *WSAccountUMBN) Subscribe(v interface{}) {
 	if item, ok := v.(string); ok {
 		var req = WSMethodBN{
 			this.connId,
@@ -76,14 +77,14 @@ func (this *WSTradeUMBN) Subscribe(v interface{}) {
 	}
 }
 
-func (this *WSTradeUMBN) Unsubscribe(v interface{}) {
+func (this *WSAccountUMBN) Unsubscribe(v interface{}) {
 	this.subscribed = append(this.subscribed, v)
 	if err := this.conn.WriteJSON(v); err != nil {
 		this.ErrorHandler(err)
 	}
 }
 
-func (this *WSTradeUMBN) Start() error {
+func (this *WSAccountUMBN) Start() error {
 	if err := this.startCheck(); err != nil {
 		return err
 	}
@@ -98,34 +99,6 @@ func (this *WSTradeUMBN) Start() error {
 	}
 	this.conn = conn
 
-	//var req = WSMethodBN{
-	//	this.connId, []string{"userDataStream.start"}, "REQUEST",
-	//}
-	//
-	//err = conn.WriteJSON(req)
-	//if err != nil {
-	//	// it means stopped at least once.
-	//	if len(this.restartTS) != 0 {
-	//		this.Restart()
-	//	}
-	//	return err
-	//}
-	//
-	//var _, p, readErr = conn.ReadMessage()
-	//if readErr != nil {
-	//	// it means stopped at least once.
-	//	if len(this.restartTS) != 0 {
-	//		this.Restart()
-	//	}
-	//	return readErr
-	//}
-	//
-	//var result = struct {
-	//	Id string `json:"id"`
-	//}{}
-	//
-	//_ = json.Unmarshal(p, &result)
-
 	go this.pingRoutine()
 	go this.checRoutine()
 	go this.recvRoutine()
@@ -133,7 +106,7 @@ func (this *WSTradeUMBN) Start() error {
 	return nil
 }
 
-func (this *WSTradeUMBN) pingRoutine() {
+func (this *WSAccountUMBN) pingRoutine() {
 	var stopPingChn = make(chan bool, 1)
 	this.stopPingSign = stopPingChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
@@ -172,7 +145,7 @@ func (this *WSTradeUMBN) pingRoutine() {
 	}
 }
 
-func (this *WSTradeUMBN) checRoutine() {
+func (this *WSAccountUMBN) checRoutine() {
 	var stopCheckChn = make(chan bool, 1)
 	this.stopChecSign = stopCheckChn
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
@@ -197,14 +170,18 @@ func (this *WSTradeUMBN) checRoutine() {
 	}
 }
 
-func (this *WSTradeUMBN) recvRoutine() {
+func (this *WSAccountUMBN) recvRoutine() {
 	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PENDING_SEC * time.Second)
 	defer ticker.Stop()
-	var conn = this.conn
 
 	for {
-		var msgType, msg, readErr = conn.ReadMessage()
+		var msgType, msg, readErr = this.conn.ReadMessage()
 		if readErr != nil {
+			// conn closed by user.
+			if strings.Index(readErr.Error(), "use of closed network connection") > 0 {
+				fmt.Println("conn closed by user. ")
+				return
+			}
 			this.ErrorHandler(readErr)
 			this.Restart()
 			return
@@ -220,7 +197,7 @@ func (this *WSTradeUMBN) recvRoutine() {
 
 }
 
-func (this *WSTradeUMBN) Stop() {
+func (this *WSAccountUMBN) Stop() {
 	if this.stopPingSign != nil {
 		this.stopPingSign <- true
 	}
@@ -236,7 +213,7 @@ func (this *WSTradeUMBN) Stop() {
 	this.connId = ""
 }
 
-func (this *WSTradeUMBN) Restart() {
+func (this *WSAccountUMBN) Restart() {
 	this.restartTS[time.Now().Unix()] = this.connId
 	this.Stop()
 	this.ErrorHandler(
@@ -265,7 +242,7 @@ func (this *WSTradeUMBN) Restart() {
 
 }
 
-func (this *WSTradeUMBN) initDefaultValue() {
+func (this *WSAccountUMBN) initDefaultValue() {
 	if this.RecvHandler == nil {
 		this.RecvHandler = func(msg string) {
 			log.Println(msg)
@@ -294,7 +271,7 @@ func (this *WSTradeUMBN) initDefaultValue() {
 
 }
 
-func (this *WSTradeUMBN) startCheck() error {
+func (this *WSAccountUMBN) startCheck() error {
 	var restartNum, limitTS = 0, time.Now().Unix() - int64(this.restartLimitSec)
 	for ts, _ := range this.restartTS {
 		if ts > limitTS {
@@ -314,7 +291,7 @@ func (this *WSTradeUMBN) startCheck() error {
 	return nil
 }
 
-func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
+func (this *WSAccountUMBN) loginConn() (*websocket.Conn, error) {
 	this.initDefaultValue()
 
 	var bn = New(this.Config)
@@ -344,98 +321,5 @@ func (this *WSTradeUMBN) loginConn() (*websocket.Conn, error) {
 	this.connId = UUID()
 	this.listenKey = response.ListenKey
 
-	return conn, nil
-}
-
-type WSMarketUMBN struct {
-	*WSTradeUMBN
-}
-
-func (this *WSMarketUMBN) Start() error {
-	// it will return error if the restart limit is reached
-	if err := this.startCheck(); err != nil {
-		return err
-	}
-
-	var conn, err = this.noLoginConn("wss://fstream.binance.com/stream")
-	if err != nil {
-		// it means stopped at least once.
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-	this.conn = conn
-
-	//go this.pingRoutine()
-	go this.checRoutine()
-	go this.recvRoutine()
-
-	return nil
-}
-
-func (this *WSMarketUMBN) Subscribe(v interface{}) {
-	if item, ok := v.(string); ok {
-
-		var req = struct {
-			Id     string   `json:"id"`
-			Method string   `json:"method"`
-			Params []string `json:"params"`
-		}{
-			this.connId,
-			"SUBSCRIBE",
-			[]string{item},
-		}
-
-		if err := this.conn.WriteJSON(req); err != nil {
-			this.ErrorHandler(err)
-			return
-		}
-		this.subscribed = append(this.subscribed, item)
-	}
-}
-
-func (this *WSMarketUMBN) Restart() {
-	this.restartTS[time.Now().Unix()] = this.connId
-	this.Stop()
-	this.ErrorHandler(
-		&WSRestartError{Msg: fmt.Sprintf("websocket will restart in next %d seconds......", this.restartSec)},
-	)
-
-	time.Sleep(time.Duration(this.restartSec) * time.Second)
-	if err := this.Start(); err != nil {
-		this.ErrorHandler(err)
-		return
-	}
-
-	// subscribe unsubscribe the channel
-	for _, v := range this.subscribed {
-		if item, ok := v.(string); ok {
-			var req = struct {
-				Id     string   `json:"id"`
-				Method string   `json:"method"`
-				Params []string `json:"params"`
-			}{
-				this.connId,
-				"SUBSCRIBE",
-				[]string{item},
-			}
-			if err := this.conn.WriteJSON(req); err != nil {
-				this.ErrorHandler(err)
-			}
-		}
-	}
-}
-
-func (this *WSMarketUMBN) noLoginConn(wss string) (*websocket.Conn, error) {
-	this.initDefaultValue()
-	var conn, _, err = websocket.DefaultDialer.Dial(
-		wss,
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-	this.connId = UUID()
 	return conn, nil
 }
