@@ -14,6 +14,7 @@ const (
 	WEBSOCKET_API_PASSPHRASE = ""
 )
 
+// go test -v ./okex/... -count=1 -run=Test_OKExWebSocket
 func Test_OKExWebSocket(t *testing.T) {
 
 	var ws = WSTradeOKEx{
