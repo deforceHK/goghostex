@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	WEBSOCKET_API_KEY        = ""
-	WEBSOCKET_API_SECRETKEY  = ""
-	WEBSOCKET_API_PASSPHRASE = ""
+	WEBSOCKET_API_KEY        = "a0c4886f-9fe8-4eb0-9956-4308be92d753"
+	WEBSOCKET_API_SECRETKEY  = "34956E7F169FF859411835355A883211"
+	WEBSOCKET_API_PASSPHRASE = "Dcg8280@@"
 )
 
+// go test -v ./okex/... -count=1 -run=Test_OKExWebSocket
 func Test_OKExWebSocket(t *testing.T) {
 
 	var ws = WSTradeOKEx{
