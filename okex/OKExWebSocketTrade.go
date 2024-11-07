@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -207,6 +208,11 @@ func (this *WSTradeOKEx) recvRoutine() {
 	for {
 		var msgType, msg, readErr = conn.ReadMessage()
 		if readErr != nil {
+			// conn closed by user.
+			if strings.Index(readErr.Error(), "use of closed network connection") > 0 {
+				fmt.Println("conn closed by user. ")
+				return
+			}
 			this.ErrorHandler(readErr)
 			this.Restart()
 			return
@@ -331,30 +337,4 @@ func (this *WSTradeOKEx) getConn(wss string) (*websocket.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
-}
-
-type WSMarketOKEx struct {
-	*WSTradeOKEx
-}
-
-func (this *WSMarketOKEx) Start() error {
-	// it will stop the ws if the restart limit is reached
-	if err := this.startCheck(); err != nil {
-		return err
-	}
-
-	var conn, err = this.getConn("wss://ws.okx.com:8443/ws/v5/public")
-	if err != nil {
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-	this.conn = conn
-
-	go this.pingRoutine()
-	go this.checkRoutine()
-	go this.recvRoutine()
-
-	return nil
 }
