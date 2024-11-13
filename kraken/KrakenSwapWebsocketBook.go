@@ -38,6 +38,7 @@ type LocalOrderBooks struct {
 	BidData       map[string]map[int64]float64
 	AskData       map[string]map[int64]float64
 	SeqData       map[string]int64
+	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
 }
 
@@ -53,6 +54,9 @@ func (this *LocalOrderBooks) Init() error {
 	}
 	if this.SeqData == nil {
 		this.SeqData = make(map[string]int64)
+	}
+	if this.TsData == nil {
+		this.TsData = make(map[string]int64)
 	}
 
 	this.WSSwapMarketKK.RecvHandler = func(s string) {
@@ -112,7 +116,6 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 		Feed string `json:"feed"`
 	}{}
 	_ = json.Unmarshal(rawData, &pre)
-
 	if pre.Feed == "book" {
 		var book = KKBook{}
 		_ = json.Unmarshal(rawData, &book)
@@ -148,6 +151,7 @@ func (this *LocalOrderBooks) recvBook(book KKBook) {
 		this.AskData[book.ProductId][stdPrice] = book.Qty
 	}
 	this.SeqData[book.ProductId] = book.Seq
+	this.TsData[book.ProductId] = book.Timestamp
 }
 
 func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot) {
@@ -175,7 +179,7 @@ func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot) {
 	this.BidData[snapshot.ProductId] = bidData
 	this.AskData[snapshot.ProductId] = askData
 	this.SeqData[snapshot.ProductId] = snapshot.Seq
-
+	this.TsData[snapshot.ProductId] = snapshot.Timestamp
 }
 
 func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
@@ -193,12 +197,12 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var now = time.Now()
+	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSSwapMarketKK.Config.Location)
 	var depth = &SwapDepth{
 		Pair:      pair,
-		Timestamp: now.Unix(),
+		Timestamp: lastTime.UnixMilli(),
 		Sequence:  this.SeqData[productId],
-		Date:      now.Format(GO_BIRTHDAY),
+		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}

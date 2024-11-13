@@ -17,6 +17,7 @@ type LocalOrderBooks struct {
 	BidData       map[string]map[int64]float64
 	AskData       map[string]map[int64]float64
 	SeqData       map[string]int64
+	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
 }
 
@@ -29,7 +30,7 @@ type OKBook struct {
 	Data []struct {
 		Asks      [][]string `json:"asks"`
 		Bids      [][]string `json:"bids"`
-		Timestamp int64      `json:"timestamp,string"`
+		Timestamp int64      `json:"ts,string"`
 		Checksum  int64      `json:"checksum"`
 		SeqId     int64      `json:"seqId"`
 		PrevSeqId int64      `json:"prevSeqId"`
@@ -49,6 +50,9 @@ func (this *LocalOrderBooks) Init() error {
 	if this.SeqData == nil {
 		this.SeqData = make(map[string]int64)
 	}
+	if this.TsData == nil {
+		this.TsData = make(map[string]int64)
+	}
 
 	this.WSMarketOKEx.RecvHandler = func(s string) {
 		this.Receiver(s)
@@ -65,6 +69,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 		var instId = delta.Arg.InstId
 		var seqId = delta.Data[0].SeqId
 		var prevSeqId = delta.Data[0].PrevSeqId
+		var timestamp = delta.Data[0].Timestamp
 
 		var _, exist = this.OrderBookMuxs[instId]
 		if !exist {
@@ -96,6 +101,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 			this.BidData[instId] = bidData
 			this.AskData[instId] = askData
 			this.SeqData[instId] = seqId
+			this.TsData[instId] = timestamp
 		} else {
 			if prevSeqId != this.SeqData[instId] {
 				log.Println(fmt.Sprintf(
@@ -121,6 +127,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 				this.AskData[instId][stdPrice] = amount
 			}
 			this.SeqData[instId] = seqId
+			this.TsData[instId] = timestamp
 		}
 	} else {
 		fmt.Println(msg)
@@ -173,12 +180,12 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var now = time.Now()
+	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &SwapDepth{
 		Pair:      pair,
-		Timestamp: now.Unix(),
+		Timestamp: this.TsData[productId],
 		Sequence:  this.SeqData[productId],
-		Date:      now.Format(GO_BIRTHDAY),
+		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}

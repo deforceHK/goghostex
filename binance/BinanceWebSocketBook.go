@@ -18,6 +18,7 @@ type LocalOrderBooks struct {
 	BidData       map[string]map[int64]float64
 	AskData       map[string]map[int64]float64
 	SeqData       map[string]int64
+	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
 	Cache         map[string][]*DeltaOrderBook
 }
@@ -46,6 +47,9 @@ func (this *LocalOrderBooks) Init() error {
 	}
 	if this.SeqData == nil {
 		this.SeqData = make(map[string]int64)
+	}
+	if this.TsData == nil {
+		this.TsData = make(map[string]int64)
 	}
 	if this.Cache == nil {
 		this.Cache = make(map[string][]*DeltaOrderBook)
@@ -127,6 +131,7 @@ func (this *LocalOrderBooks) ReceiveDelta(msg string) {
 				this.AskData[productId][stdPrice] = volume
 			}
 			this.SeqData[productId] = cache.EndSeq
+			this.TsData[productId] = cache.Timestamp
 		}
 		this.Cache[productId] = make([]*DeltaOrderBook, 0)
 	}
@@ -151,6 +156,7 @@ func (this *LocalOrderBooks) ReceiveDelta(msg string) {
 			this.AskData[productId][stdPrice] = volume
 		}
 		this.SeqData[productId] = delta.Data.EndSeq
+		this.TsData[productId] = delta.Data.Timestamp
 	}
 
 }
@@ -216,11 +222,11 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var now = time.Now()
+	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketUMBN.Config.Location)
 	var depth = &SwapDepth{
 		Pair:      pair,
-		Timestamp: now.UnixMilli(),
-		Date:      now.Format(GO_BIRTHDAY),
+		Timestamp: lastTime.UnixMilli(),
+		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}
