@@ -43,13 +43,13 @@ func TestSwap_Account_Flow(t *testing.T) {
 func TestSwap_Pair_Flow_Counter(t *testing.T) {
 
 	var config = &APIConfig{
-		Endpoint: ENDPOINT,
+		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse(PROXY_URL)
+			//	},
+			//},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
@@ -58,7 +58,7 @@ func TestSwap_Pair_Flow_Counter(t *testing.T) {
 	}
 
 	var bn = New(config)
-	if items, raw, err := bn.Swap.GetPairFlow(Pair{BTC, USDT}); err != nil {
+	if items, raw, err := bn.Swap.GetPairFlow(Pair{SOL, USDT}); err != nil {
 		t.Error(err)
 		return
 	} else {
