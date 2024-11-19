@@ -266,6 +266,27 @@ func (this *LocalOrderBooks) Unsubscribe(pair Pair) {
 	this.WSMarketOKEx.Unsubscribe(unSub)
 }
 
+func (this *LocalOrderBooks) SubSpotSwapPair(pair Pair) {
+	this.WSMarketOKEx.Subscribe(WSOpOKEx{
+		Op: "subscribe",
+		Args: []map[string]string{
+			{
+				"channel": "books",
+				"instId":  pair.ToSymbol("-", true),
+			},
+		},
+	})
+	this.WSMarketOKEx.Subscribe(WSOpOKEx{
+		Op: "subscribe",
+		Args: []map[string]string{
+			{
+				"channel": "books",
+				"instId":  fmt.Sprintf("%s-SWAP", pair.ToSymbol("-", true)),
+			},
+		},
+	})
+}
+
 func (this *LocalOrderBooks) SubscribeById(productId string) {
 
 	var sub = WSOpOKEx{
