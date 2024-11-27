@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	. "github.com/deforceHK/goghostex"
 )
 
-const OKEXONE_ENDPOINT = ""
+const OKEXONE_ENDPOINT = "https://www.okx.com"
 
 type OKExOne struct {
 	HttpClient    *http.Client
@@ -25,32 +26,31 @@ type OKExOne struct {
 }
 
 type Instrument struct {
-	InstType string `json:"instType"`
-	InstId string `json:"instId"`
-	BaseCcy string `json:"baseCcy"`
-	QuoteCcy string `json:"quoteCcy"`
-	SettleCcy string `json:"settleCcy"`
-	CtVal string `json:"ctVal"`
-	CtMult string `json:"ctMult"`
-	CtValCcy string `json:"ctValCcy"`
-	OptType string `json:"optType"`
-	Stk string `json:"stk"`
-	ListTime int64 `json:"listTime,string"`
-	AuctionEndTime int64 `json:"auctionEndTime,string"`
-	ExpTime int64 `json:"expTime,string"`
-	Lever int64 `json:"lever,string"`
-	TickSz float64 `json:"tickSz,string"`
-	LotSz float64 `json:"lotSz,string"`
-	MinSz float64 `json:"minSz,string"`
-	CtType string `json:"ctType"`
-	State string `json:"state"`
-	RuleType string `json:"ruleType"`
-	MaxLmtSz float64 `json:"maxLmtSz,string"`
-	MaxMktSz float64 `json:"maxMktSz,string"`
-	MaxLmtAmt float64 `json:"maxLmtAmt,string"`
-	MaxMktAmt float64 `json:"maxMktAmt,string"`
+	InstType       string  `json:"instType"`
+	InstId         string  `json:"instId"`
+	BaseCcy        string  `json:"baseCcy"`
+	QuoteCcy       string  `json:"quoteCcy"`
+	SettleCcy      string  `json:"settleCcy"`
+	CtVal          string  `json:"ctVal"`
+	CtMult         string  `json:"ctMult"`
+	CtValCcy       string  `json:"ctValCcy"`
+	OptType        string  `json:"optType"`
+	Stk            string  `json:"stk"`
+	ListTime       string   `json:"listTime"`
+	AuctionEndTime string   `json:"auctionEndTime"`
+	ExpTime        string   `json:"expTime"`
+	Lever          string   `json:"lever"`
+	TickSz         string `json:"tickSz"`
+	LotSz          string `json:"lotSz"`
+	MinSz          string `json:"minSz"`
+	CtType         string  `json:"ctType"`
+	State          string  `json:"state"`
+	RuleType       string  `json:"ruleType"`
+	MaxLmtSz       string `json:"maxLmtSz"`
+	MaxMktSz       string `json:"maxMktSz"`
+	MaxLmtAmt      string `json:"maxLmtAmt"`
+	MaxMktAmt      string `json:"maxMktAmt"`
 }
-
 
 func (ok *OKExOne) Init() error {
 	if ok.HttpClient == nil {
@@ -76,10 +76,10 @@ func (ok *OKExOne) RequestDirect(
 	response interface{},
 ) ([]byte, error) {
 
-	var url = ok.Endpoint + uri
+	var reqUrl = ok.Endpoint + uri
 	var resp, err = NewHttpRequest(
 		ok.HttpClient,
-		httpMethod, url,
+		httpMethod, reqUrl,
 		reqBody,
 		map[string]string{
 			CONTENT_TYPE: APPLICATION_JSON_UTF8,
@@ -150,7 +150,24 @@ func (ok *OKExOne) doParamSign(httpMethod, uri, requestBody string) (string, str
 	return sign, isoTime
 }
 
-func (ok *OKExOne) getProducts(tradeType string)  {
+func (ok *OKExOne) GetProducts(tradeType string) ([]byte, []*Instrument, error) {
+	var uri = "/api/v5/public/instruments?"
+	var params = url.Values{}
+	params.Set("instType", tradeType)
+	uri += params.Encode()
 
+	var response struct {
+		Code string        `json:"code"`
+		Msg  string        `json:"msg"`
+		Data []*Instrument `json:"data"`
+	}
+	var rawResp, err = ok.RequestDirect(http.MethodGet, uri, "", &response)
+	if err != nil {
+		return rawResp, nil, err
+	}
+	if response.Code != "0" {
+		return rawResp, nil, errors.New(response.Msg)
+	}
+
+	return rawResp, response.Data, nil
 }
-
