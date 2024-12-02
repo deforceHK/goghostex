@@ -55,10 +55,10 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 
 	var contract = swap.getContract(order.Pair)
 	var symbol = contract.ContractName
-	var reduceOnly = "false"
-	if order.Type == LIQUIDATE_LONG || order.Type == LIQUIDATE_SHORT {
-		reduceOnly = "true"
-	}
+	//var reduceOnly = "false"
+	//if order.Type == LIQUIDATE_LONG || order.Type == LIQUIDATE_SHORT {
+	//	reduceOnly = "true"
+	//}
 
 	var param = url.Values{}
 	param.Set("symbol", symbol)
@@ -66,7 +66,7 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("limitPrice", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
 	param.Set("side", side)
 	param.Set("size", fmt.Sprintf("%v", order.Amount))
-	param.Set("reduceOnly", reduceOnly)
+	param.Set("reduceOnly", "false")
 	if order.Cid != "" {
 		param.Set("cliOrdId", order.Cid)
 	}
