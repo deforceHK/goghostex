@@ -26,26 +26,26 @@ type OKExOne struct {
 }
 
 type Instrument struct {
-	InstType       string  `json:"instType"`
-	InstId         string  `json:"instId"`
-	BaseCcy        string  `json:"baseCcy"`
-	QuoteCcy       string  `json:"quoteCcy"`
-	SettleCcy      string  `json:"settleCcy"`
-	CtVal          string  `json:"ctVal"`
-	CtMult         string  `json:"ctMult"`
-	CtValCcy       string  `json:"ctValCcy"`
-	OptType        string  `json:"optType"`
-	Stk            string  `json:"stk"`
-	ListTime       string   `json:"listTime"`
-	AuctionEndTime string   `json:"auctionEndTime"`
-	ExpTime        string   `json:"expTime"`
-	Lever          string   `json:"lever"`
+	InstType       string `json:"instType"`
+	InstId         string `json:"instId"`
+	BaseCcy        string `json:"baseCcy"`
+	QuoteCcy       string `json:"quoteCcy"`
+	SettleCcy      string `json:"settleCcy"`
+	CtVal          string `json:"ctVal"`
+	CtMult         string `json:"ctMult"`
+	CtValCcy       string `json:"ctValCcy"`
+	OptType        string `json:"optType"`
+	Stk            string `json:"stk"`
+	ListTime       string `json:"listTime"`
+	AuctionEndTime string `json:"auctionEndTime"`
+	ExpTime        string `json:"expTime"`
+	Lever          string `json:"lever"`
 	TickSz         string `json:"tickSz"`
 	LotSz          string `json:"lotSz"`
 	MinSz          string `json:"minSz"`
-	CtType         string  `json:"ctType"`
-	State          string  `json:"state"`
-	RuleType       string  `json:"ruleType"`
+	CtType         string `json:"ctType"`
+	State          string `json:"state"`
+	RuleType       string `json:"ruleType"`
 	MaxLmtSz       string `json:"maxLmtSz"`
 	MaxMktSz       string `json:"maxMktSz"`
 	MaxLmtAmt      string `json:"maxLmtAmt"`

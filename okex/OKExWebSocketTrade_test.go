@@ -14,16 +14,16 @@ const (
 	WEBSOCKET_API_PASSPHRASE = ""
 )
 
-// go test -v ./okex/... -count=1 -run=Test_OKExWebSocket
-func Test_OKExWebSocket(t *testing.T) {
+// go test -v ./okex/... -count=1 -run=Test_OKExWebSocket111
+func Test_OKExWebSocket111(t *testing.T) {
 
 	var ws = WSTradeOKEx{
 		Config: &APIConfig{
 			Endpoint:      ENDPOINT,
 			HttpClient:    nil,
-			ApiKey:        WEBSOCKET_API_KEY,
-			ApiSecretKey:  WEBSOCKET_API_SECRETKEY,
-			ApiPassphrase: WEBSOCKET_API_PASSPHRASE,
+			ApiKey:        SWAP_API_KEY,
+			ApiSecretKey:  SWAP_API_SECRETKEY,
+			ApiPassphrase: SWAP_API_PASSPHRASE,
 			Location:      time.Now().Location(),
 		},
 		RecvHandler: func(res string) {
@@ -37,21 +37,11 @@ func Test_OKExWebSocket(t *testing.T) {
 		Op: "subscribe",
 		Args: []map[string]string{
 			//{
-			//	"channel": "funding-rate",
-			//	"instId":  "BTC-USD-SWAP",
-			//},
-			//{
-			//	"channel": "account",
-			//	"ccy": "USDT",
-			//	"extraParams": "0",
-			//},
-			//{
-			//	"channel": "positions",
-			//	"instType": "SWAP",
-			//	//"extraParams": "0",
+			//	"channel": "balance_and_position",
 			//},
 			{
-				"channel": "balance_and_position",
+				"channel":  "orders",
+				"instType": "ANY",
 			},
 		},
 	}
