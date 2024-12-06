@@ -62,7 +62,7 @@ type WSTradeOKEx struct {
 }
 
 func (this *WSTradeOKEx) Subscribe(v interface{}) {
-	if err := this.conn.WriteJSON(v); err != nil {
+	if err := this.Write(v); err != nil {
 		this.ErrorHandler(err)
 		return
 	}
@@ -70,11 +70,18 @@ func (this *WSTradeOKEx) Subscribe(v interface{}) {
 }
 
 func (this *WSTradeOKEx) Unsubscribe(v interface{}) {
-	if err := this.conn.WriteJSON(v); err != nil {
+	if err := this.Write(v); err != nil {
 		this.ErrorHandler(err)
 		return
 	}
 	this.subscribed = append(this.subscribed, v)
+}
+
+func (this *WSTradeOKEx) Write(v interface{}) error {
+	if err := this.conn.WriteJSON(v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (this *WSTradeOKEx) Start() error {
