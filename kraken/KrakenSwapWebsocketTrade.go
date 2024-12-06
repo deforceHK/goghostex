@@ -50,7 +50,7 @@ func (this *WSSwapTradeKK) Subscribe(v interface{}) {
 		return
 	}
 
-	var err = this.conn.WriteJSON(map[string]string{
+	var err = this.Write(map[string]string{
 		"event":              "subscribe",
 		"feed":               channel,
 		"api_key":            this.Config.ApiKey,
@@ -71,7 +71,7 @@ func (this *WSSwapTradeKK) Unsubscribe(v interface{}) {
 		return
 	}
 
-	var err = this.conn.WriteJSON(map[string]string{
+	var err = this.Write(map[string]string{
 		"event":              "unsubscribe",
 		"feed":               channel,
 		"api_key":            this.Config.ApiKey,
@@ -90,6 +90,13 @@ func (this *WSSwapTradeKK) Unsubscribe(v interface{}) {
 		}
 	}
 	this.subscribed = newSub
+}
+
+func (this *WSSwapTradeKK) Write(v interface{}) error {
+	if err := this.conn.WriteJSON(v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (this *WSSwapTradeKK) Start() error {
