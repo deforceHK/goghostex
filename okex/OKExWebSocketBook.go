@@ -133,7 +133,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 			this.TsData[instId] = timestamp
 
 			if this.UpdateChan != nil {
-				this.UpdateChan <- instId
+				this.UpdateChan <- fmt.Sprintf("%s:%d",instId,timestamp)
 			}
 		}
 	} else {
