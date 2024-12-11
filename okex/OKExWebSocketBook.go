@@ -19,6 +19,9 @@ type LocalOrderBooks struct {
 	SeqData       map[string]int64
 	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
+
+	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
+	UpdateChan chan string
 }
 
 type OKBook struct {
@@ -128,6 +131,10 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 			}
 			this.SeqData[instId] = seqId
 			this.TsData[instId] = timestamp
+
+			if this.UpdateChan != nil {
+				this.UpdateChan <- instId
+			}
 		}
 	} else {
 		fmt.Println(msg)
