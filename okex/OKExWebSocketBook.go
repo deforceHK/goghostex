@@ -335,9 +335,9 @@ func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
 	}
 
-	//var mux = this.OrderBookMuxs[productId]
-	//mux.Lock()
-	//defer mux.Unlock()
+	var mux = this.OrderBookMuxs[productId]
+	mux.Lock()
+	defer mux.Unlock()
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &Depth{
 		Timestamp: this.TsData[productId],
