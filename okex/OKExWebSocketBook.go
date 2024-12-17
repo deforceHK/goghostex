@@ -14,10 +14,10 @@ import (
 
 type LocalOrderBooks struct {
 	*WSMarketOKEx
-	BidData map[string]map[int64]float64
-	AskData map[string]map[int64]float64
-	SeqData map[string]int64
-	TsData  map[string]int64
+	BidData      map[string]map[int64]float64
+	AskData      map[string]map[int64]float64
+	SeqData      map[string]int64
+	TsData       map[string]int64
 	OrderBookMux *sync.RWMutex
 
 	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
@@ -64,6 +64,8 @@ func (this *LocalOrderBooks) Init() error {
 }
 
 func (this *LocalOrderBooks) Receiver(msg string) {
+	this.OrderBookMux.Lock()
+	defer this.OrderBookMux.Unlock()
 	var rawData = []byte(msg)
 	var delta = OKBook{}
 	_ = json.Unmarshal(rawData, &delta)
@@ -73,9 +75,6 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 		var seqId = delta.Data[0].SeqId
 		var prevSeqId = delta.Data[0].PrevSeqId
 		var timestamp = delta.Data[0].Timestamp
-
-		this.OrderBookMux.Lock()
-		defer this.OrderBookMux.Unlock()
 
 		if delta.Action == "snapshot" {
 			var bidData = make(map[int64]float64)
@@ -176,11 +175,10 @@ func (this *LocalOrderBooks) Resubscribe(productId string) {
 }
 
 func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
-	var symbol = pair.ToSymbol("-", true)
-	var productId = fmt.Sprintf("%s-SWAP", symbol)
-
 	this.OrderBookMux.RLock()
 	defer this.OrderBookMux.RUnlock()
+	var symbol = pair.ToSymbol("-", true)
+	var productId = fmt.Sprintf("%s-SWAP", symbol)
 
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &SwapDepth{
@@ -290,8 +288,8 @@ func (this *LocalOrderBooks) UnsubscribeById(productId string) {
 }
 
 func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
-	this.OrderBookMux.Lock()
-	defer this.OrderBookMux.Unlock()
+	this.OrderBookMux.RLock()
+	defer this.OrderBookMux.RUnlock()
 
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &Depth{
