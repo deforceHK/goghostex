@@ -121,6 +121,9 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 				var stdPrice = int64(price * 100000000)
 				var amount, _ = strconv.ParseFloat(bid[1], 64)
 				this.BidData[instId][stdPrice] = amount
+				if amount == 0 {
+					delete(this.BidData[instId], stdPrice)
+				}
 			}
 
 			for _, ask := range delta.Data[0].Asks {
@@ -128,12 +131,15 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 				var stdPrice = int64(price * 100000000)
 				var amount, _ = strconv.ParseFloat(ask[1], 64)
 				this.AskData[instId][stdPrice] = amount
+				if amount == 0 {
+					delete(this.AskData[instId], stdPrice)
+				}
 			}
 			this.SeqData[instId] = seqId
 			this.TsData[instId] = timestamp
 
 			if this.UpdateChan != nil {
-				this.UpdateChan <- fmt.Sprintf("%s:%d",instId,timestamp)
+				this.UpdateChan <- fmt.Sprintf("%s:%d", instId, timestamp)
 			}
 		}
 	} else {
@@ -329,9 +335,9 @@ func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
 	}
 
-	var mux = this.OrderBookMuxs[productId]
-	mux.Lock()
-	defer mux.Unlock()
+	//var mux = this.OrderBookMuxs[productId]
+	//mux.Lock()
+	//defer mux.Unlock()
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &Depth{
 		Timestamp: this.TsData[productId],
@@ -340,47 +346,21 @@ func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}
-	var zeroCount, sumCount = 0.0, 0.0
+
 	for stdPrice, amount := range this.BidData[productId] {
-		if amount > 0 {
-			depth.BidList = append(depth.BidList, DepthRecord{
-				Price:  float64(stdPrice) / 100000000,
-				Amount: amount,
-			})
-		} else {
-			zeroCount++
-		}
-		sumCount++
+		depth.BidList = append(depth.BidList, DepthRecord{
+			Price:  float64(stdPrice) / 100000000,
+			Amount: amount,
+		})
 	}
 
 	for stdPrice, amount := range this.AskData[productId] {
-		if amount > 0 {
-			depth.AskList = append(depth.AskList, DepthRecord{
-				Price:  float64(stdPrice) / 100000000,
-				Amount: amount,
-			})
-		} else {
-			zeroCount++
-		}
-		sumCount++
+		depth.AskList = append(depth.AskList, DepthRecord{
+			Price:  float64(stdPrice) / 100000000,
+			Amount: amount,
+		})
 	}
 	sort.Sort(sort.Reverse(depth.BidList))
 	sort.Sort(depth.AskList)
-
-	// collect the zero amount data
-	//if zeroCount/sumCount > 0.3 {
-	//	for stdPrice, amount := range this.BidData[productId] {
-	//		if amount > 0 {
-	//			continue
-	//		}
-	//		delete(this.BidData[productId], stdPrice)
-	//	}
-	//	for stdPrice, amount := range this.AskData[productId] {
-	//		if amount > 0 {
-	//			continue
-	//		}
-	//		delete(this.AskData[productId], stdPrice)
-	//	}
-	//}
 	return depth, nil
 }
