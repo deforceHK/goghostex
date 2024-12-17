@@ -14,11 +14,11 @@ import (
 
 type LocalOrderBooks struct {
 	*WSMarketOKEx
-	BidData       map[string]map[int64]float64
-	AskData       map[string]map[int64]float64
-	SeqData       map[string]int64
-	TsData        map[string]int64
-	OrderBookMuxs map[string]*sync.Mutex
+	BidData map[string]map[int64]float64
+	AskData map[string]map[int64]float64
+	SeqData map[string]int64
+	TsData  map[string]int64
+	OrderBookMux *sync.RWMutex
 
 	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
 	UpdateChan chan string
@@ -41,8 +41,8 @@ type OKBook struct {
 }
 
 func (this *LocalOrderBooks) Init() error {
-	if this.OrderBookMuxs == nil {
-		this.OrderBookMuxs = make(map[string]*sync.Mutex)
+	if this.OrderBookMux == nil {
+		this.OrderBookMux = &sync.RWMutex{}
 	}
 	if this.BidData == nil {
 		this.BidData = make(map[string]map[int64]float64)
@@ -74,20 +74,14 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 		var prevSeqId = delta.Data[0].PrevSeqId
 		var timestamp = delta.Data[0].Timestamp
 
-		var _, exist = this.OrderBookMuxs[instId]
-		if !exist {
-			this.OrderBookMuxs[instId] = &sync.Mutex{}
-		}
-
-		var mux = this.OrderBookMuxs[instId]
-		mux.Lock()
-		defer mux.Unlock()
+		this.OrderBookMux.Lock()
+		defer this.OrderBookMux.Unlock()
 
 		if delta.Action == "snapshot" {
 			var bidData = make(map[int64]float64)
 			var askData = make(map[int64]float64)
-			for _, bid := range delta.Data[0].Bids {
 
+			for _, bid := range delta.Data[0].Bids {
 				var price, _ = strconv.ParseFloat(bid[0], 64)
 				var stdPrice = int64(price * 100000000)
 				var amount, _ = strconv.ParseFloat(bid[1], 64)
@@ -185,13 +179,8 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	var symbol = pair.ToSymbol("-", true)
 	var productId = fmt.Sprintf("%s-SWAP", symbol)
 
-	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
-		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
-	}
-
-	var mux = this.OrderBookMuxs[productId]
-	mux.Lock()
-	defer mux.Unlock()
+	this.OrderBookMux.RLock()
+	defer this.OrderBookMux.RUnlock()
 
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &SwapDepth{
@@ -202,48 +191,22 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
 	}
-	var zeroCount, sumCount = 0.0, 0.0
+
 	for stdPrice, amount := range this.BidData[productId] {
-		if amount > 0 {
-			depth.BidList = append(depth.BidList, DepthRecord{
-				Price:  float64(stdPrice) / 100000000,
-				Amount: amount,
-			})
-		} else {
-			zeroCount++
-		}
-		sumCount++
+		depth.BidList = append(depth.BidList, DepthRecord{
+			Price:  float64(stdPrice) / 100000000,
+			Amount: amount,
+		})
 	}
 
 	for stdPrice, amount := range this.AskData[productId] {
-		if amount > 0 {
-			depth.AskList = append(depth.AskList, DepthRecord{
-				Price:  float64(stdPrice) / 100000000,
-				Amount: amount,
-			})
-		} else {
-			zeroCount++
-		}
-		sumCount++
+		depth.AskList = append(depth.AskList, DepthRecord{
+			Price:  float64(stdPrice) / 100000000,
+			Amount: amount,
+		})
 	}
 	sort.Sort(sort.Reverse(depth.BidList))
 	sort.Sort(depth.AskList)
-
-	// collect the zero amount data
-	//if zeroCount/sumCount > 0.3 {
-	//	for stdPrice, amount := range this.BidData[productId] {
-	//		if amount > 0 {
-	//			continue
-	//		}
-	//		delete(this.BidData[productId], stdPrice)
-	//	}
-	//	for stdPrice, amount := range this.AskData[productId] {
-	//		if amount > 0 {
-	//			continue
-	//		}
-	//		delete(this.AskData[productId], stdPrice)
-	//	}
-	//}
 	return depth, nil
 }
 
@@ -301,7 +264,6 @@ func (this *LocalOrderBooks) SubSpotSwapPair(pair Pair) {
 }
 
 func (this *LocalOrderBooks) SubscribeById(productId string) {
-
 	var sub = WSOpOKEx{
 		Op: "subscribe",
 		Args: []map[string]string{
@@ -312,11 +274,9 @@ func (this *LocalOrderBooks) SubscribeById(productId string) {
 		},
 	}
 	this.WSMarketOKEx.Subscribe(sub)
-
 }
 
 func (this *LocalOrderBooks) UnsubscribeById(productId string) {
-
 	var unSub = WSOpOKEx{
 		Op: "unsubscribe",
 		Args: []map[string]string{
@@ -330,14 +290,9 @@ func (this *LocalOrderBooks) UnsubscribeById(productId string) {
 }
 
 func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
+	this.OrderBookMux.Lock()
+	defer this.OrderBookMux.Unlock()
 
-	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
-		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
-	}
-
-	var mux = this.OrderBookMuxs[productId]
-	mux.Lock()
-	defer mux.Unlock()
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketOKEx.Config.Location)
 	var depth = &Depth{
 		Timestamp: this.TsData[productId],
