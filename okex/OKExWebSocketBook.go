@@ -224,20 +224,20 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	sort.Sort(depth.AskList)
 
 	// collect the zero amount data
-	if zeroCount/sumCount > 0.3 {
-		for stdPrice, amount := range this.BidData[productId] {
-			if amount > 0 {
-				continue
-			}
-			delete(this.BidData[productId], stdPrice)
-		}
-		for stdPrice, amount := range this.AskData[productId] {
-			if amount > 0 {
-				continue
-			}
-			delete(this.AskData[productId], stdPrice)
-		}
-	}
+	//if zeroCount/sumCount > 0.3 {
+	//	for stdPrice, amount := range this.BidData[productId] {
+	//		if amount > 0 {
+	//			continue
+	//		}
+	//		delete(this.BidData[productId], stdPrice)
+	//	}
+	//	for stdPrice, amount := range this.AskData[productId] {
+	//		if amount > 0 {
+	//			continue
+	//		}
+	//		delete(this.AskData[productId], stdPrice)
+	//	}
+	//}
 	return depth, nil
 }
 
@@ -368,19 +368,19 @@ func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 	sort.Sort(depth.AskList)
 
 	// collect the zero amount data
-	if zeroCount/sumCount > 0.3 {
-		for stdPrice, amount := range this.BidData[productId] {
-			if amount > 0 {
-				continue
-			}
-			delete(this.BidData[productId], stdPrice)
-		}
-		for stdPrice, amount := range this.AskData[productId] {
-			if amount > 0 {
-				continue
-			}
-			delete(this.AskData[productId], stdPrice)
-		}
-	}
+	//if zeroCount/sumCount > 0.3 {
+	//	for stdPrice, amount := range this.BidData[productId] {
+	//		if amount > 0 {
+	//			continue
+	//		}
+	//		delete(this.BidData[productId], stdPrice)
+	//	}
+	//	for stdPrice, amount := range this.AskData[productId] {
+	//		if amount > 0 {
+	//			continue
+	//		}
+	//		delete(this.AskData[productId], stdPrice)
+	//	}
+	//}
 	return depth, nil
 }
