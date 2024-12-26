@@ -11,6 +11,10 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
+const (
+	SPOT_KRAKEN_ENDPOINT = "https://api.kraken.com"
+)
+
 type Spot struct {
 	*Kraken
 }
