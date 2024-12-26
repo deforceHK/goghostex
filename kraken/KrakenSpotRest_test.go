@@ -11,6 +11,12 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
+const (
+	SPOT_API_KEY        = ""
+	SPOT_API_SECRETKEY  = ""
+	SPOT_API_PASSPHRASE = ""
+)
+
 /**
 * unit test cmd
 * go test -v ./kraken/... -count=1 -run=TestSpot_GetKlineRecords
@@ -27,10 +33,10 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 				},
 			},
 		},
-		//ApiKey:        SPOT_API_KEY,
-		//ApiSecretKey:  SPOT_API_SECRETKEY,
-		//ApiPassphrase: SPOT_API_PASSPHRASE,
-		Location: time.Now().Location(),
+		ApiKey:        SPOT_API_KEY,
+		ApiSecretKey:  SPOT_API_SECRETKEY,
+		ApiPassphrase: SPOT_API_PASSPHRASE,
+		Location:      time.Now().Location(),
 	}
 
 	var kraken = New(config)
