@@ -19,6 +19,41 @@ type SpotOrderBooks struct {
 	OrderBookMuxs map[string]*sync.Mutex
 }
 
+type KKBookSnapshot struct {
+	Channel string `json:"channel"`
+	Type    string `json:"type"`
+	Data    []struct {
+		Symbol string `json:"symbol"`
+		Bids   []struct {
+			Price float64 `json:"price"`
+			Qty   float64 `json:"qty"`
+		} `json:"bids"`
+		Asks []struct {
+			Price float64 `json:"price"`
+			Qty   float64 `json:"qty"`
+		} `json:"asks"`
+		Checksum int64 `json:"checksum"`
+	} `json:"data"`
+}
+
+type KKBookUpdate struct {
+	Channel string `json:"channel"`
+	Type    string `json:"type"`
+	Data    []struct {
+		Symbol string `json:"symbol"`
+		Bids   []struct {
+			Price float64 `json:"price"`
+			Qty   float64 `json:"qty"`
+		} `json:"bids"`
+		Asks []struct {
+			Price float64 `json:"price"`
+			Qty   float64 `json:"qty"`
+		} `json:"asks"`
+		Checksum  int64  `json:"checksum"`
+		Timestamp string `json:"timestamp"`
+	} `json:"data"`
+}
+
 func (this *SpotOrderBooks) Init() error {
 	if this.OrderBookMuxs == nil {
 		this.OrderBookMuxs = make(map[string]*sync.Mutex)
@@ -42,16 +77,6 @@ func (this *SpotOrderBooks) Init() error {
 	return this.Start()
 }
 
-//func (this *LocalOrderBooks) Restart() {
-//	for productId := range this.OrderBookMuxs {
-//		this.BidData[productId] = make(map[int64]float64)
-//		this.AskData[productId] = make(map[int64]float64)
-//		this.SeqData[productId] = 0
-//	}
-//
-//	this.WSSwapMarketKK.Restart()
-//}
-
 func (this *SpotOrderBooks) Subscribe(pair Pair) {
 	var symbol = pair.ToSymbol("/", true)
 	var sub = struct {
@@ -64,9 +89,9 @@ func (this *SpotOrderBooks) Subscribe(pair Pair) {
 	}{
 		Method: "subscribe",
 		Params: struct {
-			Channel string `json:"channel"`
-			Symbol []string `json:"symbol"`
-			Depth  int64    `json:"depth"`
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
 		}{
 			"book",
 			[]string{symbol},
@@ -80,13 +105,24 @@ func (this *SpotOrderBooks) Subscribe(pair Pair) {
 func (this *SpotOrderBooks) Unsubscribe(pair Pair) {
 	var symbol = pair.ToSymbol("/", true)
 	var sub = struct {
-		Event      string   `json:"event"`
-		Feed       string   `json:"feed"`
-		ProductIds []string `json:"product_ids"`
+		Method string `json:"method"`
+		Params struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		} `json:"params"`
 	}{
-		"unsubscribe", "book", []string{fmt.Sprintf("PF_%s", symbol)},
+		Method: "unsubscribe",
+		Params: struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		}{
+			"book",
+			[]string{symbol},
+			500,
+		},
 	}
-
 	this.WSSpotMarketKK.Unsubscribe(sub)
 
 }
@@ -94,15 +130,15 @@ func (this *SpotOrderBooks) Unsubscribe(pair Pair) {
 func (this *SpotOrderBooks) Receiver(msg string) {
 	var rawData = []byte(msg)
 	var pre = struct {
-		Feed string `json:"feed"`
+		Channel string `json:"channel"`
 	}{}
 	_ = json.Unmarshal(rawData, &pre)
-	if pre.Feed == "book" {
-		var book = KKBook{}
+	if pre.Channel == "book" {
+		var book = KKBookUpdate{}
 		_ = json.Unmarshal(rawData, &book)
 		this.recvBook(book)
-	} else if pre.Feed == "book_snapshot" {
-		var snapshot = KKSnapshot{}
+	} else if pre.Channel == "snapshot" {
+		var snapshot = KKBookSnapshot{}
 		_ = json.Unmarshal(rawData, &snapshot)
 		this.recvSnapshot(snapshot)
 	} else {
@@ -110,8 +146,10 @@ func (this *SpotOrderBooks) Receiver(msg string) {
 	}
 }
 
-func (this *SpotOrderBooks) recvBook(book KKBook) {
-	var mux, exist = this.OrderBookMuxs[book.ProductId]
+func (this *SpotOrderBooks) recvBook(book KKBookUpdate) {
+	var data = book.Data[0]
+
+	var mux, exist = this.OrderBookMuxs[data.Symbol]
 	if !exist {
 		return
 	}
@@ -119,48 +157,67 @@ func (this *SpotOrderBooks) recvBook(book KKBook) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var stdPrice = int64(book.Price * 100000000)
-	if book.Seq != this.SeqData[book.ProductId]+1 {
-		//这样restart也可以，但是重新订阅是不是更轻量？
-		this.Resubscribe(book.ProductId)
-		return
+	//var stdPrice = int64(book.Price * 100000000)
+	//if book.Seq != this.SeqData[book.ProductId]+1 {
+	//	//这样restart也可以，但是重新订阅是不是更轻量？
+	//	this.Resubscribe(book.ProductId)
+	//	return
+	//}
+
+	var bidData = make(map[int64]float64)
+	var askData = make(map[int64]float64)
+	for _, bid := range data.Bids {
+		var stdPrice = int64(bid.Price * 100000000)
+		bidData[stdPrice] = bid.Qty
 	}
 
-	if book.Side == "buy" {
-		this.BidData[book.ProductId][stdPrice] = book.Qty
-	} else {
-		this.AskData[book.ProductId][stdPrice] = book.Qty
+	for _, ask := range data.Asks {
+		var stdPrice = int64(ask.Price * 100000000)
+		askData[stdPrice] = ask.Qty
 	}
-	this.SeqData[book.ProductId] = book.Seq
-	this.TsData[book.ProductId] = book.Timestamp
+	var updateTime, _ = time.ParseInLocation(time.RFC3339, data.Timestamp, this.Config.Location)
+	this.BidData[data.Symbol] = bidData
+	this.AskData[data.Symbol] = askData
+	this.SeqData[data.Symbol] = data.Checksum
+	this.TsData[data.Symbol] = updateTime.UnixMilli()
+
+	//if data.Side == "buy" {
+	//	this.BidData[book.ProductId][stdPrice] = book.Qty
+	//} else {
+	//	this.AskData[book.ProductId][stdPrice] = book.Qty
+	//}
+	//this.SeqData[book.ProductId] = book.Seq
+	//this.TsData[book.ProductId] = book.Timestamp
 }
 
-func (this *SpotOrderBooks) recvSnapshot(snapshot KKSnapshot) {
-	var _, exist = this.OrderBookMuxs[snapshot.ProductId]
+func (this *SpotOrderBooks) recvSnapshot(snapshot KKBookSnapshot) {
+	var data = snapshot.Data[0]
+
+	var _, exist = this.OrderBookMuxs[data.Symbol]
 	if !exist {
-		this.OrderBookMuxs[snapshot.ProductId] = &sync.Mutex{}
+		this.OrderBookMuxs[data.Symbol] = &sync.Mutex{}
 	}
 
-	var mux = this.OrderBookMuxs[snapshot.ProductId]
+	var mux = this.OrderBookMuxs[data.Symbol]
 	mux.Lock()
 	defer mux.Unlock()
 
 	var bidData = make(map[int64]float64)
 	var askData = make(map[int64]float64)
-	for _, bid := range snapshot.Bids {
+	for _, bid := range data.Bids {
 		var stdPrice = int64(bid.Price * 100000000)
 		bidData[stdPrice] = bid.Qty
 	}
 
-	for _, ask := range snapshot.Asks {
+	for _, ask := range data.Asks {
 		var stdPrice = int64(ask.Price * 100000000)
 		askData[stdPrice] = ask.Qty
 	}
 
-	this.BidData[snapshot.ProductId] = bidData
-	this.AskData[snapshot.ProductId] = askData
-	this.SeqData[snapshot.ProductId] = snapshot.Seq
-	this.TsData[snapshot.ProductId] = snapshot.Timestamp
+	this.BidData[data.Symbol] = bidData
+	this.AskData[data.Symbol] = askData
+	this.SeqData[data.Symbol] = data.Checksum
+	this.TsData[data.Symbol] = time.Now().UnixMilli()
 }
 
 func (this *SpotOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
@@ -178,7 +235,7 @@ func (this *SpotOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSSwapMarketKK.Config.Location)
+	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSSpotMarketKK.Config.Location)
 	var depth = &SwapDepth{
 		Pair:      pair,
 		Timestamp: lastTime.UnixMilli(),

@@ -37,7 +37,7 @@ func TestWSSpotMarketKK_Start(t *testing.T) {
 		return
 	}
 
-	var xbt = struct {
+	var btcSub = struct {
 		Method string `json:"method"`
 		Params struct {
 			Channel string   `json:"channel"`
@@ -47,12 +47,32 @@ func TestWSSpotMarketKK_Start(t *testing.T) {
 	}{
 		Method: "subscribe",
 		Params: struct {
-			Channel string `json:"channel"`
-			Symbol []string `json:"symbol"`
-			Depth  int64    `json:"depth"`
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
 		}{
 			"book",
 			[]string{"BTC/USD"},
+			500,
+		},
+	}
+
+	var ethSub = struct {
+		Method string `json:"method"`
+		Params struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		} `json:"params"`
+	}{
+		Method: "subscribe",
+		Params: struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		}{
+			"book",
+			[]string{"ETH/USD"},
 			500,
 		},
 	}
@@ -72,8 +92,8 @@ func TestWSSpotMarketKK_Start(t *testing.T) {
 	//	"subscribe", "book", []string{"PF_ETHUSD"},
 	//}
 
-	ws.Subscribe(xbt)
-	//ws.Subscribe(subETH)
+	ws.Subscribe(btcSub)
+	ws.Subscribe(ethSub)
 
 	time.Sleep(20 * time.Second)
 	ws.Restart()
