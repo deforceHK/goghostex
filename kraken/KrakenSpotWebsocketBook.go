@@ -131,18 +131,22 @@ func (this *SpotOrderBooks) Receiver(msg string) {
 	var rawData = []byte(msg)
 	var pre = struct {
 		Channel string `json:"channel"`
+		Type    string `json:"type"`
 	}{}
+
 	_ = json.Unmarshal(rawData, &pre)
-	if pre.Channel == "book" {
+	if pre.Channel != "book" {
+		fmt.Println("The feed must in book_snapshot book")
+	}
+
+	if pre.Type == "book" {
 		var book = KKBookUpdate{}
 		_ = json.Unmarshal(rawData, &book)
 		this.recvBook(book)
-	} else if pre.Channel == "snapshot" {
+	} else if pre.Type == "snapshot" {
 		var snapshot = KKBookSnapshot{}
 		_ = json.Unmarshal(rawData, &snapshot)
 		this.recvSnapshot(snapshot)
-	} else {
-		fmt.Println("The feed must in book_snapshot book")
 	}
 }
 
@@ -178,7 +182,7 @@ func (this *SpotOrderBooks) recvBook(book KKBookUpdate) {
 	var updateTime, _ = time.ParseInLocation(time.RFC3339, data.Timestamp, this.Config.Location)
 	this.BidData[data.Symbol] = bidData
 	this.AskData[data.Symbol] = askData
-	this.SeqData[data.Symbol] = data.Checksum
+	this.SeqData[data.Symbol] = updateTime.UnixMilli()
 	this.TsData[data.Symbol] = updateTime.UnixMilli()
 
 	//if data.Side == "buy" {
@@ -217,15 +221,11 @@ func (this *SpotOrderBooks) recvSnapshot(snapshot KKBookSnapshot) {
 	this.BidData[data.Symbol] = bidData
 	this.AskData[data.Symbol] = askData
 	this.SeqData[data.Symbol] = data.Checksum
-	this.TsData[data.Symbol] = time.Now().UnixMilli()
+	this.TsData[data.Symbol] = 0
 }
 
-func (this *SpotOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
-	var symbol = pair.ToSymbol("", true)
-	if symbol == "BTCUSD" {
-		symbol = "XBTUSD"
-	}
-	var productId = fmt.Sprintf("PF_%s", symbol)
+func (this *SpotOrderBooks) Snapshot(pair Pair) (*Depth, error) {
+	var productId = pair.ToSymbol("/", true)
 
 	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
 		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
@@ -236,10 +236,11 @@ func (this *SpotOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	defer mux.Unlock()
 
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSSpotMarketKK.Config.Location)
-	var depth = &SwapDepth{
+	var lastTS = lastTime.UnixMilli()
+	var depth = &Depth{
 		Pair:      pair,
-		Timestamp: lastTime.UnixMilli(),
-		Sequence:  this.SeqData[productId],
+		Timestamp: lastTS,
+		Sequence:  lastTS,
 		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),
@@ -291,11 +292,23 @@ func (this *SpotOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 
 func (this *SpotOrderBooks) Resubscribe(productId string) {
 	var unSub = struct {
-		Event      string   `json:"event"`
-		Feed       string   `json:"feed"`
-		ProductIds []string `json:"product_ids"`
+		Method string `json:"method"`
+		Params struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		} `json:"params"`
 	}{
-		"unsubscribe", "book", []string{productId},
+		Method: "unsubscribe",
+		Params: struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		}{
+			"book",
+			[]string{productId},
+			500,
+		},
 	}
 
 	var err = this.conn.WriteJSON(unSub)
@@ -305,11 +318,23 @@ func (this *SpotOrderBooks) Resubscribe(productId string) {
 	time.Sleep(10 * time.Second)
 
 	var sub = struct {
-		Event      string   `json:"event"`
-		Feed       string   `json:"feed"`
-		ProductIds []string `json:"product_ids"`
+		Method string `json:"method"`
+		Params struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		} `json:"params"`
 	}{
-		"subscribe", "book", []string{productId},
+		Method: "subscribe",
+		Params: struct {
+			Channel string   `json:"channel"`
+			Symbol  []string `json:"symbol"`
+			Depth   int64    `json:"depth"`
+		}{
+			"book",
+			[]string{productId},
+			500,
+		},
 	}
 	err = this.conn.WriteJSON(sub)
 	if err != nil {
