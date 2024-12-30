@@ -29,6 +29,7 @@ type WSSpotTradeKK struct {
 	restartTS  map[int64]string
 
 	stopChecSign chan bool
+	stopPingSign chan bool
 }
 
 func (this *WSSpotTradeKK) Subscribe(v interface{}) {
@@ -102,17 +103,12 @@ func (this *WSSpotTradeKK) Start() error {
 	}
 	this.conn = conn
 
-	var challenge = struct {
-		Event  string `json:"event"`
-		ApiKey string `json:"api_key"`
-		Feed   string `json:"feed"`
-	}{
-		Event:  "challenge",
-		Feed:   "heartbeat",
-		ApiKey: this.Config.ApiKey,
-	}
+	var ping = struct {
+		Method string `json:"method"`
+		ReqId  int64  `json:"req_id"`
+	}{"ping", time.Now().UnixMilli()}
 
-	err = this.conn.WriteJSON(challenge)
+	err = this.conn.WriteJSON(ping)
 	if err != nil {
 		if len(this.restartTS) != 0 {
 			this.Restart()
@@ -123,37 +119,23 @@ func (this *WSSpotTradeKK) Start() error {
 	for {
 		var _, p, _ = conn.ReadMessage()
 		var result = struct {
-			Event   string `json:"event"`
-			Message string `json:"message"`
+			Method  string `json:"method"`
+			ReqId   int64  `json:"req_id"`
+			TimeIn  string `json:"time_in"`
+			TimeOut string `json:"time_out"`
 		}{}
 
 		_ = json.Unmarshal(p, &result)
-		if result.Event != "challenge" {
+		if result.Method != "pong" {
 			continue
 		} else {
-			this.connId = result.Message
 			break
 		}
 	}
 
-	var heartBeat = struct {
-		Event string `json:"event"`
-		Feed  string `json:"feed"`
-	}{
-		Event: "subscribe",
-		Feed:  "heartbeat",
-	}
-
-	err = this.conn.WriteJSON(heartBeat)
-	if err != nil {
-		if len(this.restartTS) != 0 {
-			this.Restart()
-		}
-		return err
-	}
-
 	go this.recvRoutine()
 	go this.checkRoutine()
+	go this.pingRoutine()
 
 	return nil
 }
@@ -235,7 +217,6 @@ func (this *WSSpotTradeKK) getConn(wss string) (*websocket.Conn, error) {
 
 func (this *WSSpotTradeKK) getLoginConn(wss string) (*websocket.Conn, error) {
 	this.initDefaultValue()
-
 	var kk = New(this.Config)
 	if _, token, err := kk.GetToken(); err != nil {
 		return nil, err
@@ -243,15 +224,14 @@ func (this *WSSpotTradeKK) getLoginConn(wss string) (*websocket.Conn, error) {
 		this.connId = token
 	}
 
-	var conn, _, err = websocket.DefaultDialer.Dial(
+	if conn, _, err := websocket.DefaultDialer.Dial(
 		wss,
 		nil,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
+	} else {
+		return conn, nil
 	}
-	return conn, nil
-
 }
 
 func (this *WSSpotTradeKK) initDefaultValue() {
@@ -334,6 +314,40 @@ func (this *WSSpotTradeKK) recvRoutine() {
 		this.lastPingTS = time.Now().Unix()
 		if event.Feed != "heartbeat" {
 			this.RecvHandler(string(msg))
+		}
+	}
+}
+
+func (this *WSSpotTradeKK) pingRoutine() {
+
+	var stopPingChn = make(chan bool, 1)
+	this.stopPingSign = stopPingChn
+	var ticker = time.NewTicker(DEFAULT_WEBSOCKET_PING_SEC * time.Second)
+	defer ticker.Stop()
+	var conn = this.conn
+
+	for {
+		select {
+		case <-ticker.C:
+			if this.conn == nil {
+				continue
+			}
+
+			var ping = struct {
+				Method string `json:"method"`
+				ReqId  int64  `json:"req_id"`
+			}{"ping", time.Now().UnixMilli()}
+
+			var err = conn.WriteJSON(ping)
+			if err != nil {
+				fmt.Println(err)
+			}
+		case _, opened := <-stopPingChn:
+			if opened {
+				this.stopPingSign = nil
+				close(stopPingChn)
+			}
+			return
 		}
 	}
 }
