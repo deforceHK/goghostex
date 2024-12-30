@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -25,13 +24,13 @@ const (
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	var config = &APIConfig{
-		Endpoint: ENDPOINT,
+		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse("socks5://127.0.0.1:1090")
-				},
-			},
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse("socks5://127.0.0.1:1090")
+			//	},
+			//},
 		},
 		ApiKey:        SPOT_API_KEY,
 		ApiSecretKey:  SPOT_API_SECRETKEY,
@@ -60,5 +59,12 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 
 	fmt.Println(string(raw))
 	//fmt.Println(string(resp))
-
+	var resp, token, tokenErr = kraken.GetToken()
+	if tokenErr != nil {
+		t.Error(tokenErr)
+		return
+	} else {
+		fmt.Println(string(resp))
+		fmt.Println(token)
+	}
 }
