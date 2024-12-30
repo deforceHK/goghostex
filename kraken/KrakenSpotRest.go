@@ -103,11 +103,6 @@ func (s *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 	panic("implement me")
 }
 
-func (s *Spot) GetAccount() (*Account, []byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (s *Spot) PlaceOrder(order *Order) ([]byte, error) {
 	//TODO implement me
 	panic("implement me")
