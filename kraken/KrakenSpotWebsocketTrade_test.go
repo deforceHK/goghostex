@@ -37,6 +37,20 @@ func TestWSSpotTradeKK_Start(t *testing.T) {
 		return
 	}
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(30 * time.Second)
+
+	var order = ParamSpotTradeKK{
+		Method: "add_order",
+		Params: map[string]interface{}{
+			"order_type": "limit",
+			"side":       "sell",
+			"limit_price": 96500.4,
+			"order_qty":  0.01,
+			"symbol":       "BTC/USD",
+		},
+		ReqId: time.Now().UnixMilli(),
+	}
+	ws.Subscribe(order)
+
 	select {}
 }

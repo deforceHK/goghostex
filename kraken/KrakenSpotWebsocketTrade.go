@@ -12,6 +12,12 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
+type ParamSpotTradeKK struct {
+	Method string                 `json:"method"`
+	Params map[string]interface{} `json:"params"`
+	ReqId  int64                  `json:"req_id"`
+}
+
 type WSSpotTradeKK struct {
 	RecvHandler  func(string)
 	ErrorHandler func(error)
@@ -33,52 +39,29 @@ type WSSpotTradeKK struct {
 }
 
 func (this *WSSpotTradeKK) Subscribe(v interface{}) {
-	var channel, isStr = v.(string)
-	if !isStr {
-		this.ErrorHandler(fmt.Errorf("the subscribe param must be string"))
-		return
+	if p, ok := v.(ParamSpotTradeKK); ok {
+		p.Params["token"] = this.connId
+		var err = this.Write(p)
+		if err != nil {
+			this.ErrorHandler(err)
+			return
+		}
+	} else {
+		this.ErrorHandler(fmt.Errorf("param type error, it must be ParamSpotTradeKK"))
 	}
-
-	var err = this.Write(map[string]string{
-		"event":              "subscribe",
-		"feed":               channel,
-		"api_key":            this.Config.ApiKey,
-		"original_challenge": this.connId,
-		"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
-	})
-	if err != nil {
-		this.ErrorHandler(err)
-		return
-	}
-	this.subscribed = append(this.subscribed, v)
 }
 
 func (this *WSSpotTradeKK) Unsubscribe(v interface{}) {
-	var channel, isStr = v.(string)
-	if !isStr {
-		this.ErrorHandler(fmt.Errorf("the unsubscribe param must be string"))
-		return
-	}
-
-	var err = this.Write(map[string]string{
-		"event":              "unsubscribe",
-		"feed":               channel,
-		"api_key":            this.Config.ApiKey,
-		"original_challenge": this.connId,
-		"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
-	})
-	if err != nil {
-		this.ErrorHandler(err)
-		return
-	}
-
-	var newSub = make([]interface{}, 0)
-	for _, subCh := range this.subscribed {
-		if subCh.(string) != channel {
-			newSub = append(newSub, subCh)
+	if p, ok := v.(ParamSpotTradeKK); ok {
+		p.Params["token"] = this.connId
+		var err = this.Write(p)
+		if err != nil {
+			this.ErrorHandler(err)
+			return
 		}
+	} else {
+		this.ErrorHandler(fmt.Errorf("param type error, it must be ParamSpotTradeKK"))
 	}
-	this.subscribed = newSub
 }
 
 func (this *WSSpotTradeKK) Write(v interface{}) error {
@@ -165,23 +148,6 @@ func (this *WSSpotTradeKK) Restart() {
 		this.ErrorHandler(err)
 		return
 	}
-
-	// subscribe unsubscribe the channel
-	for _, channel := range this.subscribed {
-		var err = this.conn.WriteJSON(map[string]string{
-			"event":              "subscribe",
-			"feed":               channel.(string),
-			"api_key":            this.Config.ApiKey,
-			"original_challenge": this.connId,
-			"signed_challenge":   hashChallenge(this.Config.ApiSecretKey, this.connId),
-		})
-		if err != nil {
-			this.ErrorHandler(err)
-			var errMsg, _ = json.Marshal(channel.(string))
-			this.ErrorHandler(fmt.Errorf("subscribe error: %s", string(errMsg)))
-		}
-	}
-
 }
 
 func (this *WSSpotTradeKK) startCheck() error {
@@ -201,18 +167,6 @@ func (this *WSSpotTradeKK) startCheck() error {
 		return wsErr
 	}
 	return nil
-}
-
-func (this *WSSpotTradeKK) getConn(wss string) (*websocket.Conn, error) {
-	this.initDefaultValue()
-	var conn, _, err = websocket.DefaultDialer.Dial(
-		wss,
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
 }
 
 func (this *WSSpotTradeKK) getLoginConn(wss string) (*websocket.Conn, error) {
@@ -307,14 +261,12 @@ func (this *WSSpotTradeKK) recvRoutine() {
 		if msgType != websocket.TextMessage {
 			continue
 		}
-		var event = struct {
-			Feed string `json:"feed"`
-		}{}
-		_ = json.Unmarshal(msg, &event)
+		//var event = struct {
+		//	Method string `json:"method"`
+		//}{}
+		//_ = json.Unmarshal(msg, &event)
 		this.lastPingTS = time.Now().Unix()
-		if event.Feed != "heartbeat" {
-			this.RecvHandler(string(msg))
-		}
+		this.RecvHandler(string(msg))
 	}
 }
 
