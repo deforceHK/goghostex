@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +23,9 @@ type LocalOrderBooks struct {
 	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
 	Cache         map[string][]*DeltaOrderBook
+
+	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
+	UpdateChan chan string
 }
 
 type DeltaOrderBook struct {
@@ -157,15 +162,23 @@ func (this *LocalOrderBooks) ReceiveDelta(msg string) {
 		}
 		this.SeqData[productId] = delta.Data.EndSeq
 		this.TsData[productId] = delta.Data.Timestamp
+
+		if this.UpdateChan != nil {
+			this.UpdateChan <- fmt.Sprintf("%s:%d", productId, delta.Data.Timestamp)
+		}
 	}
 
 }
-func (this *LocalOrderBooks) getPairByProductId(productId string) Pair {
-	return Pair{
-		Basis:   NewCurrency(productId[:len(productId)-4], ""),
-		Counter: NewCurrency(productId[len(productId)-4:], ""),
-	}
 
+func (this *LocalOrderBooks) getPairByProductId(productId string) Pair {
+	var theId = productId
+	if strings.Index(productId, "_") > 0 {
+		theId = strings.Split(productId, "_")[0]
+	}
+	return Pair{
+		Basis:   NewCurrency(theId[:len(theId)-4], ""),
+		Counter: NewCurrency(theId[len(theId)-4:], ""),
+	}
 }
 
 func (this *LocalOrderBooks) getSnapshot(productId string, times int) {
@@ -185,9 +198,7 @@ func (this *LocalOrderBooks) getSnapshot(productId string, times int) {
 		return
 	}
 
-	var pair = this.getPairByProductId(productId)
-	var bn = New(this.Config)
-	var depth, _, err = bn.Swap.GetDepth(pair, 1000)
+	var depth, err = this.getDepthById(productId, 1000) //bn.Swap.GetDepth(pair, 1000)
 	if err != nil {
 		this.ErrorHandler(err)
 		time.Sleep(5 * time.Second)
@@ -212,8 +223,14 @@ func (this *LocalOrderBooks) getSnapshot(productId string, times int) {
 	mux.Unlock()
 }
 
-func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
+func (this *LocalOrderBooks) Snapshot(pair Pair) (*Depth, error) {
 	var productId = pair.ToSymbol("", false)
+	var depth, err = this.SnapshotById(productId)
+	//depth.Pair = pair
+	return depth, err
+}
+
+func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
 		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
 	}
@@ -221,10 +238,11 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	var mux = this.OrderBookMuxs[productId]
 	mux.Lock()
 	defer mux.Unlock()
-
+	var pair = this.getPairByProductId(productId)
 	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketUMBN.Config.Location)
-	var depth = &SwapDepth{
+	var depth = &Depth{
 		Pair:      pair,
+		Sequence:  this.SeqData[productId],
 		Timestamp: lastTime.UnixMilli(),
 		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
@@ -274,6 +292,11 @@ func (this *LocalOrderBooks) Snapshot(pair Pair) (*SwapDepth, error) {
 	}
 
 	return depth, nil
+
+}
+
+func (this *LocalOrderBooks) SubscribeByProductId(productId string) {
+	this.WSMarketUMBN.Subscribe(fmt.Sprintf("%s@depth", productId))
 }
 
 func (this *LocalOrderBooks) Subscribe(pair Pair) {
@@ -289,4 +312,59 @@ func (this *LocalOrderBooks) Unsubscribe(pair Pair) {
 
 	this.WSMarketUMBN.Unsubscribe(fmt.Sprintf("%s@depth", symbol))
 
+}
+
+func (this *LocalOrderBooks) getDepthById(productId string, size int) (*Depth, error) {
+
+	var sizes = []int{5, 10, 20, 50, 100, 500, 1000}
+	for _, s := range sizes {
+		if size <= s {
+			size = s
+			break
+		}
+	}
+
+	var response = struct {
+		Asks         [][]interface{} `json:"asks"` // The binance return asks Ascending ordered
+		Bids         [][]interface{} `json:"bids"` // The binance return bids Descending ordered
+		LastUpdateId int64           `json:"lastUpdateId"`
+	}{}
+
+	var params = url.Values{}
+	params.Set("symbol", productId)
+	params.Set("limit", fmt.Sprintf("%d", size))
+	var bn = New(this.Config)
+	var _, err = bn.Swap.DoRequest(
+		http.MethodGet,
+		SWAP_COUNTER_DEPTH_URI+params.Encode(),
+
+		"",
+		&response,
+		SETTLE_MODE_COUNTER,
+	)
+
+	//fmt.Println(string(resp))
+
+	var now = time.Now()
+	var depth = new(Depth)
+	//depth.Pair = pair
+	depth.Timestamp = now.UnixNano() / int64(time.Millisecond)
+	depth.Date = now.In(this.Config.Location).Format(GO_BIRTHDAY)
+	depth.Sequence = response.LastUpdateId
+
+	for _, bid := range response.Bids {
+		var price = ToFloat64(bid[0])
+		var amount = ToFloat64(bid[1])
+		depthItem := DepthRecord{Price: price, Amount: amount}
+		depth.BidList = append(depth.BidList, depthItem)
+	}
+
+	for _, ask := range response.Asks {
+		var price = ToFloat64(ask[0])
+		var amount = ToFloat64(ask[1])
+		depthItem := DepthRecord{Price: price, Amount: amount}
+		depth.AskList = append(depth.AskList, depthItem)
+	}
+
+	return depth, err
 }
