@@ -37,31 +37,34 @@ func TestBinanceWebsocketBook(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	time.Sleep(1 * time.Second)
 
-	var sol = Pair{SOL, USDT}
-	var eth = Pair{ETH, USDT}
-	wsBN.Subscribe(sol)
-	wsBN.Subscribe(eth)
+	var ethSwap = "ethusdt"
+	var ethfuture = "ethusdt_250627"
+	//wsBN.Subscribe(sol)
+	wsBN.SubscribeByProductId(ethSwap)
+	wsBN.SubscribeByProductId(ethfuture)
+
+	time.Sleep(10 * time.Second)
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(5 * time.Second)
 		if i%2 == 0 {
-			depth, depthErr := wsBN.Snapshot(sol)
+			depth, depthErr := wsBN.SnapshotById(ethfuture)
 			if depthErr != nil {
 				t.Error(depthErr)
 				return
 			}
 			var depthData, _ = json.Marshal(depth)
 			t.Log(string(depthData))
+			break
 		} else {
-			depth, depthErr := wsBN.Snapshot(eth)
+			depth, depthErr := wsBN.SnapshotById(ethSwap)
 			if depthErr != nil {
 				t.Error(depthErr)
 				return
 			}
-			var depthData, _ = json.Marshal(depth)
-			t.Log(string(depthData))
+			var _, _ = json.Marshal(depth)
+			//t.Log(string(depthData))
 		}
 	}
 
