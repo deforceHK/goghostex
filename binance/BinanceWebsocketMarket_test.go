@@ -36,6 +36,6 @@ func TestBinanceMarketWebsocket(t *testing.T) {
 	}
 	time.Sleep(10 * time.Second)
 
-	wsBN.Subscribe("solusdt@depth")
+	wsBN.Subscribe("ethusdt_250627@depth")
 	select {}
 }
