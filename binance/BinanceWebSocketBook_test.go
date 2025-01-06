@@ -41,8 +41,8 @@ func TestBinanceWebsocketBook(t *testing.T) {
 	var ethSwap = "ethusdt"
 	var ethfuture = "ethusdt_250627"
 	//wsBN.Subscribe(sol)
-	wsBN.SubscribeByProductId(ethSwap)
-	wsBN.SubscribeByProductId(ethfuture)
+	wsBN.SubscribeById(ethSwap)
+	wsBN.SubscribeById(ethfuture)
 
 	time.Sleep(10 * time.Second)
 
