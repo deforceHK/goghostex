@@ -295,7 +295,7 @@ func (this *LocalOrderBooks) SnapshotById(productId string) (*Depth, error) {
 
 }
 
-func (this *LocalOrderBooks) SubscribeByProductId(productId string) {
+func (this *LocalOrderBooks) SubscribeById(productId string) {
 	this.WSMarketUMBN.Subscribe(fmt.Sprintf("%s@depth", productId))
 }
 
