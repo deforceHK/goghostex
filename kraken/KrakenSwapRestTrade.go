@@ -215,16 +215,23 @@ func (swap *Swap) GetOrder(order *SwapOrder) ([]byte, error) {
 		if fills, _, err := swap.GetOrders(order.Pair); err != nil {
 			return resp, err
 		} else {
+			var dealAmount, dealValue float64 = 0, 0
+			// fill detail in fills, so one order may have multiple fills
 			for _, fill := range fills {
 				if fill.OrderId != order.OrderId {
 					continue
 				} else {
-					order.AvgPrice = fill.AvgPrice
-					order.DealAmount = fill.DealAmount
+					dealAmount += fill.DealAmount
+					dealValue += fill.DealAmount * fill.AvgPrice
+
 					order.DealTimestamp = fill.DealTimestamp
 					order.DealDatetime = fill.DealDatetime
-					break
 				}
+			}
+
+			if dealValue > 0 {
+				order.AvgPrice = dealValue / dealAmount
+				order.DealAmount = dealAmount
 			}
 		}
 		return resp, nil
