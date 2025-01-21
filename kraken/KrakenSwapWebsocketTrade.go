@@ -133,7 +133,14 @@ func (this *WSSwapTradeKK) Start() error {
 	}
 
 	for {
-		var _, p, _ = conn.ReadMessage()
+		var _, p, err = conn.ReadMessage()
+		if err != nil {
+			if len(this.restartTS) != 0 {
+				this.Restart()
+			}
+			return err
+		}
+
 		var result = struct {
 			Event   string `json:"event"`
 			Message string `json:"message"`
