@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	ENDPOINT = "https://api.kraken.com"
-	API_V1   = "/0/public/"
+	ENDPOINT    = "https://api.kraken.com"
+	API_V1      = "/0/public/"
+	API_PRIVATE = "/0/private"
 
 	KLINE_URI = "OHLC"
 )
@@ -76,12 +77,18 @@ func (k *Kraken) DoRequest(httpMethod, uri, reqBody string, response interface{}
 	}
 }
 
-func (k *Kraken) DoSignRequest(httpMethod, uri, reqBody, sign string, response interface{}) ([]byte, error) {
+func (k *Kraken) DoSignRequest(httpMethod, uri string, data interface{}, response interface{}) ([]byte, error) {
+	var sign, signErr = k.GetKrakenSign(uri, data)
+	if signErr != nil {
+		return nil, signErr
+	}
+
+	var postData, _ = json.Marshal(data)
 	resp, err := NewHttpRequest(
 		k.config.HttpClient,
 		httpMethod,
 		k.config.Endpoint+uri,
-		reqBody,
+		string(postData),
 		map[string]string{
 			"Content-Type": "application/json",
 			"Accept":       "application/json",
@@ -99,6 +106,7 @@ func (k *Kraken) DoSignRequest(httpMethod, uri, reqBody, sign string, response i
 		}
 		return resp, json.Unmarshal(resp, &response)
 	}
+
 }
 
 func (k *Kraken) GetKrakenSign(urlPath string, data interface{}) (string, error) {
@@ -144,37 +152,25 @@ func (k *Kraken) GetToken() ([]byte, string, error) {
 		"nonce": nonce,
 	}
 
-	if sig, err := k.GetKrakenSign(
-		"/0/private/GetWebSocketsToken",
-		data,
-	); err != nil {
-		return nil, "", err
+	var response = struct {
+		Error  []string `json:"error"`
+		Result struct {
+			Token   string `json:"token"`
+			Expires int64  `json:"expires"`
+		} `json:"result"`
+	}{}
+	var resp, err = k.DoSignRequest(
+		http.MethodPost,
+		API_PRIVATE+"/GetWebSocketsToken",
+		data, &response,
+	)
+
+	if err != nil {
+		return resp, "", err
 	} else {
-		var postData, _ = json.Marshal(data)
-		var response = struct {
-			Error  []string `json:"error"`
-			Result struct {
-				Token   string `json:"token"`
-				Expires int64  `json:"expires"`
-			} `json:"result"`
-		}{}
-
-		if resp, err := k.DoSignRequest(
-			http.MethodPost,
-			"/0/private/GetWebSocketsToken",
-			string(postData), sig,
-			&response,
-		); err != nil {
-			return nil, "", err
-		} else {
-			if err = json.Unmarshal(resp, &response); err != nil {
-				return nil, "", err
-			}
-			if len(response.Error) != 0 {
-				return nil, "", fmt.Errorf("%s", response.Error)
-			}
-			return resp, response.Result.Token, nil
+		if len(response.Error) != 0 {
+			return resp, "", fmt.Errorf("%s", response.Error)
 		}
+		return resp, response.Result.Token, nil
 	}
-
 }
