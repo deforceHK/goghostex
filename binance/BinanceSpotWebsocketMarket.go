@@ -96,7 +96,6 @@ func (this *WSMarketSpot) Unsubscribe(v interface{}) {
 	}
 }
 
-
 func (this *WSMarketSpot) Restart() {
 	this.restartTS[time.Now().Unix()] = this.connId
 	this.Stop()
@@ -255,5 +254,3 @@ func (this *WSMarketSpot) initDefaultValue() {
 	}
 
 }
-
-

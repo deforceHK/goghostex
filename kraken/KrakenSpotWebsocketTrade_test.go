@@ -42,11 +42,11 @@ func TestWSSpotTradeKK_Start(t *testing.T) {
 	var order = ParamSpotTradeKK{
 		Method: "add_order",
 		Params: map[string]interface{}{
-			"order_type": "limit",
-			"side":       "sell",
-			"limit_price": 96500.4,
-			"order_qty":  0.01,
-			"symbol":       "BTC/USD",
+			"order_type":  "limit",
+			"side":        "sell",
+			"limit_price": 106500.4,
+			"order_qty":   0.01,
+			"symbol":      "BTC/USD",
 		},
 		ReqId: time.Now().UnixMilli(),
 	}
