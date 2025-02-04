@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -14,6 +15,13 @@ import (
 const (
 	SPOT_KRAKEN_ENDPOINT = "https://api.kraken.com"
 )
+
+var _INERNAL_ORDER_PLACE_TYPE_CONVERTER = map[PlaceType]string{
+	NORMAL:     "limit",
+	ONLY_MAKER: "post-only",
+	FOK:        "market",
+	IOC:        "limit",
+}
 
 type Spot struct {
 	*Kraken
@@ -104,8 +112,67 @@ func (s *Spot) GetTrades(pair Pair, since int64) ([]*Trade, error) {
 }
 
 func (s *Spot) PlaceOrder(order *Order) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	// Convert pair to Kraken format
+	var pairStd = strings.ToUpper(order.Pair.ToSymbol("", true))
+	if pairStd == "BTCUSD" {
+		pairStd = "XXBTZUSD"
+	} else if pairStd == "ETHUSD" {
+		pairStd = "XETHZUSD"
+	}
+
+	// Map order type
+	var orderType, exist = _INERNAL_ORDER_PLACE_TYPE_CONVERTER[order.OrderType]
+	if !exist {
+		return nil, errors.New("unsupported order type")
+	}
+
+	// Map side
+	var side string
+	switch order.Side {
+	case BUY:
+		side = "buy"
+	case SELL:
+		side = "sell"
+	default:
+		return nil, errors.New("invalid order side")
+	}
+
+	var params = map[string]interface{}{
+		"pair":      pairStd,
+		"type":      side,
+		"ordertype": orderType,
+		"volume":    fmt.Sprintf("%f", order.Amount),
+		"price":     fmt.Sprintf("%f", order.Price),
+		"nonce":     fmt.Sprintf("%d", time.Now().UnixNano()),
+	}
+
+	if order.Cid != "" {
+		params["cl_ord_id"] = order.Cid
+	}
+
+	var result struct {
+		Error  []string `json:"error"`
+		Result struct {
+			Descr map[string]string `json:"descr"`
+			Txid  []string          `json:"txid"`
+		} `json:"result"`
+	}
+
+	resp, err := s.DoSignRequest(http.MethodPost, API_PRIVATE+"/AddOrder", params, &result)
+	if err != nil {
+		return resp, err
+	}
+
+	if len(result.Error) != 0 {
+		return resp, errors.New(strings.Join(result.Error, ","))
+	}
+
+	if len(result.Result.Txid) == 0 {
+		return resp, errors.New("no transaction id returned")
+	}
+
+	order.OrderId = result.Result.Txid[0]
+	return resp, nil
 }
 
 func (s *Spot) CancelOrder(order *Order) ([]byte, error) {

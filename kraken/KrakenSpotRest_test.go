@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ const (
 func TestSpot_GetKlineRecords(t *testing.T) {
 
 	var config = &APIConfig{
-		Endpoint:   ENDPOINT,
+		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
 			//Transport: &http.Transport{
 			//	Proxy: func(req *http.Request) (*url.URL, error) {
@@ -67,4 +68,44 @@ func TestSpot_GetKlineRecords(t *testing.T) {
 		fmt.Println(string(resp))
 		fmt.Println(token)
 	}
+}
+
+/**
+* unit test cmd
+* go test -v ./kraken/... -count=1 -run=TestSpot_PlaceOrder
+*
+**/
+func TestSpot_PlaceOrder(t *testing.T) {
+
+	var config = &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(req *http.Request) (*url.URL, error) {
+					return url.Parse("socks5://127.0.0.1:1090")
+				},
+			},
+		},
+		ApiKey:        SPOT_API_KEY,
+		ApiSecretKey:  SPOT_API_SECRETKEY,
+		ApiPassphrase: SPOT_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	var kraken = New(config)
+	var order = Order{
+		Pair:   Pair{Basis: BTC, Counter: USD},
+		Price:  103000,
+		Amount: 0.001,
+		Side:   SELL,
+		//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
+		OrderType: NORMAL,
+	}
+	resp, err := kraken.Spot.PlaceOrder(&order)
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(string(resp))
 }

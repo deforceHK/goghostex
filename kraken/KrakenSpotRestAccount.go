@@ -1,7 +1,6 @@
 package kraken
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -14,18 +13,10 @@ func (s *Spot) GetAccount() (*Account, []byte, error) {
 		"nonce": nowTS,
 	}
 
-	var sign, err = s.GetKrakenSign("/0/private/Balance", data)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	body, _ := json.Marshal(data)
-
-	resp, err := s.DoSignRequest("POST", "/0/private/Balance", string(body), sign, nil)
+	resp, err := s.DoSignRequest("POST", "/0/private/Balance", data, nil)
 	if err != nil {
 		return nil, nil, err
 	} else {
 		return nil, resp, nil
 	}
-
 }
