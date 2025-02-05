@@ -65,7 +65,7 @@ func (this *LocalOrderBooks) Init() error {
 
 func (this *LocalOrderBooks) Receiver(msg string) {
 	this.OrderBookMux.Lock()
-	defer this.OrderBookMux.Unlock()
+	//defer this.OrderBookMux.Unlock()
 	var rawData = []byte(msg)
 	var delta = OKBook{}
 	_ = json.Unmarshal(rawData, &delta)
@@ -104,7 +104,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 					"The prevSeqId %d is not equal to the last seqId %d, in product %s. ",
 					prevSeqId, this.SeqData[instId], instId,
 				))
-
+				this.OrderBookMux.Unlock()
 				this.Resubscribe(instId)
 				return
 			}
@@ -139,6 +139,7 @@ func (this *LocalOrderBooks) Receiver(msg string) {
 		fmt.Println(msg)
 		fmt.Println("The action must in snapshot/update. ")
 	}
+	this.OrderBookMux.Unlock()
 }
 
 func (this *LocalOrderBooks) Resubscribe(productId string) {

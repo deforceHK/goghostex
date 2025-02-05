@@ -136,10 +136,9 @@ func (this *LocalOrderBooks) recvBook(book KKBook) {
 	}
 
 	mux.Lock()
-	defer mux.Unlock()
-
 	var stdPrice = int64(book.Price * 100000000)
 	if book.Seq != this.SeqData[book.ProductId]+1 {
+		mux.Unlock()
 		//这样restart也可以，但是重新订阅是不是更轻量？
 		this.Resubscribe(book.ProductId)
 		return
@@ -152,6 +151,7 @@ func (this *LocalOrderBooks) recvBook(book KKBook) {
 	}
 	this.SeqData[book.ProductId] = book.Seq
 	this.TsData[book.ProductId] = book.Timestamp
+	mux.Unlock()
 }
 
 func (this *LocalOrderBooks) recvSnapshot(snapshot KKSnapshot) {
