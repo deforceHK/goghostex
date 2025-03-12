@@ -40,6 +40,9 @@ type LocalOrderBooks struct {
 	SeqData       map[string]int64
 	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
+
+	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
+	UpdateChan chan string
 }
 
 func (this *LocalOrderBooks) Init() error {
@@ -113,13 +116,20 @@ func (this *LocalOrderBooks) Unsubscribe(pair Pair) {
 func (this *LocalOrderBooks) Receiver(msg string) {
 	var rawData = []byte(msg)
 	var pre = struct {
-		Feed string `json:"feed"`
+		Feed      string `json:"feed"`
+		ProductId string `json:"product_id"`
+		Timestamp int64  `json:"timestamp"`
 	}{}
 	_ = json.Unmarshal(rawData, &pre)
 	if pre.Feed == "book" {
 		var book = KKBook{}
 		_ = json.Unmarshal(rawData, &book)
 		this.recvBook(book)
+
+		if this.UpdateChan != nil {
+			this.UpdateChan <- fmt.Sprintf("%s:%d", pre.ProductId, pre.Timestamp)
+		}
+
 	} else if pre.Feed == "book_snapshot" {
 		var snapshot = KKSnapshot{}
 		_ = json.Unmarshal(rawData, &snapshot)
