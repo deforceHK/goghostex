@@ -125,6 +125,7 @@ const (
 	ONLY_MAKER                  // only maker
 	FOK                         // fill or kill
 	IOC                         // Immediate or Cancel
+	MARKET                      // market order
 )
 
 func (ot PlaceType) String() string {
