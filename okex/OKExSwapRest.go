@@ -45,6 +45,7 @@ var _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER = map[PlaceType]string{
 	ONLY_MAKER: "post_only",
 	FOK:        "fok",
 	IOC:        "ioc",
+	MARKET:     "market",
 }
 
 func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
