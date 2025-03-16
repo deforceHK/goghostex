@@ -184,10 +184,10 @@ func TestSpot_InstrumentsAPI(t *testing.T) {
 
 	var ok = New(config)
 
-	var resp, err = ok.Spot.UpdateContracts()
+	var _, err = ok.Spot.UpdateContracts()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	t.Log(string(resp))
+	//t.Log(string(resp))
 }
