@@ -130,7 +130,10 @@ type OKEx struct {
 
 func New(config *APIConfig) *OKEx {
 	okex := &OKEx{config: config}
-	okex.Spot = &Spot{okex}
+	okex.Spot = &Spot{
+		OKEx:   okex,
+		Locker: new(sync.Mutex),
+	}
 	okex.Swap = &Swap{
 		OKEx:          okex,
 		Locker:        new(sync.Mutex),
