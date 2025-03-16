@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/deforceHK/goghostex"
@@ -15,6 +16,9 @@ import (
 
 type Spot struct {
 	*OKEx
+
+	sync.Locker
+	nextUpdateTime time.Time
 }
 
 type PlaceOrderParam struct {
@@ -277,182 +281,6 @@ func (spot *Spot) GetAccount() (*Account, []byte, error) {
 	return account, resp, nil
 }
 
-func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
-	uri := "/api/spot/v3/orders"
-	param := PlaceOrderParam{
-		InstrumentId: order.Pair.ToSymbol("-", true),
-	}
-
-	if order.Cid == "" {
-		order.Cid = UUID()
-	}
-	param.ClientOid = order.Cid
-
-	var response remoteOrder
-	switch order.Side {
-	case BUY, SELL:
-		param.Side = strings.ToLower(order.Side.String())
-		param.Price = order.Price
-		param.Size = order.Amount
-		param.Type = "limit"
-		param.OrderType = _INTERNAL_ORDER_TYPE_CONVERTER[order.OrderType]
-	case SELL_MARKET:
-		param.Side = "sell"
-		param.Type = "market"
-		param.Size = order.Amount
-	case BUY_MARKET:
-		param.Side = "buy"
-		param.Type = "market"
-		param.Notional = order.Price
-	default:
-		param.Size = order.Amount
-		param.Price = order.Price
-	}
-
-	jsonStr, _, _ := spot.BuildRequestBody(param)
-	resp, err := spot.DoRequest(
-		"POST",
-		uri,
-		jsonStr,
-		&response,
-	)
-	if err != nil {
-		return resp, err
-	}
-	if err := response.Merge(order); err != nil {
-		return resp, err
-	}
-	return resp, nil
-}
-
-// orderId can set client oid or orderId
-func (spot *Spot) CancelOrder(order *Order) ([]byte, error) {
-	urlPath := "/api/spot/v3/cancel_orders/" + order.OrderId
-	param := struct {
-		InstrumentId string `json:"instrument_id"`
-	}{
-		order.Pair.ToSymbol("-", true),
-	}
-	reqBody, _, _ := spot.BuildRequestBody(param)
-	var response struct {
-		ClientOid string `json:"client_oid"`
-		OrderId   string `json:"order_id"`
-		Result    bool   `json:"result"`
-	}
-
-	resp, err := spot.DoRequest(
-		"POST",
-		urlPath,
-		reqBody,
-		&response,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if response.Result {
-		return resp, nil
-	}
-	return resp, NewError(400, "cancel fail, unknown error")
-}
-
-func (spot *Spot) adaptOrder(order *Order, response *OrderResponse) error {
-
-	order.Cid = response.ClientOid
-	order.OrderId = response.OrderId
-	order.Price = response.Price
-	order.Amount = response.Size
-	order.AvgPrice = ToFloat64(response.PriceAvg)
-	order.DealAmount = ToFloat64(response.FilledSize)
-	order.Status = spot.adaptOrderState(response.State)
-
-	switch response.Side {
-	case "buy":
-		if response.Type == "market" {
-			order.Side = BUY_MARKET
-			order.DealAmount = ToFloat64(response.Notional) //成交金额
-		} else {
-			order.Side = BUY
-		}
-	case "sell":
-		if response.Type == "market" {
-			order.Side = SELL_MARKET
-			order.DealAmount = ToFloat64(response.Notional) //成交数量
-		} else {
-			order.Side = SELL
-		}
-	}
-
-	switch response.OrderType {
-	case 0:
-		order.OrderType = NORMAL
-	case 1:
-		order.OrderType = ONLY_MAKER
-	case 2:
-		order.OrderType = FOK
-	case 3:
-		order.OrderType = IOC
-	default:
-		order.OrderType = NORMAL
-	}
-
-	if date, err := time.Parse(time.RFC3339, response.Timestamp); err != nil {
-		return err
-	} else {
-		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
-		order.OrderDate = date.In(spot.config.Location).Format(GO_BIRTHDAY)
-		return nil
-	}
-}
-
-// orderId can set client oid or orderId
-func (spot *Spot) GetOrder(order *Order) ([]byte, error) {
-	uri := "/api/spot/v3/orders/" + order.OrderId + "?instrument_id=" + order.Pair.ToSymbol("-", true)
-	var response OrderResponse
-	resp, err := spot.DoRequest(
-		"GET",
-		uri,
-		"",
-		&response,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if err := spot.adaptOrder(order, &response); err != nil {
-		return nil, err
-	}
-	return resp, nil
-}
-
-func (spot *Spot) GetUnFinishOrders(pair Pair) ([]*Order, []byte, error) {
-	uri := fmt.Sprintf(
-		"/api/spot/v3/orders_pending?instrument_id=%s",
-		pair.ToSymbol("-", true),
-	)
-	var response []OrderResponse
-	resp, err := spot.DoRequest(
-		"GET",
-		uri,
-		"",
-		&response,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var orders []*Order
-	for _, itm := range response {
-		order := Order{Pair: pair}
-		if err := spot.adaptOrder(&order, &itm); err != nil {
-			return nil, nil, err
-		}
-		orders = append(orders, &order)
-	}
-
-	return orders, resp, nil
-}
-
 func (spot *Spot) GetOrders(pair Pair) ([]*Order, error) {
 	panic("unsupported")
 }
@@ -468,4 +296,113 @@ func (spot *Spot) KeepAlive() {
 
 func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []byte, error) {
 	panic("implement me")
+}
+
+func (spot *Spot) getContract() {
+
+}
+
+func (spot *Spot) getInstruments(pair Pair) *Instrument {
+	//defer spot.Unlock()
+	//spot.Lock()
+
+	var now = time.Now().In(spot.config.Location)
+	if now.After(spot.nextUpdateTime) {
+		_, err := spot.updateContracts()
+		//重试三次
+		for i := 0; err != nil && i < 3; i++ {
+			time.Sleep(time.Second)
+			_, err = spot.updateContracts()
+		}
+		// 初次启动必须可以吧。
+		if spot.nextUpdateTime.IsZero() && err != nil {
+			panic(err)
+		}
+
+	}
+	//return spot.swapContracts.ContractNameKV[pair.ToSwapContractName()]
+	return nil
+}
+
+func (spot *Spot) UpdateContracts() ([]byte, error) {
+	return spot.updateContracts()
+}
+
+func (spot *Spot) updateContracts() ([]byte, error) {
+	var params = url.Values{}
+	params.Set("instType", "SPOT")
+
+	var uri = "/api/v5/public/instruments?"
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			InstId    string `json:"instId"`
+			Uly       string `json:"uly"`
+			SettleCcy string `json:"settleCcy"`
+			CtVal     string `json:"ctVal"`
+			TickSz    string `json:"tickSz"`
+			LotSz     string `json:"lotSz"`
+			MinSz     string `json:"minSz"`
+		} `json:"data"`
+	}{}
+	resp, err := spot.DoRequestMarket(
+		http.MethodGet,
+		uri+params.Encode(),
+		"",
+		&response,
+	)
+	if err != nil {
+		return resp, err
+	}
+	if response.Code != "0" {
+		return resp, errors.New(response.Msg)
+	}
+	if len(response.Data) == 0 {
+		return resp, errors.New("The api data not ready. ")
+	}
+
+	fmt.Println(string(resp))
+	//var swapContracts = SwapContracts{
+	//	ContractNameKV: make(map[string]*SwapContract, 0),
+	//}
+	//for _, item := range response.Data {
+	//	var pair = NewPair(item.Uly, "-")
+	//	var symbol = pair.ToSymbol("_", false)
+	//	var stdContractName = pair.ToSwapContractName()
+	//	var firstCurrency = strings.Split(symbol, "_")[0]
+	//	var settleMode = SETTLE_MODE_BASIS
+	//	if firstCurrency != strings.ToLower(item.SettleCcy) {
+	//		settleMode = SETTLE_MODE_COUNTER
+	//	}
+	//
+	//	var contract = SwapContract{
+	//		Pair:         pair,
+	//		Symbol:       pair.ToSymbol("_", false),
+	//		Exchange:     OKEX,
+	//		ContractName: stdContractName,
+	//		SettleMode:   settleMode,
+	//
+	//		UnitAmount:      ToFloat64(item.CtVal),
+	//		TickSize:        ToFloat64(item.TickSz),
+	//		PricePrecision:  GetPrecisionInt64(ToFloat64(item.TickSz)),
+	//		AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
+	//	}
+	//
+	//	swapContracts.ContractNameKV[stdContractName] = &contract
+	//}
+	//
+	//// setting next update time.
+	//var nowTime = time.Now().In(spot.config.Location)
+	//var nextUpdateTime = time.Date(
+	//	nowTime.Year(), nowTime.Month(), nowTime.Day(),
+	//	16, 0, 0, 0, spot.config.Location,
+	//)
+	//if nowTime.Hour() >= 16 {
+	//	nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
+	//}
+	//
+	//spot.nextUpdateContractTime = nextUpdateTime
+	//spot.swapContracts = swapContracts
+	return resp, nil
 }

@@ -176,3 +176,14 @@ type Rule struct {
 	BasePrecision    int
 	CounterPrecision int
 }
+
+//type Instrument struct {
+//	Pair     Pair   `json:"-"`
+//	Symbol   string `json:"symbol"`
+//	Exchange string `json:"exchange"`
+//
+//	UnitAmount      float64 `json:"unit_amount"`
+//	TickSize        float64 `json:"tick_size"`
+//	PricePrecision  int64   `json:"price_precision"`
+//	AmountPrecision int64   `json:"amount_precision"`
+//}
