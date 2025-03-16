@@ -19,6 +19,7 @@ type Spot struct {
 
 	sync.Locker
 	nextUpdateTime time.Time
+	Instruments    map[string]*Instrument
 }
 
 type PlaceOrderParam struct {
@@ -329,22 +330,15 @@ func (spot *Spot) UpdateContracts() ([]byte, error) {
 }
 
 func (spot *Spot) updateContracts() ([]byte, error) {
+
 	var params = url.Values{}
 	params.Set("instType", "SPOT")
 
 	var uri = "/api/v5/public/instruments?"
 	var response = struct {
-		Code string `json:"code"`
-		Msg  string `json:"msg"`
-		Data []struct {
-			InstId    string `json:"instId"`
-			Uly       string `json:"uly"`
-			SettleCcy string `json:"settleCcy"`
-			CtVal     string `json:"ctVal"`
-			TickSz    string `json:"tickSz"`
-			LotSz     string `json:"lotSz"`
-			MinSz     string `json:"minSz"`
-		} `json:"data"`
+		Code string        `json:"code"`
+		Msg  string        `json:"msg"`
+		Data []*Instrument `json:"data"`
 	}{}
 	resp, err := spot.DoRequestMarket(
 		http.MethodGet,
@@ -362,47 +356,23 @@ func (spot *Spot) updateContracts() ([]byte, error) {
 		return resp, errors.New("The api data not ready. ")
 	}
 
-	fmt.Println(string(resp))
-	//var swapContracts = SwapContracts{
-	//	ContractNameKV: make(map[string]*SwapContract, 0),
-	//}
-	//for _, item := range response.Data {
-	//	var pair = NewPair(item.Uly, "-")
-	//	var symbol = pair.ToSymbol("_", false)
-	//	var stdContractName = pair.ToSwapContractName()
-	//	var firstCurrency = strings.Split(symbol, "_")[0]
-	//	var settleMode = SETTLE_MODE_BASIS
-	//	if firstCurrency != strings.ToLower(item.SettleCcy) {
-	//		settleMode = SETTLE_MODE_COUNTER
-	//	}
-	//
-	//	var contract = SwapContract{
-	//		Pair:         pair,
-	//		Symbol:       pair.ToSymbol("_", false),
-	//		Exchange:     OKEX,
-	//		ContractName: stdContractName,
-	//		SettleMode:   settleMode,
-	//
-	//		UnitAmount:      ToFloat64(item.CtVal),
-	//		TickSize:        ToFloat64(item.TickSz),
-	//		PricePrecision:  GetPrecisionInt64(ToFloat64(item.TickSz)),
-	//		AmountPrecision: GetPrecisionInt64(ToFloat64(item.LotSz)),
-	//	}
-	//
-	//	swapContracts.ContractNameKV[stdContractName] = &contract
-	//}
-	//
-	//// setting next update time.
-	//var nowTime = time.Now().In(spot.config.Location)
-	//var nextUpdateTime = time.Date(
-	//	nowTime.Year(), nowTime.Month(), nowTime.Day(),
-	//	16, 0, 0, 0, spot.config.Location,
-	//)
-	//if nowTime.Hour() >= 16 {
-	//	nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
-	//}
-	//
-	//spot.nextUpdateContractTime = nextUpdateTime
-	//spot.swapContracts = swapContracts
+	for _, item := range response.Data {
+		if item.State != "live" {
+			continue
+		}
+		spot.Instruments[item.InstId] = item
+	}
+
+	// setting next update time.
+	var nowTime = time.Now().In(spot.config.Location)
+	var nextUpdateTime = time.Date(
+		nowTime.Year(), nowTime.Month(), nowTime.Day(),
+		16, 0, 0, 0, spot.config.Location,
+	)
+	if nowTime.Hour() >= 16 {
+		nextUpdateTime = nextUpdateTime.AddDate(0, 0, 1)
+	}
+
+	spot.nextUpdateTime = nextUpdateTime
 	return resp, nil
 }
