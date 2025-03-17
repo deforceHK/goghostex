@@ -150,6 +150,9 @@ type Order struct {
 	//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
 	OrderType PlaceType
 
+	OrderTimestamp int64
+	OrderDate      string
+
 	PlaceTimestamp int64
 	PlaceDatetime  string
 
