@@ -69,7 +69,7 @@ func TestSpot_TradeAPI(t *testing.T) {
 		t.Log(string(resp))
 	}
 
-	normalOrder := Order{
+	var normalOrder = Order{
 		Pair:      Pair{Basis: BTC, Counter: USDT},
 		Price:     buyPrice,
 		Amount:    0.00001,
@@ -91,6 +91,31 @@ func TestSpot_TradeAPI(t *testing.T) {
 		t.Log("Order remote api response: ")
 		t.Log(string(resp))
 	}
+
+	//var marketOrder = Order{
+	//	Pair:      Pair{Basis: BTC, Counter: USDT},
+	//	//Price:     buyPrice,
+	//	Amount:    0.00001,
+	//	Side:      BUY,
+	//	OrderType: MARKET,
+	//}
+	//
+	//if resp, err := ok.Spot.PlaceOrder(&marketOrder); err != nil {
+	//	t.Error(err)
+	//	return
+	//} else {
+	//	standard, err := json.Marshal(marketOrder)
+	//	if err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//	t.Log("Order standard struct:")
+	//	t.Log(string(standard))
+	//	t.Log("Order remote api response: ")
+	//	t.Log(string(resp))
+	//}
+
+
 	//
 	//for i := 0; i < 3; i++ {
 	//	if resp, err := ok.Spot.GetOrder(&normalOrder); err != nil {

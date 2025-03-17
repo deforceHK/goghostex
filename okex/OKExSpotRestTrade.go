@@ -34,8 +34,9 @@ func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
 		PosSide string `json:"posSide,omitempty"`
 		OrdType string `json:"ordType"`
 		Sz      string `json:"sz"`
-		Px      string `json:"px"`
+		Px      string `json:"px,omitempty"`
 		ClOrdId string `json:"clOrdId,omitempty"`
+		TgtCcy  string `json:"tgtCcy,omitempty"`
 	}{}
 
 	request.InstId = instrument.InstId
@@ -45,6 +46,7 @@ func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
 	request.Sz = FloatToString(order.Amount, instrument.AmountPrecision)
 	request.Px = FloatToString(order.Price, instrument.PricePrecision)
 	request.ClOrdId = order.Cid
+	request.TgtCcy = "base_ccy"
 
 	var response = struct {
 		Code string `json:"code"`
