@@ -135,20 +135,26 @@ func (depth *Depth) Verify() error {
  **/
 type Order struct {
 	// cid is important, when the order api return wrong, you can find it in unfinished api
-	Cid            string
-	Price          float64
-	Amount         float64
-	AvgPrice       float64
-	DealAmount     float64
-	Fee            float64
-	OrderId        string
-	OrderTimestamp int64
-	OrderDate      string
-	Status         TradeStatus
-	Pair           Pair
-	Side           TradeSide
+	Cid        string
+	Price      float64
+	Amount     float64
+	AvgPrice   float64
+	DealAmount float64
+	Fee        float64
+	OrderId    string
+	//OrderTimestamp int64
+	//OrderDate      string
+	Status TradeStatus
+	Pair   Pair
+	Side   TradeSide
 	//0:NORMAL,1:ONLY_MAKER,2:FOK,3:IOC
 	OrderType PlaceType
+
+	PlaceTimestamp int64
+	PlaceDatetime  string
+
+	DealTimestamp int64
+	DealDatetime  string
 }
 
 /**
