@@ -50,6 +50,9 @@ type Instrument struct {
 	MaxMktSz       string `json:"maxMktSz"`
 	MaxLmtAmt      string `json:"maxLmtAmt"`
 	MaxMktAmt      string `json:"maxMktAmt"`
+
+	PricePrecision  int64 `json:"pricePrecision"`
+	AmountPrecision int64 `json:"amountPrecision"`
 }
 
 func (ok *OKExOne) Init() error {

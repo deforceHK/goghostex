@@ -3,74 +3,87 @@ package okex
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	. "github.com/deforceHK/goghostex"
 )
 
+var _INERNAL_V5_SPOT_TRADE_SIDE_CONVERTER = map[TradeSide]string{
+	BUY:  "buy",
+	SELL: "sell",
+	//BU:        "fok",
+	//IOC:        "ioc",
+	//MARKET:     "market",
+}
+
+var _INERNAL_V5_SPOT_PLACE_TYPE_CONVERTER = map[PlaceType]string{
+	NORMAL:     "limit",
+	ONLY_MAKER: "post_only",
+	FOK:        "fok",
+	IOC:        "ioc",
+	MARKET:     "market",
+}
+
 func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
-	return nil, errors.New("not implemented")
-	//var contract = spot.getContract(order.Pair)
-	//var request = struct {
-	//	InstId  string `json:"instId"`
-	//	TdMode  string `json:"tdMode"`
-	//	Side    string `json:"side"`
-	//	PosSide string `json:"posSide,omitempty"`
-	//	OrdType string `json:"ordType"`
-	//	Sz      string `json:"sz"`
-	//	Px      string `json:"px"`
-	//	ClOrdId string `json:"clOrdId,omitempty"`
-	//}{}
-	//
-	//request.InstId = order.Pair.ToSymbol("-", true)
-	//request.TdMode = "cross" // todo 目前写死全仓，后续调整成可逐仓
-	//sideInfo, _ := _INERNAL_V5_FUTURE_TYPE_CONVERTER[order.Type]
-	//request.Side = sideInfo[0]
-	//request.PosSide = sideInfo[1]
-	//placeInfo, _ := _INERNAL_V5_FUTURE_PLACE_TYPE_CONVERTER[order.PlaceType]
-	//request.OrdType = placeInfo
-	//request.Sz = FloatToString(order.Amount, contract.AmountPrecision)
-	//request.Px = FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize)
-	//request.ClOrdId = order.Cid
-	//
-	//var response = struct {
-	//	Code string `json:"code"`
-	//	Msg  string `json:"msg"`
-	//	Data []struct {
-	//		ClOrdId string `json:"clOrdId"`
-	//		OrdId   string `json:"ordId"`
-	//		SCode   string `json:"sCode"`
-	//		SMsg    string `json:"sMsg"`
-	//	} `json:"data"`
-	//}{}
-	//var uri = "/api/v5/trade/order"
-	//
-	//now := time.Now()
-	//order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
-	//order.PlaceDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	//reqBody, _, _ := swap.BuildRequestBody(request)
-	//resp, err := swap.DoRequest(
-	//	http.MethodPost,
-	//	uri,
-	//	reqBody,
-	//	&response,
-	//)
-	//
-	//if err != nil {
-	//	return resp, err
-	//}
-	//if len(response.Data) > 0 && response.Data[0].SCode != "0" {
-	//	return resp, errors.New(string(resp)) // very important cause it has the error code
-	//}
-	//if response.Code != "0" {
-	//	return resp, errors.New(string(resp)) // very important cause it has the error code
-	//}
-	//
-	//now = time.Now()
-	//order.DealTimestamp = now.UnixNano() / int64(time.Millisecond)
-	//order.DealDatetime = now.In(swap.config.Location).Format(GO_BIRTHDAY)
-	//order.OrderId = response.Data[0].OrdId
-	//return resp, nil
+	var instrument = spot.getInstruments(order.Pair)
+	var request = struct {
+		InstId  string `json:"instId"`
+		TdMode  string `json:"tdMode"`
+		Side    string `json:"side"`
+		PosSide string `json:"posSide,omitempty"`
+		OrdType string `json:"ordType"`
+		Sz      string `json:"sz"`
+		Px      string `json:"px"`
+		ClOrdId string `json:"clOrdId,omitempty"`
+	}{}
+
+	request.InstId = instrument.InstId
+	request.TdMode = "cross"
+	request.Side = _INERNAL_V5_SPOT_TRADE_SIDE_CONVERTER[order.Side]
+	request.OrdType = _INERNAL_V5_SPOT_PLACE_TYPE_CONVERTER[order.OrderType]
+	request.Sz = FloatToString(order.Amount, instrument.AmountPrecision)
+	request.Px = FloatToString(order.Price, instrument.PricePrecision)
+	request.ClOrdId = order.Cid
+
+	var response = struct {
+		Code string `json:"code"`
+		Msg  string `json:"msg"`
+		Data []struct {
+			ClOrdId string `json:"clOrdId"`
+			OrdId   string `json:"ordId"`
+			SCode   string `json:"sCode"`
+			SMsg    string `json:"sMsg"`
+		} `json:"data"`
+	}{}
+	var uri = "/api/v5/trade/order"
+
+	now := time.Now()
+	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.PlaceDatetime = now.In(spot.config.Location).Format(GO_BIRTHDAY)
+	reqBody, _, _ := spot.BuildRequestBody(request)
+	resp, err := spot.DoRequest(
+		http.MethodPost,
+		uri,
+		reqBody,
+		&response,
+	)
+
+	if err != nil {
+		return resp, err
+	}
+	if len(response.Data) > 0 && response.Data[0].SCode != "0" {
+		return resp, errors.New(string(resp)) // very important cause it has the error code
+	}
+	if response.Code != "0" {
+		return resp, errors.New(string(resp)) // very important cause it has the error code
+	}
+
+	now = time.Now()
+	order.DealTimestamp = now.UnixNano() / int64(time.Millisecond)
+	order.DealDatetime = now.In(spot.config.Location).Format(GO_BIRTHDAY)
+	order.OrderId = response.Data[0].OrdId
+	return resp, nil
 }
 
 // orderId can set client oid or orderId
@@ -146,8 +159,8 @@ func (spot *Spot) adaptOrder(order *Order, response *OrderResponse) error {
 	if date, err := time.Parse(time.RFC3339, response.Timestamp); err != nil {
 		return err
 	} else {
-		order.OrderTimestamp = date.UnixNano() / int64(time.Millisecond)
-		order.OrderDate = date.In(spot.config.Location).Format(GO_BIRTHDAY)
+		order.DealTimestamp = date.UnixNano() / int64(time.Millisecond)
+		order.DealDatetime = date.In(spot.config.Location).Format(GO_BIRTHDAY)
 		return nil
 	}
 }

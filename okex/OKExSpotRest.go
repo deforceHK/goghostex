@@ -69,36 +69,47 @@ type OrderResponse struct {
 
 // public api
 func (spot *Spot) GetTicker(pair Pair) (*Ticker, []byte, error) {
-	uri := fmt.Sprintf(
-		"/api/spot/v3/instruments/%s/ticker",
-		pair.ToSymbol("-", true),
-	)
+
+	var params = url.Values{}
+	params.Set("instId", pair.ToSymbol("-", true))
+
+	var uri = "/api/v5/market/ticker?"
 
 	var response struct {
-		Last          float64 `json:"last,string"`
-		High24h       float64 `json:"high_24h,string"`
-		Low24h        float64 `json:"low_24h,string"`
-		BestBid       float64 `json:"best_bid,string"`
-		BestAsk       float64 `json:"best_ask,string"`
-		BaseVolume24h float64 `json:"base_volume_24h,string"`
-		Timestamp     string  `json:"timestamp"`
+		Code int64  `json:"code,string"`
+		Msg  string `json:"msg"`
+		Data []*struct {
+			Last      float64 `json:"last,string"`
+			Ask       float64 `json:"askPx,string"`
+			Bid       float64 `json:"bidPx,string"`
+			High      float64 `json:"high24h,string"`
+			Low       float64 `json:"low24h,string"`
+			Vol       float64 `json:"vol24h,string"`
+			Timestamp int64   `json:"ts,string"`
+		} `json:"data"`
 	}
-	resp, err := spot.DoRequest("GET", uri, "", &response)
+
+	resp, err := spot.DoRequest(http.MethodGet, uri+params.Encode(), "", &response)
 	if err != nil {
 		return nil, resp, err
 	}
+	if response.Code != 0 {
+		return nil, resp, errors.New(response.Msg)
+	}
+	if len(response.Data) == 0 {
+		return nil, resp, errors.New("The api data not ready. ")
+	}
 
-	date, _ := time.Parse(time.RFC3339, response.Timestamp)
 	return &Ticker{
 		Pair:      pair,
-		Last:      response.Last,
-		High:      response.High24h,
-		Low:       response.Low24h,
-		Sell:      response.BestAsk,
-		Buy:       response.BestBid,
-		Vol:       response.BaseVolume24h,
-		Timestamp: date.UnixNano() / int64(time.Millisecond),
-		Date:      date.In(spot.config.Location).Format(GO_BIRTHDAY),
+		Last:      response.Data[0].Last,
+		High:      response.Data[0].High,
+		Low:       response.Data[0].Low,
+		Sell:      response.Data[0].Ask,
+		Buy:       response.Data[0].Bid,
+		Vol:       response.Data[0].Vol,
+		Timestamp: response.Data[0].Timestamp,
+		Date:      time.UnixMilli(response.Data[0].Timestamp).In(spot.config.Location).Format(GO_BIRTHDAY),
 	}, resp, nil
 }
 
@@ -299,21 +310,17 @@ func (spot *Spot) GetOHLCs(symbol string, period, size, since int) ([]*OHLC, []b
 	panic("implement me")
 }
 
-func (spot *Spot) getContract() {
-
-}
-
 func (spot *Spot) getInstruments(pair Pair) *Instrument {
-	//defer spot.Unlock()
-	//spot.Lock()
+	defer spot.Unlock()
+	spot.Lock()
 
 	var now = time.Now().In(spot.config.Location)
 	if now.After(spot.nextUpdateTime) {
-		_, err := spot.updateContracts()
+		_, err := spot.updateInstruments()
 		//重试三次
 		for i := 0; err != nil && i < 3; i++ {
 			time.Sleep(time.Second)
-			_, err = spot.updateContracts()
+			_, err = spot.updateInstruments()
 		}
 		// 初次启动必须可以吧。
 		if spot.nextUpdateTime.IsZero() && err != nil {
@@ -322,14 +329,14 @@ func (spot *Spot) getInstruments(pair Pair) *Instrument {
 
 	}
 	//return spot.swapContracts.ContractNameKV[pair.ToSwapContractName()]
-	return nil
+	return spot.Spot.Instruments[pair.ToSymbol("-", true)]
 }
 
-func (spot *Spot) UpdateContracts() ([]byte, error) {
-	return spot.updateContracts()
+func (spot *Spot) GetInstruments(pair Pair) *Instrument {
+	return spot.getInstruments(pair)
 }
 
-func (spot *Spot) updateContracts() ([]byte, error) {
+func (spot *Spot) updateInstruments() ([]byte, error) {
 
 	var params = url.Values{}
 	params.Set("instType", "SPOT")
@@ -360,6 +367,9 @@ func (spot *Spot) updateContracts() ([]byte, error) {
 		if item.State != "live" {
 			continue
 		}
+		item.PricePrecision = GetPrecisionInt64(ToFloat64(item.TickSz))
+		item.AmountPrecision = GetPrecisionInt64(ToFloat64(item.LotSz))
+
 		spot.Instruments[item.InstId] = item
 	}
 

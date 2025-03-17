@@ -184,10 +184,11 @@ func TestSpot_InstrumentsAPI(t *testing.T) {
 
 	var ok = New(config)
 
-	var _, err = ok.Spot.UpdateContracts()
+	var ins = ok.Spot.GetInstruments(BTC_USDT)
+	var result, err = json.Marshal(ins)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	//t.Log(string(resp))
+	t.Log(string(result))
 }
