@@ -140,9 +140,10 @@ func (this *SpotOrderBooks) Receiver(msg string) {
 	_ = json.Unmarshal(rawData, &pre)
 	if pre.Channel != "book" {
 		fmt.Println("The feed must in book_snapshot book")
+		return
 	}
 
-	if pre.Type == "book" {
+	if pre.Type == "update" {
 		var book = KKBookUpdate{}
 		_ = json.Unmarshal(rawData, &book)
 		this.recvBook(book)
@@ -154,81 +155,70 @@ func (this *SpotOrderBooks) Receiver(msg string) {
 }
 
 func (this *SpotOrderBooks) recvBook(book KKBookUpdate) {
-	var data = book.Data[0]
+	for _, data := range book.Data {
+		var mux, exist = this.OrderBookMuxs[data.Symbol]
+		if !exist {
+			return
+		}
 
-	var mux, exist = this.OrderBookMuxs[data.Symbol]
-	if !exist {
-		return
+		mux.Lock()
+		//var stdPrice = int64(book.Price * 100000000)
+		//if book.Seq != this.SeqData[book.ProductId]+1 {
+		//	//这样restart也可以，但是重新订阅是不是更轻量？
+		//	this.Resubscribe(book.ProductId)
+		//	return
+		//}
+		for _, bid := range data.Bids {
+			//fmt.Println(data.Symbol, bid.Price, bid.Qty)
+			var stdPrice = int64(bid.Price * 100000000)
+			this.BidData[data.Symbol][stdPrice] = bid.Qty
+		}
+
+		for _, ask := range data.Asks {
+			//fmt.Println(data.Symbol, ask.Price, ask.Qty)
+			var stdPrice = int64(ask.Price * 100000000)
+			this.AskData[data.Symbol][stdPrice] = ask.Qty
+		}
+		var updateTime, _ = time.ParseInLocation(time.RFC3339, data.Timestamp, this.Config.Location)
+		this.SeqData[data.Symbol] = data.Checksum
+		this.TsData[data.Symbol] = updateTime.UnixMilli()
+		mux.Unlock()
+
+		if this.UpdateChan != nil {
+			this.UpdateChan <- fmt.Sprintf("%s:%d", data.Symbol, updateTime.UnixMilli())
+		}
 	}
-
-	mux.Lock()
-	defer mux.Unlock()
-
-	//var stdPrice = int64(book.Price * 100000000)
-	//if book.Seq != this.SeqData[book.ProductId]+1 {
-	//	//这样restart也可以，但是重新订阅是不是更轻量？
-	//	this.Resubscribe(book.ProductId)
-	//	return
-	//}
-
-	var bidData = make(map[int64]float64)
-	var askData = make(map[int64]float64)
-	for _, bid := range data.Bids {
-		var stdPrice = int64(bid.Price * 100000000)
-		bidData[stdPrice] = bid.Qty
-	}
-
-	for _, ask := range data.Asks {
-		var stdPrice = int64(ask.Price * 100000000)
-		askData[stdPrice] = ask.Qty
-	}
-	var updateTime, _ = time.ParseInLocation(time.RFC3339, data.Timestamp, this.Config.Location)
-	this.BidData[data.Symbol] = bidData
-	this.AskData[data.Symbol] = askData
-	this.SeqData[data.Symbol] = updateTime.UnixMilli()
-	this.TsData[data.Symbol] = updateTime.UnixMilli()
-
-	if this.UpdateChan != nil {
-		this.UpdateChan <- fmt.Sprintf("%s:%d", data.Symbol, updateTime.UnixMilli())
-	}
-
-	//if data.Side == "buy" {
-	//	this.BidData[book.ProductId][stdPrice] = book.Qty
-	//} else {
-	//	this.AskData[book.ProductId][stdPrice] = book.Qty
-	//}
-	//this.SeqData[book.ProductId] = book.Seq
-	//this.TsData[book.ProductId] = book.Timestamp
 }
 
 func (this *SpotOrderBooks) recvSnapshot(snapshot KKBookSnapshot) {
-	var data = snapshot.Data[0]
+	for _, data := range snapshot.Data {
 
-	var _, exist = this.OrderBookMuxs[data.Symbol]
-	if !exist {
-		this.OrderBookMuxs[data.Symbol] = &sync.Mutex{}
+		var _, exist = this.OrderBookMuxs[data.Symbol]
+		if !exist {
+			this.OrderBookMuxs[data.Symbol] = &sync.Mutex{}
+		}
+
+		var mux = this.OrderBookMuxs[data.Symbol]
+		mux.Lock()
+
+		var bidData = make(map[int64]float64)
+		var askData = make(map[int64]float64)
+		for _, bid := range data.Bids {
+			var stdPrice = int64(bid.Price * 100000000)
+			bidData[stdPrice] = bid.Qty
+		}
+
+		for _, ask := range data.Asks {
+			var stdPrice = int64(ask.Price * 100000000)
+			askData[stdPrice] = ask.Qty
+		}
+
+		this.BidData[data.Symbol] = bidData
+		this.AskData[data.Symbol] = askData
+		this.SeqData[data.Symbol] = data.Checksum
+		this.TsData[data.Symbol] = 0
+		mux.Unlock()
 	}
-
-	var mux = this.OrderBookMuxs[data.Symbol]
-	mux.Lock()
-	defer mux.Unlock()
-
-	var bidData = make(map[int64]float64)
-	var askData = make(map[int64]float64)
-	for _, bid := range data.Bids {
-		var stdPrice = int64(bid.Price * 100000000)
-		bidData[stdPrice] = bid.Qty
-	}
-
-	for _, ask := range data.Asks {
-		var stdPrice = int64(ask.Price * 100000000)
-		askData[stdPrice] = ask.Qty
-	}
-
-	this.BidData[data.Symbol] = bidData
-	this.AskData[data.Symbol] = askData
-	this.SeqData[data.Symbol] = data.Checksum
-	this.TsData[data.Symbol] = 0
 }
 
 func (this *SpotOrderBooks) Snapshot(pair Pair) (*Depth, error) {
@@ -247,7 +237,7 @@ func (this *SpotOrderBooks) Snapshot(pair Pair) (*Depth, error) {
 	var depth = &Depth{
 		Pair:      pair,
 		Timestamp: lastTS,
-		Sequence:  lastTS,
+		Sequence:  this.SeqData[productId],
 		Date:      lastTime.Format(GO_BIRTHDAY),
 		AskList:   make(DepthRecords, 0),
 		BidList:   make(DepthRecords, 0),

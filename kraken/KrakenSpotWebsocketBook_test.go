@@ -1,7 +1,6 @@
 package kraken
 
 import (
-	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -44,16 +43,34 @@ func TestWSSpotWebsocketBook_Start(t *testing.T) {
 	var pair = NewPair("btc_usd", "_")
 	book.Subscribe(pair)
 
+	var ethPair = NewPair("eth_usd", "_")
+	book.Subscribe(ethPair)
+
 	for i := 0; i < 100; i++ {
 		time.Sleep(5 * time.Second)
-		depth, depthErr := book.Snapshot(pair)
-		if depthErr != nil {
-			t.Error(depthErr)
-			return
-		}
-		var depthData, _ = json.Marshal(depth)
-		t.Log(string(depthData))
-	}
+		var j = i % 2
 
-	select {}
+		if j == 0 {
+			depth, depthErr := book.Snapshot(pair)
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+
+			t.Log(pair, depth.BidList[0].Price, depth.AskList[0].Price)
+			t.Log(len(depth.BidList), len(depth.AskList))
+		} else {
+			depth, depthErr := book.Snapshot(ethPair)
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+
+			t.Log(ethPair, depth.BidList[0].Price, depth.AskList[0].Price)
+			t.Log(len(depth.BidList), len(depth.AskList))
+
+		}
+		//var depthData, _ = json.Marshal(depth)
+		//t.Log(string(depthData))
+	}
 }
