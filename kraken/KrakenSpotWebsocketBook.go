@@ -17,6 +17,9 @@ type SpotOrderBooks struct {
 	SeqData       map[string]int64
 	TsData        map[string]int64
 	OrderBookMuxs map[string]*sync.Mutex
+
+	// if the channel is not nil, send the update message to the channel. User should read the channel in the loop.
+	UpdateChan chan string
 }
 
 type KKBookSnapshot struct {
@@ -184,6 +187,10 @@ func (this *SpotOrderBooks) recvBook(book KKBookUpdate) {
 	this.AskData[data.Symbol] = askData
 	this.SeqData[data.Symbol] = updateTime.UnixMilli()
 	this.TsData[data.Symbol] = updateTime.UnixMilli()
+
+	if this.UpdateChan != nil {
+		this.UpdateChan <- fmt.Sprintf("%s:%d", data.Symbol, updateTime.UnixMilli())
+	}
 
 	//if data.Side == "buy" {
 	//	this.BidData[book.ProductId][stdPrice] = book.Qty
