@@ -8,8 +8,9 @@ import (
 	. "github.com/deforceHK/goghostex"
 )
 
-// go test -v ./binance/... -count=1 -run=TestBinanceSpotWebsocketMarket
-func TestBinanceSpotWebsocketMarket(t *testing.T) {
+// go test -v ./binance/... -count=1 -run=TestBinanceWebsocketSpotBook
+func TestBinanceWebsocketSpotBook(t *testing.T) {
+
 	var config = &APIConfig{
 		Endpoint:   ENDPOINT,
 		HttpClient: &http.Client{
@@ -19,23 +20,26 @@ func TestBinanceSpotWebsocketMarket(t *testing.T) {
 			//	},
 			//},
 		},
-		ApiKey:        API_KEY,
-		ApiSecretKey:  API_SECRETKEY,
-		ApiPassphrase: "",
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: SWAP_API_PASSPHRASE,
 		Location:      time.Now().Location(),
 	}
 
-	var wsBN = &WSMarketSpot{
-		Config: config,
+	var book = &LocalSpotBooks{
+		WSMarketSpot: &WSMarketSpot{
+			Config: config,
+		},
 	}
 
-	err := wsBN.Start()
+	var err = book.Init()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	time.Sleep(10 * time.Second)
 
-	wsBN.Subscribe("ethusdt@depth")
+	book.Subscribe(Pair{BTC, USDT})
+
 	select {}
+
 }
