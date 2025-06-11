@@ -79,11 +79,9 @@ var _INERNAL_KLINE_SECOND_CONVERTER = map[int]int{
 }
 
 func New(config *APIConfig) *Binance {
-	binance := &Binance{config: config}
+	var binance = &Binance{config: config}
 	binance.Spot = &Spot{Binance: binance}
-	binance.Margin = &Margin{
-		Binance: binance,
-	}
+	binance.Margin = &Margin{Binance: binance}
 	binance.Swap = &Swap{
 		Binance:       binance,
 		Locker:        new(sync.Mutex),
@@ -93,15 +91,17 @@ func New(config *APIConfig) *Binance {
 		Binance: binance,
 		Locker:  new(sync.Mutex),
 	}
+	binance.Derivatives = &Derivatives{Binance: binance}
 	return binance
 }
 
 type Binance struct {
-	config *APIConfig
-	Spot   *Spot
-	Margin *Margin
-	Swap   *Swap
-	Future *Future
+	config      *APIConfig
+	Spot        *Spot
+	Margin      *Margin
+	Swap        *Swap
+	Future      *Future
+	Derivatives *Derivatives
 }
 
 func (this *Binance) GetExchangeName() string {
