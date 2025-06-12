@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -74,7 +76,7 @@ func (this *LocalSpotBooks) ReceiveDelta(msg string) {
 		return
 	}
 
-	var productId = delta.Symbol
+	var productId = strings.ToLower(delta.Symbol)
 	// 如果还没有锁，说明还没有申请过snapshot，或者snapshot重置了。
 	if this.OrderBookMuxs[productId] == nil {
 		this.BidData[productId] = make(map[int64]float64)
@@ -212,10 +214,9 @@ func (this *LocalSpotBooks) getDepthById(productId string, size int) (*Depth, er
 	}{}
 
 	var params = url.Values{}
-	params.Set("symbol", productId)
+	params.Set("symbol", strings.ToUpper(productId))
 	params.Set("limit", fmt.Sprintf("%d", size))
 
-	fmt.Println("https://api.binance.com/api/v3/depth?" + params.Encode())
 	var resp, err = NewHttpRequest(
 		this.Config.HttpClient,
 		http.MethodGet,
@@ -226,13 +227,11 @@ func (this *LocalSpotBooks) getDepthById(productId string, size int) (*Depth, er
 		},
 	)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
 	err = json.Unmarshal(resp, &response)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
@@ -258,6 +257,84 @@ func (this *LocalSpotBooks) getDepthById(productId string, size int) (*Depth, er
 	}
 
 	return depth, nil
+}
+
+func (this *LocalSpotBooks) Snapshot(pair Pair) (*Depth, error) {
+	var productId = pair.ToSymbol("", false)
+	var depth, err = this.SnapshotById(productId)
+	if err != nil {
+		return nil, err
+	}
+	depth.Pair = pair
+	return depth, err
+}
+
+func (this *LocalSpotBooks) SnapshotById(productId string) (*Depth, error) {
+	if this.BidData[productId] == nil || this.AskData[productId] == nil || this.OrderBookMuxs[productId] == nil {
+		return nil, fmt.Errorf("The order book data is not ready or you need subscribe the productid. ")
+	}
+
+	var mux = this.OrderBookMuxs[productId]
+	mux.Lock()
+	defer mux.Unlock()
+
+	var lastTime = time.UnixMilli(this.TsData[productId]).In(this.WSMarketSpot.Config.Location)
+	var depth = &Depth{
+		Sequence:  this.SeqData[productId],
+		Timestamp: lastTime.UnixMilli(),
+		Date:      lastTime.Format(GO_BIRTHDAY),
+		AskList:   make(DepthRecords, 0),
+		BidList:   make(DepthRecords, 0),
+	}
+	var zeroCount, sumCount = 0.0, 0.0
+	for stdPrice, amount := range this.BidData[productId] {
+		if amount > 0 {
+			depth.BidList = append(depth.BidList, DepthRecord{
+				Price:  float64(stdPrice) / 100000000,
+				Amount: amount,
+			})
+		} else {
+			zeroCount++
+		}
+		sumCount++
+	}
+
+	for stdPrice, amount := range this.AskData[productId] {
+		if amount > 0 {
+			depth.AskList = append(depth.AskList, DepthRecord{
+				Price:  float64(stdPrice) / 100000000,
+				Amount: amount,
+			})
+		} else {
+			zeroCount++
+		}
+		sumCount++
+	}
+	sort.Sort(sort.Reverse(depth.BidList))
+	sort.Sort(depth.AskList)
+
+	// collect the zero amount data
+	if zeroCount/sumCount > 0.3 {
+		for priceKey, amountValue := range this.BidData[productId] {
+			if amountValue > 0 {
+				continue
+			}
+			delete(this.BidData[productId], priceKey)
+		}
+		for priceKey, amountValue := range this.AskData[productId] {
+			if amountValue > 0 {
+				continue
+			}
+			delete(this.AskData[productId], priceKey)
+		}
+	}
+
+	return depth, nil
+
+}
+
+func (this *LocalSpotBooks) SubscribeById(productId string) {
+	this.WSMarketSpot.Subscribe(fmt.Sprintf("%s@depth", productId))
 }
 
 func (this *LocalSpotBooks) Subscribe(pair Pair) {

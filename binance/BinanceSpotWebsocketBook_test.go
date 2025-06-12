@@ -39,7 +39,39 @@ func TestBinanceWebsocketSpotBook(t *testing.T) {
 	}
 
 	book.Subscribe(Pair{BTC, USDT})
+	book.Subscribe(Pair{ETH, BTC})
 
-	select {}
+	for i := 0; ; i++ {
+		time.Sleep(5 * time.Second)
+		if i%2 == 0 {
+			depth, depthErr := book.Snapshot(Pair{BTC, USDT})
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+			t.Log(
+				depth.BidList[0].Price,
+				depth.BidList[0].Amount,
+				depth.AskList[0].Price,
+				depth.AskList[0].Amount,
+				depth.Pair.ToSymbol("", true),
+			)
+		} else {
+			depth, depthErr := book.Snapshot(Pair{ETH, BTC})
+			if depthErr != nil {
+				t.Error(depthErr)
+				return
+			}
+			t.Log(
+				depth.BidList[0].Price,
+				depth.BidList[0].Amount,
+				depth.AskList[0].Price,
+				depth.AskList[0].Amount,
+				depth.Pair.ToSymbol("", true),
+			)
+		}
+	}
+
+	//select {}
 
 }
