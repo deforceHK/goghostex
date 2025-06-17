@@ -333,3 +333,38 @@ func TestSpot_TradeAPI(t *testing.T) {
 	}
 
 }
+
+// go test -v ./binance/... -count=1 -run=TestSpot_TradeAPI_MARKET
+func TestSpot_TradeAPI_MARKET(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint:   ENDPOINT,
+		HttpClient: &http.Client{
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse(PROXY_URL)
+			//	},
+			//},
+		},
+		ApiKey:        API_KEY,
+		ApiSecretKey:  API_SECRETKEY,
+		ApiPassphrase: "",
+		Location:      time.Now().Location(),
+	}
+
+	bn := New(config)
+
+	var mOrder = Order{
+		Pair:      Pair{Basis: NewCurrency("XVS", ""), Counter: USDT},
+		Amount:    1,
+		Side:      SELL_MARKET,
+		OrderType: NORMAL,
+	}
+
+	var resp, err = bn.Spot.PlaceOrder(&mOrder)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(string(resp))
+}
