@@ -14,7 +14,7 @@ const (
 	SWAP_API_KEY        = ""
 	SWAP_API_SECRETKEY  = ""
 	SWAP_API_PASSPHRASE = ""
-	SWAP_PROXY_URL      = "socks5://127.0.0.1:1090"
+	SWAP_PROXY_URL      = "" // socks5://127.0.0.1:1090
 )
 
 /**
@@ -406,11 +406,11 @@ func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 	config := &APIConfig{
 		Endpoint: ENDPOINT,
 		HttpClient: &http.Client{
-			Transport: &http.Transport{
-				Proxy: func(req *http.Request) (*url.URL, error) {
-					return url.Parse(PROXY_URL)
-				},
-			},
+			//Transport: &http.Transport{
+			//	Proxy: func(req *http.Request) (*url.URL, error) {
+			//		return url.Parse(PROXY_URL)
+			//	},
+			//},
 		},
 		ApiKey:        SWAP_API_KEY,
 		ApiSecretKey:  SWAP_API_SECRETKEY,
@@ -434,7 +434,7 @@ func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 		}
 	}
 
-	pair := Pair{Basis: BTC, Counter: USDT}
+	pair := Pair{Basis: NewCurrency("xvs",""), Counter: USDT}
 	ticker, _, err := bn.Swap.GetTicker(pair)
 	if err != nil {
 		t.Error(err)
@@ -444,7 +444,7 @@ func TestSwap_DEALAPI_COUNTER(t *testing.T) {
 	openShort := SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Sell * 0.99,
-		Amount:    0.012,
+		Amount:    1,
 		PlaceType: NORMAL,
 		Type:      OPEN_SHORT,
 		LeverRate: 20,
@@ -781,4 +781,44 @@ func TestSwap_DEALAPI_BASIS(t *testing.T) {
 		return
 	}
 
+}
+
+// go test -v ./binance/... -count=1 -run=TestSwap_TradeAPI_COUNTER_MARKET
+func TestSwap_TradeAPI_COUNTER_MARKET(t *testing.T) {
+
+	config := &APIConfig{
+		Endpoint: ENDPOINT,
+		HttpClient: &http.Client{
+			Transport: &http.Transport{
+				//Proxy: func(req *http.Request) (*url.URL, error) {
+				//	return url.Parse(PROXY_URL)
+				//},
+			},
+		},
+		ApiKey:        SWAP_API_KEY,
+		ApiSecretKey:  SWAP_API_SECRETKEY,
+		ApiPassphrase: SWAP_API_PASSPHRASE,
+		Location:      time.Now().Location(),
+	}
+
+	var bn = New(config)
+	var swapOrder = SwapOrder{
+		Cid:       UUID(),
+		Price:     0,
+		Amount:    1,
+		PlaceType: MARKET,
+		Type:      LIQUIDATE_SHORT,
+		LeverRate: 20,
+		Pair:      NewPair("xvs_usdt", "_"),
+		Exchange:  BINANCE,
+	}
+	var resp, err = bn.Swap.PlaceOrder(&swapOrder)
+	if err != nil {
+		t.Error(err)
+		return
+	} else {
+		stdOrder, _ := json.Marshal(swapOrder)
+		t.Log(string(resp))
+		t.Log(string(stdOrder))
+	}
 }

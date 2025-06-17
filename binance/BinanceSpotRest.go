@@ -263,6 +263,8 @@ func (spot *Spot) PlaceOrder(order *Order) ([]byte, error) {
 	switch orderType {
 	case "LIMIT":
 		params.Set("price", fmt.Sprintf("%f", order.Price))
+	case "MARKET":
+		params.Del("timeInForce")
 	}
 
 	if err := spot.buildParamsSigned(&params); err != nil {
