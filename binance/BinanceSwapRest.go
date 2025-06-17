@@ -475,6 +475,7 @@ var placeTypeRelation = map[PlaceType]string{
 	ONLY_MAKER: "GTX",
 	IOC:        "IOC",
 	FOK:        "FOK",
+	MARKET:     "MARKET",
 }
 
 var sideRelation = map[FutureType]string{
@@ -533,11 +534,17 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	param.Set("type", "LIMIT")
 	param.Set("price", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
 	param.Set("quantity", FloatToString(order.Amount, contract.AmountPrecision))
-	// "GTC": 成交为止, 一直有效。
-	// "IOC": 无法立即成交(吃单)的部分就撤销。
-	// "FOK": 无法全部立即成交就撤销。
-	// "GTX": 无法成为挂单方就撤销。
-	param.Set("timeInForce", placeType)
+
+	if placeType == "MARKET" {
+		param.Set("type", "MARKET")
+		param.Del("price")
+	} else {
+		// "GTC": 成交为止, 一直有效。
+		// "IOC": 无法立即成交(吃单)的部分就撤销。
+		// "FOK": 无法全部立即成交就撤销。
+		// "GTX": 无法成为挂单方就撤销。
+		param.Set("timeInForce", placeType)
+	}
 	if order.Cid != "" {
 		param.Set("newClientOrderId", order.Cid)
 	}
@@ -1049,7 +1056,6 @@ func (swap *Swap) getContract(pair Pair) *SwapContract {
 			time.Sleep(time.Second)
 			_, err = swap.updateContracts()
 		}
-
 		// init fail at first time, get a default one.
 		if swap.nextUpdateContractTime.IsZero() && err != nil {
 			swap.swapContracts = SwapContracts{
