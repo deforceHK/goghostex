@@ -91,17 +91,21 @@ func New(config *APIConfig) *Binance {
 		Binance: binance,
 		Locker:  new(sync.Mutex),
 	}
-	binance.Derivatives = &Derivatives{Binance: binance}
+	binance.One = &One{
+		Binance: binance,
+		Locker:  new(sync.Mutex),
+		Infos:   make(map[string]*OneInfo),
+	}
 	return binance
 }
 
 type Binance struct {
-	config      *APIConfig
-	Spot        *Spot
-	Margin      *Margin
-	Swap        *Swap
-	Future      *Future
-	Derivatives *Derivatives
+	config *APIConfig
+	Spot   *Spot
+	Margin *Margin
+	Swap   *Swap
+	Future *Future
+	One    *One
 }
 
 func (this *Binance) GetExchangeName() string {
@@ -109,9 +113,9 @@ func (this *Binance) GetExchangeName() string {
 }
 
 func (this *Binance) buildParamsSigned(postForm *url.Values) error {
-	timestamp := fmt.Sprintf("%d", time.Now().UnixNano()/int64(time.Millisecond))
+	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 	postForm.Set("timestamp", timestamp)
-	postForm.Set("recvWindow", "60000")
+	postForm.Set("recvWindow", "6000")
 	payload := postForm.Encode()
 	sign, _ := GetParamHmacSHA256Sign(this.config.ApiSecretKey, payload)
 	postForm.Set("signature", sign)
