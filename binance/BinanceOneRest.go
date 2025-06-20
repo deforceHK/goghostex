@@ -250,7 +250,7 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	}
 
 	// 添加签名
-	if err := o.Binance.buildParamsSigned(&param); err != nil {
+	if err := o.buildParamsSigned(&param); err != nil {
 		return nil, err
 	}
 
@@ -269,13 +269,16 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	// 记录当前时间
 	now := time.Now()
 
+	var uri = "/papi/v1/um/order"
+	if order.SettleMode == 1 {
+		uri = "/papi/v1/cm/order"
+	}
 	// 发送API请求
-	resp, err := o.Swap.DoRequest(
+	resp, err := o.DoRequest(
 		http.MethodPost,
-		"placeOrderUri"+param.Encode(),
+		uri+param.Encode(),
 		"",
 		&response,
-		1,
 	)
 
 	if err != nil {
