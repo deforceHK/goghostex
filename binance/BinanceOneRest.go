@@ -1,6 +1,7 @@
 package binance
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -185,12 +186,20 @@ func (o *One) GetUMInfos() ([]*OneInfo, []byte, error) {
 func (o *One) getInfo(productId string) (*OneInfo, error) {
 	if len(o.Infos) == 0 {
 		var infos, _, err = o.GetInfos()
-		if err != nil {
-			return nil, fmt.Errorf("get infos failed: %w", err)
+		for i := 0; err != nil && i < 4; i++ {
+			time.Sleep(time.Second * 10)
+			infos, _, err = o.GetInfos()
 		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		o.Lock()
 		for _, info := range infos {
 			o.Infos[info.ProductId] = info
 		}
+		o.Unlock()
 	}
 
 	var info, exist = o.Infos[productId]
@@ -207,6 +216,9 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	}
 
 	var info, err = o.getInfo(order.ProductId)
+	var test, _ = json.Marshal(info)
+	fmt.Println(string(test))
+
 	if err != nil {
 		return nil, fmt.Errorf("get info for product %s failed: %w", order.ProductId, err)
 	}
@@ -269,9 +281,9 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	// 记录当前时间
 	now := time.Now()
 
-	var uri = "/papi/v1/um/order"
+	var uri = "/papi/v1/um/order?"
 	if order.SettleMode == 1 {
-		uri = "/papi/v1/cm/order"
+		uri = "/papi/v1/cm/order?"
 	}
 	// 发送API请求
 	resp, err := o.DoRequest(
@@ -289,9 +301,9 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	orderTime := time.Unix(response.UpdateTime/1000, 0)
 	order.OrderId = fmt.Sprintf("%d", response.OrderId)
 	order.PlaceTimestamp = now.UnixNano() / int64(time.Millisecond)
-	order.PlaceDatetime = now.In(o.Binance.config.Location).Format(GO_BIRTHDAY)
+	order.PlaceDatetime = now.In(o.config.Location).Format(GO_BIRTHDAY)
 	order.DealTimestamp = response.UpdateTime
-	order.DealDatetime = orderTime.In(o.Binance.config.Location).Format(GO_BIRTHDAY)
+	order.DealDatetime = orderTime.In(o.config.Location).Format(GO_BIRTHDAY)
 
 	// 更新订单状态
 	if status, exists := statusRelation[response.Status]; exists {
