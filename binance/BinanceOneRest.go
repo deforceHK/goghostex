@@ -1,7 +1,6 @@
 package binance
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -216,9 +215,6 @@ func (o *One) PlaceOrder(order *OneOrder) ([]byte, error) {
 	}
 
 	var info, err = o.getInfo(order.ProductId)
-	var test, _ = json.Marshal(info)
-	fmt.Println(string(test))
-
 	if err != nil {
 		return nil, fmt.Errorf("get info for product %s failed: %w", order.ProductId, err)
 	}
