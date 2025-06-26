@@ -169,13 +169,11 @@ func (this *SpotOrderBooks) recvBook(book KKBookUpdate) {
 		//	return
 		//}
 		for _, bid := range data.Bids {
-			//fmt.Println(data.Symbol, bid.Price, bid.Qty)
 			var stdPrice = int64(bid.Price * 100000000)
 			this.BidData[data.Symbol][stdPrice] = bid.Qty
 		}
 
 		for _, ask := range data.Asks {
-			//fmt.Println(data.Symbol, ask.Price, ask.Qty)
 			var stdPrice = int64(ask.Price * 100000000)
 			this.AskData[data.Symbol][stdPrice] = ask.Qty
 		}

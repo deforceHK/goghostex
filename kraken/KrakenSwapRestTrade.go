@@ -21,6 +21,7 @@ var placeTypeRelation = map[PlaceType]string{
 	NORMAL:     "lmt",
 	ONLY_MAKER: "post",
 	IOC:        "ioc",
+	MARKET:     "mkt",
 }
 
 var statusRelation = map[string]TradeStatus{
@@ -48,25 +49,22 @@ func (swap *Swap) PlaceOrder(order *SwapOrder) ([]byte, error) {
 	if side, exist = sideRelation[order.Type]; !exist {
 		return nil, errors.New("swap side not found. ")
 	}
-
 	if placeType, exist = placeTypeRelation[order.PlaceType]; !exist {
 		return nil, errors.New("place type not found. ")
 	}
 
 	var contract = swap.getContract(order.Pair)
 	var symbol = contract.ContractName
-	//var reduceOnly = "false"
-	//if order.Type == LIQUIDATE_LONG || order.Type == LIQUIDATE_SHORT {
-	//	reduceOnly = "true"
-	//}
 
 	var param = url.Values{}
 	param.Set("symbol", symbol)
 	param.Set("orderType", placeType)
-	param.Set("limitPrice", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
 	param.Set("side", side)
 	param.Set("size", fmt.Sprintf("%v", order.Amount))
 	param.Set("reduceOnly", "false")
+	if order.PlaceType != MARKET {
+		param.Set("limitPrice", FloatToPrice(order.Price, contract.PricePrecision, contract.TickSize))
+	}
 	if order.Cid != "" {
 		param.Set("cliOrdId", order.Cid)
 	}
