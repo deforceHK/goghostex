@@ -271,7 +271,7 @@ func TestSwap_Trade_Short_Deal(t *testing.T) {
 
 	var kr = New(config)
 	var pair = Pair{
-		BTC, USD,
+		ETH, USD,
 	}
 	var ticker, _, err = kr.Swap.GetTicker(pair)
 	if err != nil {
@@ -281,7 +281,7 @@ func TestSwap_Trade_Short_Deal(t *testing.T) {
 	var orderShort = SwapOrder{
 		Cid:       UUID(),
 		Price:     ticker.Buy * 0.95,
-		Amount:    0.0138,
+		Amount:    0.013,
 		PlaceType: NORMAL,
 		Type:      OPEN_SHORT,
 		LeverRate: 20,
