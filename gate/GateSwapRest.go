@@ -517,14 +517,6 @@ func (swap *Swap) GetPosition(pair Pair, openType FutureType) (*SwapPosition, []
 	panic("implement me")
 }
 
-func (swap *Swap) AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	panic("implement me")
-}
-
-func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	panic("implement me")
-}
-
 func (swap *Swap) GetAccountFlow() ([]*SwapAccountItem, []byte, error) {
 	panic("implement me")
 }

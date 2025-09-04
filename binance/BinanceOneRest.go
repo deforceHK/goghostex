@@ -101,8 +101,8 @@ func (o *One) GetCMInfos() ([]*OneInfo, []byte, error) {
 
 		infos = append(infos, &OneInfo{
 			Pair: Pair{
-				NewCurrency(symbol.BaseAsset, ""),
-				NewCurrency(symbol.CounterAsset, ""),
+				Basis:   NewCurrency(symbol.BaseAsset, ""),
+				Counter: NewCurrency(symbol.CounterAsset, ""),
 			},
 			Status:                  status,
 			ProductId:               symbol.Symbol,

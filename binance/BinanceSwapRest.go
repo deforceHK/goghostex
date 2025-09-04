@@ -967,42 +967,6 @@ func (swap *Swap) GetPosition(pair Pair, openType FutureType) (*SwapPosition, []
 	return nil, resp, errors.New("Can not find the position. ")
 }
 
-func (swap *Swap) AddMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	return swap.modifyMargin(pair, openType, marginAmount, 1)
-}
-
-func (swap *Swap) ReduceMargin(pair Pair, openType FutureType, marginAmount float64) ([]byte, error) {
-	return swap.modifyMargin(pair, openType, marginAmount, 2)
-}
-
-func (swap *Swap) modifyMargin(pair Pair, openType FutureType, marginAmount float64, opType int) ([]byte, error) {
-	sidePosition := "LONG"
-	if openType == OPEN_SHORT || openType == LIQUIDATE_SHORT {
-		sidePosition = "SHORT"
-	}
-
-	param := url.Values{}
-	param.Set("symbol", pair.ToSymbol("", true))
-	param.Set("positionSide", sidePosition)
-	param.Set("amount", fmt.Sprintf("%f", marginAmount))
-	param.Set("type", fmt.Sprintf("%d", opType))
-	if err := swap.buildParamsSigned(&param); err != nil {
-		return nil, err
-	}
-
-	if resp, err := swap.DoRequest(
-		http.MethodPost,
-		"/fapi/v1/positionMargin?"+param.Encode(),
-		"",
-		nil,
-		SETTLE_MODE_COUNTER,
-	); err != nil {
-		return nil, err
-	} else {
-		return resp, nil
-	}
-}
-
 func (swap *Swap) DoRequest(httpMethod, uri, reqBody string, response interface{}, settleMode int64) ([]byte, error) {
 	header := map[string]string{
 		"X-MBX-APIKEY": swap.config.ApiKey,

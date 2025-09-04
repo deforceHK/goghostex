@@ -2,3 +2,4 @@
 vendor
 goghostex/goghostex
 go.sum
+.envfile
